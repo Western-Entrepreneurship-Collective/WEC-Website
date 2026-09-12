@@ -1,0 +1,62 @@
+"use client";
+
+import { useRef, useState } from "react";
+import { Arrow, VentureLine } from "@/components/graphics/DraftGraphics";
+import { EcosystemMap } from "@/components/graphics/EcosystemMap";
+import { RevealHeading, SectionHeading, TextLink } from "@/components/ui/Editorial";
+import { siteContent as c } from "@/data/siteContent";
+import { Spark, TableSketch } from "@/components/graphics/StudioGraphics";
+
+export function Community() {
+  const [selected, setSelected] = useState(0);
+  return <section className="community section-pad" id="community" aria-labelledby="community-heading">
+    <SectionHeading id="community-heading">{c.community.label}</SectionHeading><div className="community-intro"><RevealHeading as="p" lines={c.community.headline} /><p className="section-lead">{c.community.description}</p></div>
+    <div className="community-wall">
+      <div className="community-poster"><span className="micro">An open invitation</span><p>Find your<br /><em>people.</em></p><TableSketch /><span className="poster-caption">There’s room at the table.</span><Spark /></div>
+      <div className="community-formats"><span className="micro">Different ways to get together</span><div className="community-choices" role="group" aria-label="Community gatherings">{c.community.events.map((event, i) => <button key={event} onClick={() => setSelected(i)} aria-pressed={selected === i} aria-controls="community-answer"><span className="micro" aria-hidden="true">0{i + 1}</span><span>{event}</span><Arrow diagonal /></button>)}</div><div className="community-answer" id="community-answer" aria-live="polite" aria-atomic="true"><span className="community-answer-mark" aria-hidden="true">↳</span><p>{c.community.eventNotes[selected]}</p></div><TextLink href="#join">Come find your people</TextLink></div>
+    </div>
+  </section>;
+}
+
+export function Pillars() {
+  const sectionRef = useRef<HTMLElement>(null);
+  function showPillar(index: number) {
+    if (sectionRef.current?.dataset.sequence === "true") sectionRef.current.dispatchEvent(new CustomEvent("wec:pillar", { detail: index }));
+    else document.getElementById(`pillar-${index}`)?.scrollIntoView({ behavior: "instant", block: "center" });
+  }
+  return <section className="pillars section-pad" id="pillars" aria-labelledby="pillars-heading" ref={sectionRef}>
+    <SectionHeading id="pillars-heading">{c.pillars.label}</SectionHeading>
+    <div className="foundation-intro"><RevealHeading as="p" lines={c.pillars.headline} /><p className="section-lead">{c.pillars.description}</p></div>
+    <div className="foundation-scene">
+      <div className="foundation-scene-heading"><p>{c.pillars.introduction}</p></div>
+      <div className="foundation-structure">
+        <div className="building-roof" aria-hidden="true"><svg viewBox="0 0 1200 130" preserveAspectRatio="none" fill="none"><path d="M10 102 600 8l590 94v18H10Z" fill="var(--purple)" stroke="var(--purple-muted)" strokeWidth="2" /><path d="m76 93 524-72 524 72H76Z" fill="var(--ink)" stroke="var(--purple-muted)" /><path d="M0 120h1200v10H0Z" fill="var(--white)" /><path d="M20 105h1160M600 8v13" stroke="var(--purple-muted)" /></svg></div>
+        <div className="building-columns" aria-hidden="true">{c.pillars.items.map((pillar, i) => <div className="building-bay" key={pillar.name}><div className="building-column"><span className="column-capital" /><span className="column-shaft"><span className="column-ordinal">0{i + 1}</span><i /><i /><i /></span><span className="column-plinth" /></div></div>)}</div>
+      <div className="pillar-panels">{c.pillars.items.map((pillar, i) => <article className="pillar-panel" id={`pillar-${i}`} key={pillar.name} aria-labelledby={`pillar-title-${i}`}>
+        <span className="foundation-number" aria-hidden="true">0{i + 1}</span><h3 className="pillar-word" id={`pillar-title-${i}`}>{pillar.name}</h3>
+        <div className="pillar-meaning"><h4>{pillar.subtitle}</h4><p>{pillar.description}</p></div>
+      </article>)}</div>
+        <div className="building-steps" aria-hidden="true"><i /><i /></div>
+      </div>
+      <div className="foundation-controls"><div className="foundation-nav" role="group" aria-label="Raise a foundation pillar">{c.pillars.items.map((pillar, i) => <button onClick={() => showPillar(i)} key={pillar.name} aria-controls={`pillar-${i}`}><span className="micro" aria-hidden="true">0{i + 1}</span>{pillar.name}</button>)}</div><div className="foundation-directions"><span className="foundation-instruction micro">Scroll to raise the pillars ↓</span><TextLink href="#ecosystem">Explore the ecosystem</TextLink></div></div>
+    </div>
+  </section>;
+}
+
+export function Audience() {
+  const [selected, setSelected] = useState(0);
+  const answer = c.audience.statements[selected];
+  return <section className="audience section-pad" id="find-your-place" aria-labelledby="audience-heading">
+    <SectionHeading id="audience-heading">{c.audience.label}</SectionHeading>
+    <RevealHeading as="p" lines={c.audience.headline} />
+    <p className="section-lead audience-intro">{c.audience.intro}</p>
+    <div className="audience-layout">
+      <div className="audience-start"><div className="audience-statements" role="group" aria-label="Find your starting point">{c.audience.statements.map((statement, i) => <button key={statement.quote} onClick={() => setSelected(i)} aria-pressed={selected === i} aria-controls="audience-answer" className={selected === i ? "is-selected" : ""}><span className="audience-choice-mark" aria-hidden="true">{selected === i ? "↗" : "+"}</span>{statement.quote}</button>)}</div><div className="audience-correction"><span>Founders only.</span><Arrow /><strong>{c.audience.correction}</strong></div></div>
+      <div className="audience-answer" id="audience-answer" aria-live="polite" aria-atomic="true"><p>{answer.answer}</p><TextLink href={answer.href}>{answer.link}</TextLink></div>
+    </div>
+  </section>;
+}
+
+export function Ecosystem() {
+  return <section className="ecosystem section-pad" id="ecosystem" aria-labelledby="ecosystem-heading"><SectionHeading id="ecosystem-heading">{c.ecosystem.label}</SectionHeading><div className="ecosystem-intro"><RevealHeading as="p" lines={c.ecosystem.headline} /><p className="section-lead">{c.ecosystem.description}</p></div><EcosystemMap /><div className="ecosystem-bottom"><span>{c.ecosystem.note}</span><VentureLine variant="resolve" /></div></section>;
+}

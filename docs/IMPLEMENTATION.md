@@ -1,0 +1,51 @@
+# Implementation notes
+
+## Identity audit
+
+The website repository was empty. The supplied identity was located at `C:/Users/Seba/Desktop/WEC Design System`.
+
+The audit included `SKILL.md`, `readme.md`, the original written brand kit, the Instagram creative-direction brief, all token files, logo guidance, drafting specimens, the UI kit, and all supplied raster artwork. `brand-audit.png` is the visual contact sheet used for review.
+
+The identity retains Western Purple `#582C83`, Ivey Green `#034638` as an accent, Space Grotesk display type, and Inter body text. The approved expressive direction adds lavender and deep-purple surfaces, system handwriting for occasional annotations, monospace interface captions, and original SVG sketches. The supplied PNG geometry is unchanged. The four wordmark/lockup files were checked byte-for-byte against the original transparent assets. The app icon is a proportional 192px derivative for delivery; its original source remains in the supplied kit.
+
+The supplied website UI kit explicitly describes itself as speculative and includes unverified dates, membership counts, testimonials, contact details, and partnership language. Those were excluded. This implementation uses the supplied organizational facts and an eight-section architecture, consolidating all three programs into Experience. It says WEC has strong ties to the Morrissette Institute and participates in the ecosystem, without asserting legal partnership, sponsorship, or endorsement.
+
+The direct website brief and approval for a less corporate, more expressive design take precedence over earlier design-system recommendations against parallax, framing, rotation, handwritten notes, or illustration. These additions form an open-studio visual language. Logos themselves are never rotated, recoloured, skewed, or reconstructed. No event photos or member project assets were supplied; the sketches are original editorial illustrations and are not presented as actual member work.
+
+[Filmbot](https://filmbot.com/) was reviewed for scale, pacing, whitespace, and scene-based presentation. No assets, copy, code, or exact compositions were reused.
+
+## Narrative construction
+
+1. **Hero:** the official mark and positioning sit beside a physical purple door and two posted invitations. The door has a frame, window panel, hinges, lever handle, lower panel, and kickplate. Scroll input turns the handle, opens the leaf on its hinge, and enlarges the whole scene around the doorway. The view passes through to the real About section underneath. The notes read “You don’t need a finished idea” and “People to build with.”
+2. **About:** a clear reading column sits beside the saturated $120K+ proof poster, with its attribution adjacent. The proof block aligns with the About heading in the desktop and tablet grid and stacks below the introduction on mobile. A small prompt selector offers three concrete starting questions.
+3. **Experience:** three overlapping windows contain Venture Studio, Founder Labs, and the complete From-The-Field experience. Windows have no internal scroll region. One document lock covers seven positions: Studio, Labs, then the five field perspectives. Covered windows are removed from keyboard focus until active. Studio/Labs use 18px gestures and a 120ms pause; the field uses 3.6px and 60ms. These thresholds require one fifth of the previous input. A retained-input queue lets a longer gesture visit multiple steps, with each state rendered in sequence; pending input is cleared at either endpoint, on navigation, and on release. Fractional input tolerates native float32 rounding. Windows transition in 200ms. The original horizontal field highlights, outline-word depth, and moving guide remain inside the third window, with 140ms horizontal positioning on narrow screens. Its heading restores “03”; window headers show one, two, and three filled dots. All three original program anchors open their respective windows. There is no standalone field section.
+4. **Community:** an illustrated, slightly rotated invitation poster sits beside five selectable gathering formats. Selecting a format reveals a conversational description in a stable response area. These are program descriptions, not scheduled event listings.
+5. **Five Pillars:** Build, Discover, Connect, Explore, and Contribute are the five columns of a fictional pavilion. Tall white columns and purple text sit beneath a purple roof, with capitals, fluted shafts, plinths, and steps continuing the drafting theme. The page locks while each 18px gesture raises the next column in 180ms, with a 100ms pause between steps. Scrolling backward lowers them in reverse. Wide, tall layouts place all descriptions on their columns; layouts below 1200px wide or at most 860px tall show the selected description underneath. Native buttons jump to a pillar. Leaving the sequence completes the building; disabling motion shows every description. The roof label “The collective,” standing-pillar counter, and “Our common ground” band are removed.
+6. **Ecosystem:** a responsive grid connects WEC to Morrissette, then branches to all six opportunities through visible arrowheads. Cards and connections share the same camera and scale gently from .96 to 1 together, preserving their alignment during scrolling. Mobile stacks WEC above Morrissette and uses a vertical trunk with right-pointing arrows into each destination. The map retains the supplied strong-ties wording.
+7. **Audience:** starting points are selectable, with a concise explanation on an offset paper surface and a working anchor to the relevant experience.
+8. **Join:** a welcoming badge and more conversational invitation sit inside the assembling frame. The primary action has a tactile press response. Motion settles before the visitor reaches the two configured actions.
+
+The recurring Venture Line is implemented as SVG path segments that reappear as frames, guides, branches, and the final composition. It intentionally leaves space between appearances.
+
+The proof's horizontal and vertical measurement guides travel at different rates before aligning around the $120K+ figure; the heading and proof block retain their aligned top edges. Experience windows arrive from below with perspective and a slight tilt, settle flat for reading, and recede behind the next window. From-The-Field pairs each active cell with an oversized outline word drifting opposite the foreground guide. The faster highlight timing and fixed document position remain intact.
+
+Pillar copy is unchanged in meaning: these are the club's foundational principles. The presentation keeps all five equally important and preserves the original pillar anchor IDs. The building is a visual metaphor, not a claim about a physical WEC location.
+
+Section orientation uses descriptive `h2` headings instead of numbered index labels. Program names lead their compositions at display scale, with the editorial slogans beneath them. Other sections pair a visible section name with their larger statement. The slogans are display paragraphs, so the document outline identifies the actual sections.
+
+Lead descriptions sit with their headings at 20–24px on desktop and 18px on mobile. Foundation descriptions use 13–15px body copy depending on viewport size. Short desktop scenes reduce decorative scale and spacing to fit the complete interaction while preserving full motion. Reading mode exposes all content in normal document flow.
+
+## Engineering decisions
+
+- Next.js App Router, TypeScript, and plain token-based CSS; no component-template dependency.
+- The complete semantic page is prerendered. Interactive islands share a client shell; the animation module is dynamically imported only when motion is enabled.
+- GSAP contexts and match-media contexts own the timelines. Reverting them removes pin wrappers and inline transforms. Event listeners, animation frames, observers, the GSAP ticker callback, and Lenis are explicitly cleaned up.
+- The hero uses a pin without extra spacing, allowing About to scroll underneath it. The zoom pivot and final scale are measured from the door's layout coordinates and recalculated at responsive breakpoints. The aperture and surrounding wall become transparent as the frame passes outside the viewport. The hero releases pointer events before arrival, so controls in About remain usable. Door, camera, and foundation transforms are explicitly cleared during teardown. The door illustration is hidden from assistive technology; the invitation notes remain semantic text and a real anchor.
+- Lenis smooths wheel input with a 1.7 multiplier and synchronizes touch input with a 1.5 multiplier. Both use .18 interpolation; anchor transitions take 650ms. Experience (including From-The-Field) and the pavilion stop Lenis and lock document overflow while consuming input locally. Their thresholds operate on raw gestures, independent of the page multipliers. Automatic entry requires a recent scroll gesture, so anchor jumps and focus changes do not unexpectedly activate a sequence. Sequence boundaries, Escape, outside focus, links, and teardown restore page scrolling. Internal links retain URL hashes and move focus to the destination. Direct entry, browser navigation, and font-driven measurements are handled after layout refresh.
+- Dialogs use native modal semantics with an explicit keyboard focus loop and focus restoration. Opening a dialog suspends Lenis.
+- Full motion is the default, per the follow-up request. System settings and legacy saved preferences do not silently disable it; the footer provides a persistent manual opt-out. All meaningful content has a linear fallback. The door pins on screens at least 600px tall and on desktop layouts down to 500px tall. Smaller heights use normal flow. The static door remains visible when animations are disabled.
+- There is no WebGL, custom cursor, invented photography, placeholder speaker, analytics service, form backend, or unsupported outbound destination.
+
+## Before public deployment
+
+Supply the real membership and event URLs, set the public origin, and rebuild. The website does not require a database. A Next.js-compatible host can run the production build. No public deployment was performed as part of the local implementation.

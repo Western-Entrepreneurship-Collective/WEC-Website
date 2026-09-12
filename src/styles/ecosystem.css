@@ -1,0 +1,48 @@
+/* Cards and their arrows share one grid, so every connection stays attached. */
+.ecosystem-map { position: relative; height: auto; margin-top: 40px; padding: 30px; border: 1px solid var(--purple-muted); border-radius: 12px; background: var(--paper); }
+.ecosystem-camera { display: grid; grid-template-columns: minmax(0, .9fr) 64px minmax(0, 1fr) minmax(0, 1.5fr); align-items: center; width: 100%; height: auto; position: relative; }
+.ecosystem-world { position: static; grid-column: 1 / -1; margin-bottom: 30px; font-size: 10px; color: var(--green); }
+.ecosystem-wec { position: relative; inset: auto; padding: 25px; background: white; border: 1px solid var(--purple-muted); border-radius: 5px; }
+.ecosystem-wec .micro { color: var(--green); font-size: 9px; }
+.ecosystem-wec .wec-logo { width: 100%; max-width: 185px; margin-top: 22px; }
+.ecosystem-wec::before { content: none; }
+.ecosystem-link { width: 100%; padding-inline: 7px; }
+.ecosystem-arrow { display: block; width: 100%; height: 24px; overflow: visible; color: var(--purple); }
+.ecosystem-arrow path { stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ecosystem-centre { position: relative; inset: auto; width: auto; margin: 0; padding: 26px 22px; border: 2px solid var(--purple); border-radius: 5px; background: var(--lavender); }
+.ecosystem-centre > .micro { display: block; color: var(--green); font-size: 9px; margin-bottom: 14px; }
+.ecosystem-centre h3 { font-size: clamp(23px, 2.3vw, 35px); font-weight: 500; line-height: 1.15; letter-spacing: -.04em; }
+.ecosystem-centre::after { content: ""; position: absolute; left: 100%; top: 50%; width: 28px; border-top: 2px solid var(--purple); }
+.ecosystem-nodes { display: grid; grid-template-columns: 1fr; padding: 0; }
+.ecosystem-route { position: relative; display: grid; grid-template-columns: 80px minmax(0, 1fr); align-items: center; padding-block: 6px; }
+.ecosystem-route::before { content: ""; position: absolute; left: 26px; top: 0; bottom: 0; border-left: 2px solid var(--purple); }
+.ecosystem-route:first-child::before { top: 50%; }
+.ecosystem-route:last-child::before { bottom: 50%; }
+.ecosystem-connector { padding-left: 26px; padding-right: 4px; position: relative; }
+.ecosystem-node { position: relative; inset: auto; display: flex; align-items: center; min-height: 60px; margin: 0; padding: 15px 18px; background: white; border: 1px solid var(--purple-muted); border-radius: 4px; font-size: 16px; line-height: 1.45; }
+[data-spatial-story] .ecosystem-map { perspective: none; overflow: visible; }
+[data-spatial-story] .ecosystem-camera { transform-origin: center; }
+@media (min-width: 760px) and (max-width: 1023px) {
+  .ecosystem-map { padding: 22px; }.ecosystem-camera { grid-template-columns: minmax(0, .9fr) 48px minmax(0, 1fr) minmax(0, 1.5fr); }
+  .ecosystem-wec { padding: 16px; }.ecosystem-centre { padding: 20px 15px; }
+  .ecosystem-route { grid-template-columns: 56px minmax(0, 1fr); }.ecosystem-node { font-size: 14px; padding: 12px; }
+  .ecosystem-centre h3 { font-size: 23px; }
+}
+@media (max-width: 759px) {
+  .ecosystem-map { padding: 20px 16px; margin-top: 30px; border: 1px solid var(--purple-muted); }
+  .ecosystem-camera { display: flex; flex-direction: column; align-items: stretch; }
+  .ecosystem-world { margin-bottom: 22px; font-size: 8px; }
+  .ecosystem-wec { padding: 20px; }.ecosystem-wec .wec-logo { width: 155px; margin-top: 16px; }
+  .ecosystem-link { height: 52px; display: flex; align-items: center; justify-content: center; }
+  .ecosystem-link .ecosystem-arrow { width: 48px; height: 24px; transform: rotate(90deg); }
+  .ecosystem-centre { padding: 20px; margin: 0; border: 2px solid var(--purple); }
+  .ecosystem-centre h3 { font-size: 27px; }.ecosystem-centre > .micro { margin-bottom: 10px; }
+  .ecosystem-centre::after { left: 24px; top: 100%; width: 0; height: 25px; border-top: 0; border-left: 2px solid var(--purple); }
+  .ecosystem-nodes { padding: 0; margin-top: 24px; }
+  .ecosystem-route { grid-template-columns: 57px minmax(0, 1fr); padding-block: 5px; }
+  .ecosystem-route:first-child::before { top: 0; }
+  .ecosystem-node { font-size: 15px; min-height: 56px; padding: 13px 14px; margin: 0; }
+}
+@media print {
+  .ecosystem-camera { transform: none !important; opacity: 1 !important; }
+}

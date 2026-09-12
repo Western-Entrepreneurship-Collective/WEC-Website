@@ -1,0 +1,52 @@
+/* Decorative depth layers are enabled only after the motion engine is ready. */
+.motion-art { display: none; pointer-events: none; user-select: none; }
+[data-spatial-story] .motion-art { display: block; }
+
+.about-evidence { position: relative; isolation: isolate; }
+.about-evidence > :not(.proof-guides) { position: relative; z-index: 1; }
+.proof-guides { position: absolute; inset: -18px -12px -20px -20px; color: var(--purple); opacity: .24; }
+.proof-guide-horizontal { position: absolute; bottom: 0; left: 0; width: 100%; border-bottom: 1px solid currentColor; }
+.proof-guide-horizontal .measure-ticks { justify-content: space-between; }
+.proof-guide-vertical { position: absolute; top: 0; bottom: 0; left: 0; border-left: 1px solid currentColor; }
+.proof-guide-vertical .measure-ticks { height: 100%; flex-direction: column; justify-content: space-between; align-items: start; }
+.proof-guide-vertical .measure-ticks i { width: 4px; height: 1px; }
+.proof-guide-vertical .measure-ticks i:nth-child(4n+1) { width: 11px; }
+.proof-guide-corner { position: absolute; width: 45px; height: 45px; top: 0; right: 0; border-top: 1px solid var(--green); border-right: 1px solid var(--green); }
+
+[data-scroll-scenes] .experience-windows { perspective: 1400px; perspective-origin: 50% 0; }
+[data-scroll-scenes] .program-window { backface-visibility: hidden; }
+
+.field-sequence { isolation: isolate; }
+.field-depth { position: absolute; inset: -36px 0 -12px; overflow: clip; z-index: -1; perspective: 1000px; }
+.field-echo { position: absolute; inset: 0; }
+.field-echo-word { position: absolute; left: var(--gutter); top: 0; font-family: var(--display); font-size: clamp(110px, 15vw, 250px); line-height: 1; letter-spacing: -.055em; text-transform: uppercase; white-space: nowrap; color: transparent; -webkit-text-stroke: 1px #ffffff38; visibility: hidden; }
+.field-focus-line { position: absolute; left: var(--gutter); top: 16px; bottom: 12px; width: 48px; border-left: 1px solid #ffffff88; }
+.field-focus-line i { position: absolute; left: -8px; width: 24px; height: 1px; background: #ffffff88; }
+.field-focus-line i:first-child { top: 0; }.field-focus-line i:last-child { bottom: 0; }
+.field-person { background: var(--purple); }
+
+
+.ecosystem-camera { position: relative; width: 100%; height: 100%; }
+[data-spatial-story] .ecosystem-map { perspective: 1200px; overflow: clip; overflow-clip-margin: 18px; }
+[data-spatial-story] .ecosystem-camera { transform-origin: 18% 52%; }
+
+[data-spatial-story] .join-composition { perspective: 1100px; isolation: isolate; }
+.join-fragments { position: absolute; inset: 0; transform-style: preserve-3d; z-index: -1; }
+.join-fragment { position: absolute; width: 62px; height: 62px; border-color: var(--purple-tint); border-style: solid; border-width: 0; }
+.join-fragment.tl { top: 0; left: 0; border-top-width: 1px; border-left-width: 1px; }
+.join-fragment.tr { top: 0; right: 0; border-top-width: 1px; border-right-width: 1px; }
+.join-fragment.bl { bottom: 0; left: 0; border-bottom-width: 1px; border-left-width: 1px; }
+.join-fragment.br { bottom: 0; right: 0; border-bottom-width: 1px; border-right-width: 1px; }
+.join-fragment span { position: absolute; height: 1px; width: 32px; top: 15px; left: -16px; background: currentColor; opacity: .55; }
+
+@media (max-width: 759px) {
+  .proof-guides { inset: -12px -2px -18px -12px; }
+  .field-echo-word { font-size: 104px; }
+  .field-depth { inset-block: -24px -8px; }
+  .ecosystem-camera { height: auto; }
+  .join-fragment { width: 36px; height: 36px; }
+}
+@media print {
+  .motion-art { display: none !important; }
+  .ecosystem-camera, .ecosystem-node, .ecosystem-wec, .ecosystem-centre { transform: none !important; opacity: 1 !important; visibility: visible !important; }
+}

@@ -1,0 +1,17 @@
+:root {
+  --purple: #582c83;
+  --green: #034638;
+  --white: #ffffff;
+  --paper: #f8f7f9;
+  --line: #e3e0e8;
+  --muted: #59545f;
+  --purple-hover: #472369;
+  --purple-tint: #e6ddf0;
+  --purple-muted: #cbb9df;
+  --display: "Space Grotesk Variable", "Helvetica Neue", Arial, sans-serif;
+  --body: "Inter Variable", "Helvetica Neue", Arial, sans-serif;
+  --gutter: clamp(24px, 4.2vw, 80px);
+  --nav-height: 88px;
+  --section-space: clamp(88px, 10vw, 160px);
+  --ease: cubic-bezier(.2, .8, .2, 1);
+}
