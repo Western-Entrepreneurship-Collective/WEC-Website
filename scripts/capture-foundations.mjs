@@ -11,9 +11,9 @@ for (const [width, height] of [[1440, 1000], [1024, 768], [390, 844], [320, 740]
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('http://localhost:3000/#from-the-field', { waitUntil: 'networkidle' });
   await page.waitForTimeout(700);
-  for (const i of [0, 4]) {
+  for (const i of [0, 2]) {
     await page.locator('.experience').evaluate((element, index) => element.dispatchEvent(new CustomEvent('wec:person', { detail: index })), i);
-    await page.waitForTimeout(350);
+    await page.waitForTimeout(650);
     await page.screenshot({ path: `artifacts/scenes-${engine}-${width}-field-${i}.png` });
   }
   const field = await page.locator('#from-the-field').evaluate(element => {

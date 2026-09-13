@@ -43,13 +43,16 @@ Until official destinations are configured, the calls to action open accessible 
 | `src/styles/globals.css` | Editorial compositions, mobile layouts, and linear fallbacks |
 | `src/styles/spatial.css` | Decorative depth layers and responsive perspective |
 | `src/styles/studio.css` | Open-studio art direction, foundation structure, posters, and responsive compositions |
-| `src/styles/door.css` | Physical door, posted notes, and responsive hero layout |
+| `src/styles/door.css` | Branded physical door and responsive hero layout |
 | `src/styles/scenes.css` | Embedded field highlights and the responsive five-column pavilion |
+| `src/styles/editorial.css` | Photography, green accents, aligned About columns, and inline gathering descriptions |
+| `src/styles/ecosystem.css` | Aligned ecosystem cards and measured connections |
+| `src/styles/mobile.css` | Phone spacing, typography, tap targets, and short-screen reading layouts |
 | `src/components/sections/` | Eight sections, with all three programs inside Experience |
 | `src/components/graphics/DraftGraphics.tsx` | Official logos and reusable drafting graphics |
 | `src/components/graphics/StoryLayers.tsx` | Proof guides, field echoes, and final frame fragments |
 | `src/components/graphics/StudioGraphics.tsx` | Original sketches, annotation marks, and interactive starting prompts |
-| `src/components/graphics/StudioDoor.tsx` | Door frame, hinged panel, handle, interior, and two invitation notes |
+| `src/components/graphics/StudioDoor.tsx` | Door frame, branded hinged panel, handle, and interior |
 | `src/lib/motion/story.ts` | Scroll scenes, Venture Line, pinning, pointer response, and cleanup |
 | `src/lib/motion/spatial.ts` | Scroll-driven doorway, proof, ecosystem, and invitation effects |
 | `src/lib/motion/programScenes.ts` | Overlapping program windows and sequential field highlights |
@@ -57,18 +60,19 @@ Until official destinations are configured, the calls to action open accessible 
 | `src/lib/motion/scrollSequence.ts` | Local gesture handling and document scroll locking |
 | `src/lib/motion/preferences.ts` | Full-motion default and saved visitor opt-out |
 | `public/brand/` | WEC artwork copied from the supplied kit |
+| `public/images/` | Four original photographs supplied for the website |
 
 The original WEC mark is an image, never retypeset. Font packages include their OFL licences. Artwork provenance and implementation decisions are documented in `docs/IMPLEMENTATION.md`.
 
 ## Motion and accessibility
 
-The hero contains a purple door with a hinged panel and handle. Scrolling opens the door, enlarges the scene around the opening, and reveals the actual About section underneath. The motion reverses when scrolling back. Two posted notes invite visitors to bring unfinished ideas and find people to build with. The remaining story uses animated proof guides, program-window depth, field highlights, a drawing community poster, a rising five-column pavilion, an arrowed ecosystem map, and an assembling invitation frame.
+The larger purple door carries the official logo and headline on its face. Scrolling opens it outward in front of the frame, enlarges the scene around the opening, and reveals the real About section underneath. Reverse scrolling closes it. The outside caption and posted notes are removed. About's reading column and proof poster share the same height on wider screens; small green accents continue throughout the page. The former Rooted in Western's band is removed.
 
-Full motion is the default, including when the browser reports a reduced-motion system setting. The three overlapping WEC Experience windows present each program in plain text. Venture Studio and Founder Labs diagrams have been removed. Windows have no internal scrolling: wheel, touch, and keyboard input advance directly between programs while the document stays at the same position. Experience needs one fifth of its previous scroll input: 18px between programs and 3.6px per field highlight, with 120ms/60ms settling intervals. Input received during transitions is retained. The five From-The-Field perspectives live inside the third window, whose heading includes “03”; the three window headers fill one, two, and three dots respectively. There is no separate From-The-Field section. Program buttons and the original program URL anchors open the corresponding window directly. Elsewhere, wheel input travels 1.7 times farther and touch input 1.5 times farther, with quicker smoothing and anchor transitions.
+Full motion is the default, including when the browser reports a reduced-motion system setting. The three overlapping Experience windows have no internal scrolling. Venture Studio and Founder Labs pair their copy with the supplied workspace and workshop photos. One document lock covers five positions: Studio, Labs, then Founders, Investors, and Alumni. Each Field perspective has two sentences beneath its name. Operators and Professionals are removed. Experience retains four times its previous scroll input: 72px between programs and 14.4px per highlight, with 480ms/240ms settling intervals and 800ms window transitions. Input during transitions is retained; 172.8px completes the sequence. All three headings include their number, and headers fill one, two, and three dots. The original program anchors open their windows directly. Elsewhere, wheel and touch travel half as far as before, using multipliers .85 and .75 and 1.3-second anchor transitions.
 
-The five principles support a fictional pavilion with a drawn roof, capitals, tall white fluted columns, purple text, and steps. Scroll input raises the columns sequentially using an 18px threshold, 100ms pause, and 180ms rise while the document stays fixed. Wide, tall screens show the descriptions on the columns; smaller screens show the selected description beneath the building. The roof's “The collective” label, standing-pillar counter, and “Our common ground” band have been removed. Both the Experience and foundation sequences release scrolling at their boundaries, on Escape, on outside focus, or through navigation links. The ecosystem map uses a WEC → Morrissette arrow and six arrowed branches; its cards and connections move together to preserve alignment.
+Community pairs the conversation photo with the supplied portrait of a presenter. Each gathering format expands its description immediately beneath its button and can be collapsed. The five principles support a fictional pavilion: a white roof, narrow white shafts, flared capitals and bases, and white steps frame centered purple copy. The former lavender bay backgrounds are removed. The document stays fixed during each 36px gesture, 200ms pause, and 360ms rise. Layouts at least 1200px wide and 960px tall put descriptions on the columns; smaller screens show the selected description below. The ecosystem uses eight aligned cards and eleven consistent connections, with no orbit lines or dotted background. Mobile uses two compact card columns with arrows routed around their outer edges.
 
-These sequences work on desktop and mobile. Narrow screens bring the active From-The-Field cell into view horizontally. The hero is the only ScrollTrigger pin: on screens at least 600px tall, or at least 960px wide and 500px tall. Its pin adds no extra document spacing, so About approaches behind the doorway as the reader enters. Shorter screens use a flowing scene. Turning motion off restores the static door, exposes all five pillar descriptions, removes locks and pins, and saves the preference. Starting prompts and community-format controls use native buttons and announce updated content. All content is rendered on the server. The Morrissette ecosystem appears before “Who WEC is for.”
+Experience and foundation sequences release scrolling at their boundaries, on Escape, on outside focus, or through links. They run on screens at least 640px tall, or desktop layouts at least 960px wide and 500px tall. Shorter screens keep all programs and pillar descriptions in document flow while retaining decorative motion. Rotating a phone releases the lock and restores the appropriate layout. Mobile also uses larger tap targets, tighter section spacing, clearer Experience copy, a compact photo collage, and anchor offsets measured from the header. Narrow screens bring the active Field cell into view horizontally. The hero is the only ScrollTrigger pin, enabled on screens at least 600px tall or at least 960px wide and 500px tall. Its pin adds no extra document spacing. Shorter screens use normal flow. The footer's motion toggle restores a static door, exposes all Field and pillar descriptions, removes locks and pins, and saves the preference. All meaningful content is server rendered. The Morrissette ecosystem remains before Who WEC is for.
 
 ## Verification
 
@@ -82,4 +86,4 @@ npm run test:e2e
 
 The Playwright suite runs against production on port 3001 and covers five browser/device profiles. It checks narrative order, links, assets, audience interactions, dialogs, focus, reduced motion, anchor restoration, scroll-responsive depth, and animation cleanup. Axe audits run on the complete reduced-motion page.
 
-Additional visual checks are in `scripts/`. `responsive-audit.mjs` expects production on port 3001; the capture scripts expect development on port 3000. They save screenshots to ignored `artifacts/`. See `docs/QA.md` for the verified results and practical limits.
+Additional visual checks are in `scripts/`. `responsive-audit.mjs` expects production on port 3001; the capture scripts and mobile-audit.mjs expect development on port 3000. They save screenshots to ignored `artifacts/`. See `docs/QA.md` for the verified results and practical limits.

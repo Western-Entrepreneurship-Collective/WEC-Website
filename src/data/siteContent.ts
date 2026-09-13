@@ -26,11 +26,6 @@ export const siteContent = {
   hero: {
     index: "The door is open",
     location: "Western University · London, ON",
-    notice: { label: "Pinned for you", title: "You don’t need a finished idea.", body: "Bring a question. Bring a rough draft. Bring yourself." },
-    invitationLabel: "On the other side",
-    note: "People to build with.",
-    invitation: "Your next step starts with a conversation.",
-    cta: "Step inside",
     footer: "There’s a place for you here.",
   },
   about: {
@@ -41,7 +36,6 @@ export const siteContent = {
     evidence: "$120K+",
     evidenceLabel: "In grants & investment",
     evidenceNote: "Collectively secured by the student founders behind WEC.",
-    ecosystem: "Rooted in Western’s entrepreneurship ecosystem, with strong ties to the Morrissette Institute.",
     prompts: ["What’s one problem you keep noticing?", "What would you try if it didn’t have to be perfect?", "What’s the thing you could use a second brain on?"],
   },
   experience: {
@@ -52,7 +46,7 @@ export const siteContent = {
     programs: [
       { number: "01", name: "Venture Studio", description: "Put your idea to work.", overview: "Recurring venture-building and accountability sessions. Share progress, work through challenges, and find your next step with other builders.", note: "Bring what you’re working on.", href: "#venture-studio" },
       { number: "02", name: "Founder Labs", description: "Make the call. Then make it better.", overview: "Interactive workshops built around real entrepreneurial decisions. Work on your venture or a structured scenario, and leave with something you can use.", note: "Learn through the work.", href: "#founder-labs" },
-      { number: "03", name: "From-The-Field", description: "Learn from the people living it.", overview: "Panels, fireside chats, and honest conversations with founders, operators, investors, alumni, and professionals about the reality of building a company.", note: "Experience, without the filter.", href: "#from-the-field" },
+      { number: "03", name: "From-The-Field", description: "Learn from the people living it.", overview: "Panels, fireside chats, and honest conversations with founders, investors, and alumni about the reality of building a company.", note: "Experience, without the filter.", href: "#from-the-field" },
     ],
   },
   studio: {
@@ -82,7 +76,12 @@ export const siteContent = {
     headline: ["Beyond the", "classroom."],
     description: "The decisions, risks, failures, and unexpected opportunities that don’t fit neatly into a slide deck.",
     details: "Panels, fireside chats, and honest conversations with people who know what building a company actually feels like.",
-    people: ["Founders", "Operators", "Investors", "Alumni", "Professionals"],
+    people: ["Founders", "Investors", "Alumni"],
+    personNotes: [
+      "Hear how an idea became a venture, including the turns nobody planned for. Bring your questions about starting, stumbling, and moving forward.",
+      "Explore what investors look for beyond the pitch deck. Get a clearer view of the questions, trade-offs, and decisions behind a potential investment.",
+      "Meet people whose entrepreneurial journeys started where you are now. Learn what they tried, what surprised them, and what they would do differently.",
+    ],
     annotation: "Experience, without the filter.",
   },
   community: {

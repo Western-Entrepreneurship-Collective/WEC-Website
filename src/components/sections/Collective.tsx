@@ -1,19 +1,19 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Image from "next/image";
 import { Arrow, VentureLine } from "@/components/graphics/DraftGraphics";
 import { EcosystemMap } from "@/components/graphics/EcosystemMap";
 import { RevealHeading, SectionHeading, TextLink } from "@/components/ui/Editorial";
 import { siteContent as c } from "@/data/siteContent";
-import { Spark, TableSketch } from "@/components/graphics/StudioGraphics";
 
 export function Community() {
   const [selected, setSelected] = useState(0);
   return <section className="community section-pad" id="community" aria-labelledby="community-heading">
     <SectionHeading id="community-heading">{c.community.label}</SectionHeading><div className="community-intro"><RevealHeading as="p" lines={c.community.headline} /><p className="section-lead">{c.community.description}</p></div>
     <div className="community-wall">
-      <div className="community-poster"><span className="micro">An open invitation</span><p>Find your<br /><em>people.</em></p><TableSketch /><span className="poster-caption">There’s room at the table.</span><Spark /></div>
-      <div className="community-formats"><span className="micro">Different ways to get together</span><div className="community-choices" role="group" aria-label="Community gatherings">{c.community.events.map((event, i) => <button key={event} onClick={() => setSelected(i)} aria-pressed={selected === i} aria-controls="community-answer"><span className="micro" aria-hidden="true">0{i + 1}</span><span>{event}</span><Arrow diagonal /></button>)}</div><div className="community-answer" id="community-answer" aria-live="polite" aria-atomic="true"><span className="community-answer-mark" aria-hidden="true">↳</span><p>{c.community.eventNotes[selected]}</p></div><TextLink href="#join">Come find your people</TextLink></div>
+      <div className="community-photo-wall"><figure className="community-poster"><Image src="/images/community-conversation.png" alt="Three people sharing a conversation at an entrepreneurship gathering." fill sizes="(max-width: 759px) 85vw, 40vw" /><figcaption>Find your<br /><em>people.</em></figcaption></figure><figure className="community-photo-detail"><Image src="/images/community-speaker.jpg" alt="A presenter speaking into a microphone beside purple, green, and gold balloons." fill sizes="(max-width: 759px) 40vw, 20vw" /><figcaption className="micro">Start with hello.</figcaption></figure></div>
+      <div className="community-formats"><span className="micro">Different ways to get together</span><div className="community-choices" role="group" aria-label="Community gatherings">{c.community.events.map((event, i) => <div className="community-choice" key={event}><button onClick={() => setSelected(selected === i ? -1 : i)} aria-expanded={selected === i} aria-controls={`community-answer-${i}`}><span className="micro" aria-hidden="true">0{i + 1}</span><span>{event}</span><Arrow diagonal /></button><div className="community-answer" id={`community-answer-${i}`} hidden={selected !== i}><span className="community-answer-mark" aria-hidden="true">↳</span><p>{c.community.eventNotes[i]}</p></div></div>)}</div><TextLink href="#join">Come find your people</TextLink></div>
     </div>
   </section>;
 }
@@ -30,7 +30,7 @@ export function Pillars() {
     <div className="foundation-scene">
       <div className="foundation-scene-heading"><p>{c.pillars.introduction}</p></div>
       <div className="foundation-structure">
-        <div className="building-roof" aria-hidden="true"><svg viewBox="0 0 1200 130" preserveAspectRatio="none" fill="none"><path d="M10 102 600 8l590 94v18H10Z" fill="var(--purple)" stroke="var(--purple-muted)" strokeWidth="2" /><path d="m76 93 524-72 524 72H76Z" fill="var(--ink)" stroke="var(--purple-muted)" /><path d="M0 120h1200v10H0Z" fill="var(--white)" /><path d="M20 105h1160M600 8v13" stroke="var(--purple-muted)" /></svg></div>
+        <div className="building-roof" aria-hidden="true"><svg viewBox="0 0 1200 130" preserveAspectRatio="none" fill="none"><path d="M10 102 600 8l590 94v18H10Z" fill="white" stroke="#dedce2" strokeWidth="2" /><path d="m76 93 524-72 524 72H76Z" fill="white" stroke="#dedce2" /><path d="M0 120h1200v10H0Z" fill="white" /><path d="M20 105h1160M600 8v13" stroke="#dedce2" /></svg></div>
         <div className="building-columns" aria-hidden="true">{c.pillars.items.map((pillar, i) => <div className="building-bay" key={pillar.name}><div className="building-column"><span className="column-capital" /><span className="column-shaft"><span className="column-ordinal">0{i + 1}</span><i /><i /><i /></span><span className="column-plinth" /></div></div>)}</div>
       <div className="pillar-panels">{c.pillars.items.map((pillar, i) => <article className="pillar-panel" id={`pillar-${i}`} key={pillar.name} aria-labelledby={`pillar-title-${i}`}>
         <span className="foundation-number" aria-hidden="true">0{i + 1}</span><h3 className="pillar-word" id={`pillar-title-${i}`}>{pillar.name}</h3>

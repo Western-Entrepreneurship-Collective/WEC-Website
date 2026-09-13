@@ -1,6 +1,7 @@
 import gsap from "gsap";
 import type Lenis from "lenis";
 import { createScrollSequence, type ScrollSequence } from "./scrollSequence";
+import { PAGE_SCROLL_SLOWDOWN } from "./pacing";
 
 export function setupFoundationScene(root: HTMLElement, lenis: Lenis, controls: {
   canEnter: () => boolean;
@@ -14,7 +15,7 @@ export function setupFoundationScene(root: HTMLElement, lenis: Lenis, controls: 
   const buttons = [...section.querySelectorAll<HTMLButtonElement>(".foundation-nav button")];
   const roof = section.querySelector<HTMLElement>(".building-roof")!;
   const instruction = section.querySelector<HTMLElement>(".foundation-instruction")!;
-  const compact = matchMedia("(max-width: 1199px), (max-height: 860px)").matches;
+  const compact = matchMedia("(max-width: 1199px), (max-height: 959px)").matches;
   section.dataset.sequence = "true";
 
   function show(raised: number, immediate = false) {
@@ -25,21 +26,21 @@ export function setupFoundationScene(root: HTMLElement, lenis: Lenis, controls: 
       column.classList.toggle("is-raised", i < raised);
       const pose = { yPercent: i < raised ? 0 : 103 };
       if (immediate) gsap.set(column, pose);
-      else gsap.to(column, { ...pose, duration: .18, ease: "power2.out", overwrite: true });
+      else gsap.to(column, { ...pose, duration: .18 * PAGE_SCROLL_SLOWDOWN, ease: "power2.out", overwrite: true });
       const visible = compact ? i === selected : i < raised;
       const textPose = { autoAlpha: visible ? 1 : 0, y: visible ? 0 : 16 };
       if (immediate) gsap.set(panels[i], textPose);
-      else gsap.to(panels[i], { ...textPose, duration: .18, overwrite: true });
+      else gsap.to(panels[i], { ...textPose, duration: .18 * PAGE_SCROLL_SLOWDOWN, overwrite: true });
       if (i === selected && raised > 0) buttons[i].setAttribute("aria-current", "true");
       else buttons[i].removeAttribute("aria-current");
     });
-    gsap.to(roof, { opacity: raised === 5 ? 1 : .65, duration: immediate ? 0 : .2, overwrite: true });
+    gsap.set(roof, { opacity: 1 });
   }
   show(0, true);
   const sequence = createScrollSequence({
     root, section, scene, lenis, ...controls,
     start: () => `top ${parseFloat(getComputedStyle(root).getPropertyValue("--nav-height")) + 14}px`,
-    count: 6, onChange: raised => show(raised), gestureThreshold: 18, cooldownMs: 100,
+    count: 6, onChange: raised => show(raised), gestureThreshold: 18 * PAGE_SCROLL_SLOWDOWN, cooldownMs: 100 * PAGE_SCROLL_SLOWDOWN,
     onRelease: () => show(5),
   });
   const onPillar = (event: Event) => {

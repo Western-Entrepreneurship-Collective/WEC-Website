@@ -19,14 +19,14 @@ export function setupSpatialStory(root: HTMLElement, desktop: boolean, wide: boo
   // The actual About section travels underneath the opening. Removing the
   // aperture at the end reveals that content without a duplicate landing scene.
   doorway.fromTo(find(".door-handle"), { rotation: 0 }, { rotation: -24, duration: .12, ease: "power2.out" }, .01)
-    .fromTo(find(".door-leaf"), { transformPerspective: 1100, rotationY: -12 }, { rotationY: -88, duration: .5, ease: "power2.inOut" }, .04)
+    .fromTo(find(".door-leaf"), { transformPerspective: 1400, z: 16, rotationY: 0 }, { transformPerspective: 1400, z: 16, rotationY: -108, duration: .6, ease: "power2.inOut" }, .04)
     .fromTo(room, { scale: 1, x: 0, y: 0, transformOrigin: () => `${pivot().x}px ${pivot().y}px` }, {
       scale: () => Math.max(stage.clientWidth / (frame.clientWidth - 28), (innerHeight - navHeight()) / (frame.clientHeight - 20)) * 1.25,
       x: () => stage.clientWidth / 2 - room.offsetLeft - pivot().x,
       y: () => (innerHeight - navHeight()) / 2 - room.offsetTop - pivot().y,
       duration: .84, ease: "power2.inOut",
-    }, .16)
-    .fromTo(all(".hero-copy, .door-notes, .door-coordinate, .door-floor, .hero-meta, .hero-foot"), { autoAlpha: 1 }, { autoAlpha: 0, duration: .2, immediateRender: false }, .18)
+    }, .2)
+    .fromTo(all(".door-coordinate, .door-floor, .hero-meta, .hero-foot"), { autoAlpha: 1 }, { autoAlpha: 0, duration: .2, immediateRender: false }, .18)
     .to(find(".door-interior"), { opacity: 0, duration: .16 }, .5)
     .to(find(".door-leaf"), { opacity: 0, duration: .18 }, .64)
     .to(find(".door-aperture"), { opacity: 0, duration: .18 }, .6)
@@ -61,6 +61,6 @@ export function setupSpatialStory(root: HTMLElement, desktop: boolean, wide: boo
   });
   join.fromTo(root.querySelectorAll(".join-frame .registration"), { opacity: 0, scale: .5 }, { opacity: 1, scale: 1, duration: .2 }, .85);
 
-  gsap.fromTo(find(".community-poster"), { rotation: -5, y: 55 }, { rotation: -2, y: 0, ease: "power2.out", scrollTrigger: { trigger: find(".community-wall"), start: "top 90%", end: "top 35%", scrub: .5 } });
-  gsap.fromTo(root.querySelectorAll(".table-sketch path"), { strokeDasharray: 1, strokeDashoffset: 1, attr: { pathLength: 1 } }, { strokeDashoffset: 0, stagger: .1, ease: "none", scrollTrigger: { trigger: find(".community-poster"), start: "top 80%", end: "center 45%", scrub: .5 } });
+  gsap.fromTo(find(".community-poster"), { rotation: -3, y: 35 }, { rotation: -1, y: 0, ease: "power2.out", scrollTrigger: { trigger: find(".community-wall"), start: "top 90%", end: "top 35%", scrub: .5 } });
+  gsap.fromTo(find(".community-photo-detail"), { rotation: 7, y: 55 }, { rotation: 3, y: -12, ease: "power2.out", scrollTrigger: { trigger: find(".community-wall"), start: "top 85%", end: "center 50%", scrub: .5 } });
 }

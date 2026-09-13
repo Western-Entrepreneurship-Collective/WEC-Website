@@ -5,6 +5,7 @@ import { setupProgramScenes } from "./programScenes";
 import type { ScrollSequence } from "./scrollSequence";
 import { setupSpatialStory } from "./spatial";
 import { setupFoundationScene } from "./foundationScene";
+import { PAGE_SCROLL_SLOWDOWN } from "./pacing";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -17,7 +18,7 @@ export function setupStory(root: HTMLDivElement) {
   let experienceSequence: ScrollSequence | undefined;
   let foundationSequence: ScrollSequence | undefined;
   let navigating = false;
-  const lenis = new Lenis({ lerp: .18, wheelMultiplier: 1.7, touchMultiplier: 1.5, syncTouch: true, syncTouchLerp: .18, smoothWheel: true, autoRaf: false, anchors: false });
+  const lenis = new Lenis({ lerp: .18 / PAGE_SCROLL_SLOWDOWN, wheelMultiplier: 1.7 / PAGE_SCROLL_SLOWDOWN, touchMultiplier: 1.5 / PAGE_SCROLL_SLOWDOWN, syncTouch: true, syncTouchLerp: .18 / PAGE_SCROLL_SLOWDOWN, smoothWheel: true, autoRaf: false, anchors: false });
   const tick = (time: number) => lenis.raf(time * 1000);
   lenis.on("scroll", ScrollTrigger.update);
   gsap.ticker.add(tick);
@@ -47,7 +48,8 @@ export function setupStory(root: HTMLDivElement) {
       target.focus({ preventScroll: true });
     }
     navigating = true;
-    lenis.scrollTo(target, { offset: hash === "#hero" ? 0 : -105, immediate, force: true, duration: .65, onComplete: () => { navigating = false; } });
+    const navigationOffset = parseFloat(getComputedStyle(root).getPropertyValue("--nav-height")) + 16;
+    lenis.scrollTo(target, { offset: hash === "#hero" ? 0 : -navigationOffset, immediate, force: true, duration: .65 * PAGE_SCROLL_SLOWDOWN, onComplete: () => { navigating = false; } });
   }
 
   function onAnchor(event: MouseEvent) {
@@ -73,8 +75,7 @@ export function setupStory(root: HTMLDivElement) {
       intro.from(".door-frame", { y: 18, opacity: .5, duration: .8 })
         .from(".hero-mark", { opacity: 0, y: 16, duration: .9 }, .15)
         .from(".hero-full-name", { opacity: 0, y: 10, duration: .7 }, .3)
-        .from(".hero-positioning .reveal-line", { yPercent: 110, duration: .9, stagger: .12 }, .4)
-        .from(".door-note", { opacity: 0, y: 10, duration: .65, stagger: .08 }, .35);
+        .from(".hero-positioning .reveal-line", { yPercent: 110, duration: .9, stagger: .12 }, .4);
     }
 
     select(".reveal-heading:not(.hero-positioning)").forEach((heading: HTMLElement) => {
@@ -88,13 +89,17 @@ export function setupStory(root: HTMLDivElement) {
     });
   }, root);
 
-  media.add({ desktop: "(min-width: 960px) and (min-height: 500px)", wide: "(min-width: 760px)", tall: "(min-height: 600px)", compactBuilding: "(max-width: 1199px), (max-height: 860px)", always: "all" }, condition => {
+  media.add({ desktop: "(min-width: 960px) and (min-height: 500px)", wide: "(min-width: 760px)", tall: "(min-height: 600px)", roomForScenes: "(min-height: 640px), (min-width: 960px) and (min-height: 500px)", compactBuilding: "(max-width: 1199px), (max-height: 959px)", always: "all" }, condition => {
     const isDesktop = !!condition.conditions?.desktop;
     if (isDesktop) root.dataset.storyDesktop = "true";
-    root.dataset.scrollScenes = "true";
+    if (condition.conditions?.roomForScenes) root.dataset.scrollScenes = "true";
     root.dataset.spatialStory = "true";
     const desktop = gsap.context(() => {
       setupSpatialStory(root, isDesktop, !!condition.conditions?.wide, isDesktop || !!condition.conditions?.tall);
+
+      // Short screens keep programs and pillar copy in document flow.
+      // They retain decorative motion without trapping content below the viewport.
+      if (!condition.conditions?.roomForScenes) return;
 
       const controls = {
         canEnter: () => !activeSequence && !navigating && !root.querySelector('dialog[open], .menu-is-open'),
@@ -115,7 +120,7 @@ export function setupStory(root: HTMLDivElement) {
       // Scrubbed from/to values can leave their neutral transform inline.
       // Return the door to its CSS pose when changing modes or breakpoints.
       gsap.set(root.querySelectorAll(".hero-room, .door-leaf, .door-handle"), { clearProps: "transform,transformOrigin,opacity" });
-      gsap.set(root.querySelectorAll(".hero-copy, .door-notes, .door-coordinate, .door-floor, .hero-meta, .hero-foot"), { clearProps: "opacity,visibility" });
+      gsap.set(root.querySelectorAll(".door-coordinate, .door-floor, .hero-meta, .hero-foot"), { clearProps: "opacity,visibility" });
       gsap.set(root.querySelector(".hero-stage"), { clearProps: "backgroundColor,pointerEvents" });
       delete root.dataset.storyDesktop;
       delete root.dataset.scrollScenes;

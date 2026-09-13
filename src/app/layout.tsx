@@ -8,6 +8,8 @@ import "@/styles/studio.css";
 import "@/styles/door.css";
 import "@/styles/scenes.css";
 import "@/styles/ecosystem.css";
+import "@/styles/editorial.css";
+import "@/styles/mobile.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),

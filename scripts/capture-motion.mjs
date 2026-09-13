@@ -4,10 +4,10 @@ import { chromium } from 'playwright';
  const page=await browser.newPage({viewport:{width:1440,height:1000}});
  await page.goto('http://localhost:3000',{waitUntil:'networkidle'});
  await page.waitForSelector('[data-story-desktop]');
- for(const [name,selector,count] of [['experience','.experience-nav button',3],['field','.field-person button',5]]){
+ for(const [name,selector,count] of [['experience','.experience-nav button',3],['field','.field-person button',3]]){
   for(let i=0;i<count;i++){
    await page.locator(selector).nth(i).click();
-   await page.waitForTimeout(550);
+   await page.waitForTimeout(900);
    await page.screenshot({path:`artifacts/motion-${name}-${i}.png`});
   }
   await page.keyboard.press('Escape');

@@ -30,7 +30,7 @@ for (const [width, height] of [[320, 740], [375, 667], [375, 812], [390, 844], [
   const programIssues = [];
   for (let i = 0; i < 3; i++) {
     await page.locator(".experience-nav button").nth(i).click();
-    await page.waitForTimeout(550);
+    await page.waitForTimeout(950);
     const bounds = await page.locator(`#experience-program-${i}`).evaluate(element => {
       const card = element.getBoundingClientRect();
       const body = element.querySelector(".program-window-body");
