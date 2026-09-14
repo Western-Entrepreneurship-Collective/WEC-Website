@@ -146,6 +146,8 @@ export function createScrollSequence(options: Options): ScrollSequence {
 
   function onWheel(event: WheelEvent) {
     if (event.defaultPrevented || event.ctrlKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+    // Scrolling inside an open dialog belongs to the dialog, never to a scene.
+    if ((event.target as Element | null)?.closest?.("dialog[open]")) return;
     const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? innerHeight : 1;
     const delta = event.deltaY * unit;
     const entered = recordGesture(delta);
@@ -175,6 +177,7 @@ export function createScrollSequence(options: Options): ScrollSequence {
   }
   function onTouchMove(event: TouchEvent) {
     if (event.defaultPrevented || !touch) return;
+    if ((event.target as Element | null)?.closest?.("dialog[open]")) return;
     if (event.touches.length !== 1) { touch = null; return; }
     const point = event.touches[0];
     const delta = touch.y - point.clientY;
