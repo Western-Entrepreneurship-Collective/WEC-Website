@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "@fontsource-variable/space-grotesk";
 import "@fontsource-variable/inter";
+import "@fontsource/caveat/latin-600.css";
 import "@/styles/tokens.css";
 import "@/styles/globals.css";
 import "@/styles/spatial.css";

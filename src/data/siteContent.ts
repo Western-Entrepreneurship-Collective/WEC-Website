@@ -39,10 +39,7 @@ export const siteContent = {
     prompts: ["What’s one problem you keep noticing?", "What would you try if it didn’t have to be perfect?", "What’s the thing you could use a second brain on?"],
   },
   experience: {
-    label: "The WEC experience",
-    headline: ["Less watching.", "More making."],
-    description: "Bring the thing you’re stuck on. Find a fresh perspective. Leave with something to try. Here’s where that happens.",
-    note: "Bring what you’re working on.\nOr just bring your curiosity.",
+    label: "The WEC Experience",
     programs: [
       { number: "01", name: "Venture Studio", description: "Put your idea to work.", overview: "Recurring venture-building and accountability sessions. Share progress, work through challenges, and find your next step with other builders.", note: "Bring what you’re working on.", href: "#venture-studio" },
       { number: "02", name: "Founder Labs", description: "Make the call. Then make it better.", overview: "Interactive workshops built around real entrepreneurial decisions. Work on your venture or a structured scenario, and leave with something you can use.", note: "Learn through the work.", href: "#founder-labs" },
@@ -94,10 +91,8 @@ export const siteContent = {
     note: "Different ideas. Shared momentum.",
   },
   pillars: {
-    label: "Our five pillars",
+    label: "Our Five Pillars",
     introduction: "What holds us together.",
-    headline: ["Five foundations.", "One collective."],
-    description: "These are the principles WEC is built on. They shape our community, our programs, and the way we show up for each other.",
     items: [
       { name: "Build", subtitle: "Take action.", description: "Entrepreneurship is learned by doing. Recurring resources, accountability, and peer support give you a low-pressure place to turn ideas into action.", note: "An idea becomes something you can act on." },
       { name: "Discover", subtitle: "Learn from reality.", description: "Meet founders, investors, and professionals. Learn from the decisions, risks, failures, trade-offs, and opportunities behind their experience.", note: "There’s more to the story." },
@@ -108,8 +103,8 @@ export const siteContent = {
   },
   audience: {
     label: "Who WEC is for",
-    headline: ["Different starting points.", "One collective."],
-    intro: "There’s no single way to arrive here. Find a starting point that sounds like you.",
+    headline: ["Every starting point.", "A seat at the table."],
+    intro: "You don’t need a finished idea. Choose the seat that sounds like you.",
     statements: [
       { quote: "I’m already building.", answer: "Bring your venture, your progress, and your sticking points to Venture Studio.", link: "Find your next step", href: "#venture-studio" },
       { quote: "I have an idea.", answer: "Turn a question into a decision, get feedback, and try a next version in Founder Labs.", link: "Put it to the test", href: "#founder-labs" },
@@ -122,9 +117,9 @@ export const siteContent = {
   },
   ecosystem: {
     label: "The Morrissette ecosystem",
-    headline: ["Your way into", "a bigger world."],
+    headline: ["Your entryway to", "Morrissette."],
     description: "WEC is one part of Western’s entrepreneurship ecosystem. With strong ties to the Morrissette Institute, we help students enter, navigate, and engage with what’s around them.",
-    note: "A starting point. And more paths forward.",
+    note: "Start with WEC. Get connected to Morrissette.",
     nodes: ["Competitions", "Funding programs", "Venture development", "Entrepreneurial programming", "Alumni", "Mentors"],
     centre: "Morrissette Institute",
     world: "Western’s entrepreneurship ecosystem",

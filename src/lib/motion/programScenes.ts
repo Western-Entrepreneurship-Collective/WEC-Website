@@ -1,7 +1,7 @@
 import gsap from "gsap";
 import type Lenis from "lenis";
 import { createScrollSequence, type ScrollSequence } from "./scrollSequence";
-import { EXPERIENCE_SCROLL_SLOWDOWN } from "./pacing";
+import { EXPERIENCE_PACING } from "./pacing";
 
 type Controls = {
   canEnter: () => boolean;
@@ -29,7 +29,7 @@ export function setupProgramScenes(root: HTMLElement, lenis: Lenis, controls: Co
       if (i === index) nav[i].setAttribute("aria-current", "true");
       else nav[i].removeAttribute("aria-current");
       const position = { yPercent: i > index ? 115 : 0, y: i * 16, z: i > index ? 180 : (i - index) * 70, rotationX: i > index ? -9 : i < index ? 2 : 0, rotation: 0 };
-      if (initialized) gsap.to(card, { ...position, duration: .2 * EXPERIENCE_SCROLL_SLOWDOWN, ease: "power2.out", overwrite: true });
+      if (initialized) gsap.to(card, { ...position, duration: EXPERIENCE_PACING.program.transition, ease: "power2.out", overwrite: true });
       else gsap.set(card, position);
     });
     if (nav.some(button => button === document.activeElement)) nav[index].focus({ preventScroll: true });
@@ -44,15 +44,16 @@ export function setupProgramScenes(root: HTMLElement, lenis: Lenis, controls: Co
   let fieldInitialized = false;
   fieldSection.dataset.sequence = "true";
   function showPerson(index: number) {
+    if (fieldInitialized && index === previousPerson) return;
     const direction = Math.sign(index - previousPerson) || 1;
     echoes.forEach((echo, i) => {
       if (!fieldInitialized) gsap.set(echo, { autoAlpha: i === index ? 1 : 0, xPercent: 0, z: -90 });
-      else if (i === index) gsap.fromTo(echo, { xPercent: direction * 12, z: -180, autoAlpha: 0 }, { xPercent: 0, z: -90, autoAlpha: 1, duration: .3 * EXPERIENCE_SCROLL_SLOWDOWN, ease: "power2.out", overwrite: true });
-      else gsap.to(echo, { xPercent: -direction * 16, autoAlpha: 0, duration: .2 * EXPERIENCE_SCROLL_SLOWDOWN, overwrite: true });
+      else if (i === index) gsap.fromTo(echo, { xPercent: direction * 12, z: -180, autoAlpha: 0 }, { xPercent: 0, z: -90, autoAlpha: 1, duration: .24, ease: "power2.out", overwrite: true });
+      else gsap.to(echo, { xPercent: -direction * 16, autoAlpha: 0, duration: EXPERIENCE_PACING.field.transition, overwrite: true });
     });
     const gutter = focusLine.offsetLeft;
     const focusX = (fieldSection.clientWidth - gutter * 2 - 24) * index / (people.length - 1);
-    if (fieldInitialized) gsap.to(focusLine, { x: focusX, duration: .14 * EXPERIENCE_SCROLL_SLOWDOWN, ease: "power2.out", overwrite: true });
+    if (fieldInitialized) gsap.to(focusLine, { x: focusX, duration: EXPERIENCE_PACING.field.transition, ease: "power2.out", overwrite: true });
     else gsap.set(focusLine, { x: focusX });
     previousPerson = index;
     fieldInitialized = true;
@@ -64,7 +65,7 @@ export function setupProgramScenes(root: HTMLElement, lenis: Lenis, controls: Co
       else person.querySelector("button")!.removeAttribute("aria-current");
     });
     const target = people[index].getBoundingClientRect().left - list.getBoundingClientRect().left + list.scrollLeft - (list.clientWidth - people[index].offsetWidth) / 2;
-    gsap.to(list, { scrollLeft: Math.max(0, Math.min(target, list.scrollWidth - list.clientWidth)), duration: .14 * EXPERIENCE_SCROLL_SLOWDOWN, overwrite: true });
+    gsap.to(list, { scrollLeft: Math.max(0, Math.min(target, list.scrollWidth - list.clientWidth)), duration: EXPERIENCE_PACING.field.transition, overwrite: true });
   }
   showProgram(0);
   showPerson(0);
@@ -74,10 +75,9 @@ export function setupProgramScenes(root: HTMLElement, lenis: Lenis, controls: Co
     root, section: experienceSection, scene: root.querySelector<HTMLElement>(".experience-stage")!,
     start: () => `top ${parseFloat(getComputedStyle(root).getPropertyValue("--nav-height")) + 10}px`,
     count: 2 + people.length, lenis, ...controls,
-    onChange: index => { showProgram(Math.min(index, 2)); if (index >= 2) showPerson(index - 2); },
-    gestureThreshold: index => (index >= 2 ? 3.6 : 18) * EXPERIENCE_SCROLL_SLOWDOWN,
-    cooldownMs: index => (index >= 2 ? 60 : 120) * EXPERIENCE_SCROLL_SLOWDOWN,
-    retainInput: true,
+    onChange: index => { showProgram(Math.min(index, 2)); showPerson(Math.max(0, index - 2)); },
+    gestureThreshold: index => index >= 2 ? EXPERIENCE_PACING.field.gesture : EXPERIENCE_PACING.program.gesture[index],
+    cooldownMs: index => index >= 2 ? EXPERIENCE_PACING.field.cooldown : EXPERIENCE_PACING.program.cooldown,
   });
   const onProgram = (event: Event) => {
     const index = (event as CustomEvent<number>).detail;

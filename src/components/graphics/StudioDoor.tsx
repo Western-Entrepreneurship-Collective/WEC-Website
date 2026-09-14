@@ -1,11 +1,30 @@
+import Image from "next/image";
 import { Logo } from "./DraftGraphics";
 import { RevealHeading } from "@/components/ui/Editorial";
+
+const collagePhotos = [
+  { name: "conversations", position: "50% 42%" },
+  { name: "connections", position: "62% 42%" },
+  { name: "presentation", position: "44% 45%" },
+  { name: "applause", position: "65% 45%" },
+  { name: "ventures", position: "54% 50%" },
+  { name: "founders", position: "60% 42%" },
+];
 
 export function StudioDoor() {
   return <div className="studio-door">
     <div className="door-coordinate micro" aria-hidden="true">WEC / A way in</div>
     <div className="door-frame">
-      <div className="door-aperture" aria-hidden="true"><div className="door-interior"><span className="door-room-line line-left" /><span className="door-room-line line-right" /><span className="door-room-line line-top" /><span className="door-room-line line-bottom" /><span className="door-welcome">You’re in<br />good company.</span></div></div>
+      <div className="door-aperture" aria-hidden="true">
+        <div className="door-interior">
+          <div className="door-collage">
+            {collagePhotos.map(photo => <div className={`door-collage-photo door-collage-${photo.name}`} key={photo.name}>
+              <Image src={`/images/door-collage/${photo.name}.jpg`} alt="" fill sizes="(max-width: 759px) 100vw, 80vw" loading="eager" draggable={false} style={{ objectPosition: photo.position }} />
+            </div>)}
+            <span className="door-welcome"><span>You’re in<br />good company.</span></span>
+          </div>
+        </div>
+      </div>
       <div className="door-trim" aria-hidden="true" />
       <div className="door-leaf">
         <div className="door-leaf-back" aria-hidden="true" />

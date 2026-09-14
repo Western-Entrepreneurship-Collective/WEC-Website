@@ -2,8 +2,10 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
-import { Arrow, VentureLine } from "@/components/graphics/DraftGraphics";
-import { EcosystemMap } from "@/components/graphics/EcosystemMap";
+import { Arrow } from "@/components/graphics/DraftGraphics";
+import { ClassroomCaption } from "@/components/graphics/ClassroomCaption";
+import { StartingCircle } from "@/components/graphics/StartingCircle";
+import { EcosystemJourney } from "@/components/graphics/EcosystemJourney";
 import { RevealHeading, SectionHeading, TextLink } from "@/components/ui/Editorial";
 import { siteContent as c } from "@/data/siteContent";
 
@@ -25,9 +27,8 @@ export function Pillars() {
     else document.getElementById(`pillar-${index}`)?.scrollIntoView({ behavior: "instant", block: "center" });
   }
   return <section className="pillars section-pad" id="pillars" aria-labelledby="pillars-heading" ref={sectionRef}>
-    <SectionHeading id="pillars-heading">{c.pillars.label}</SectionHeading>
-    <div className="foundation-intro"><RevealHeading as="p" lines={c.pillars.headline} /><p className="section-lead">{c.pillars.description}</p></div>
     <div className="foundation-scene">
+      <h2 className="section-heading scene-title" id="pillars-heading">{c.pillars.label}</h2>
       <div className="foundation-scene-heading"><p>{c.pillars.introduction}</p></div>
       <div className="foundation-structure">
         <div className="building-roof" aria-hidden="true"><svg viewBox="0 0 1200 130" preserveAspectRatio="none" fill="none"><path d="M10 102 600 8l590 94v18H10Z" fill="white" stroke="#dedce2" strokeWidth="2" /><path d="m76 93 524-72 524 72H76Z" fill="white" stroke="#dedce2" /><path d="M0 120h1200v10H0Z" fill="white" /><path d="M20 105h1160M600 8v13" stroke="#dedce2" /></svg></div>
@@ -46,17 +47,15 @@ export function Pillars() {
 export function Audience() {
   const [selected, setSelected] = useState(0);
   const answer = c.audience.statements[selected];
-  return <section className="audience section-pad" id="find-your-place" aria-labelledby="audience-heading">
-    <SectionHeading id="audience-heading">{c.audience.label}</SectionHeading>
-    <RevealHeading as="p" lines={c.audience.headline} />
-    <p className="section-lead audience-intro">{c.audience.intro}</p>
-    <div className="audience-layout">
-      <div className="audience-start"><div className="audience-statements" role="group" aria-label="Find your starting point">{c.audience.statements.map((statement, i) => <button key={statement.quote} onClick={() => setSelected(i)} aria-pressed={selected === i} aria-controls="audience-answer" className={selected === i ? "is-selected" : ""}><span className="audience-choice-mark" aria-hidden="true">{selected === i ? "↗" : "+"}</span>{statement.quote}</button>)}</div><div className="audience-correction"><span>Founders only.</span><Arrow /><strong>{c.audience.correction}</strong></div></div>
+  return <section className="audience" id="find-your-place" aria-labelledby="audience-heading">
+    <div className="classroom-stage">
+      <StartingCircle selected={selected} onSelect={setSelected} />
+      <ClassroomCaption />
       <div className="audience-answer" id="audience-answer" aria-live="polite" aria-atomic="true"><p>{answer.answer}</p><TextLink href={answer.href}>{answer.link}</TextLink></div>
     </div>
   </section>;
 }
 
 export function Ecosystem() {
-  return <section className="ecosystem section-pad" id="ecosystem" aria-labelledby="ecosystem-heading"><SectionHeading id="ecosystem-heading">{c.ecosystem.label}</SectionHeading><div className="ecosystem-intro"><RevealHeading as="p" lines={c.ecosystem.headline} /><p className="section-lead">{c.ecosystem.description}</p></div><EcosystemMap /><div className="ecosystem-bottom"><span>{c.ecosystem.note}</span><VentureLine variant="resolve" /></div></section>;
+  return <section className="ecosystem section-pad" id="ecosystem" aria-labelledby="ecosystem-heading"><SectionHeading id="ecosystem-heading">{c.ecosystem.label}</SectionHeading><div className="ecosystem-intro"><RevealHeading as="p" lines={c.ecosystem.headline} /><p className="section-lead">{c.ecosystem.description}</p></div><EcosystemJourney /></section>;
 }

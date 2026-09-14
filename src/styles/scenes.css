@@ -1,15 +1,27 @@
+/* Titles belong to the captured scenes so they remain visible in both directions. */
+.experience .scene-title, .pillars .scene-title { font-size: clamp(36px, 5.2vw, 80px); line-height: 1.04; letter-spacing: -.05em; margin-bottom: 20px; flex-shrink: 0; }
+.experience .experience-intro { padding-bottom: 0; }
+.experience-stack { padding-bottom: 64px; }
+.experience-intro .studio-status { margin-bottom: 24px; }
+@media (max-width: 759px) {
+  .experience .scene-title, .pillars .scene-title { font-size: clamp(34px, 9vw, 46px); margin-bottom: 16px; }
+}
+@media (min-width: 960px) and (max-height: 760px) {
+  .experience .scene-title, .pillars .scene-title { font-size: 44px; margin-bottom: 12px; }
+}
+
 /* The field sequence belongs to the third program window. */
 .program-window-field { flex-direction: column; align-items: stretch; justify-content: center; gap: 24px; padding: 26px 36px 22px; }
 .program-window-field h3 { display: flex; align-items: center; gap: 16px; }
 .program-window-field h3 .program-window-number { display: inline-block; font-size: .9em; flex-shrink: 0; }
 .program-window-field .program-window-copy { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 36px; max-width: none; flex: 0; }
-.program-window-field h3 { font-size: clamp(36px, 4.3vw, 68px); }
-.program-window-field .program-window-tagline { font-size: 23px; margin-top: 12px; }
-.program-window-field .program-window-description .section-lead { font-size: 18px; line-height: 1.5; margin: 0; color: var(--purple); }
-.field-format { margin-top: 12px; font-size: 15px; color: var(--muted); line-height: 1.6; }
+.program-window-field h3 { font-size: clamp(42px, 5vw, 78px); }
+.program-window-field .program-window-tagline { font-size: 27px; margin-top: 14px; }
+.program-window-field .program-window-description .section-lead { font-size: 21px; line-height: 1.5; margin: 0; color: var(--purple); }
+.field-format { margin-top: 12px; font-size: 17px; color: var(--muted); line-height: 1.6; }
 .program-window .field { background: var(--purple); color: white; border-radius: 3px; padding: 24px; margin-top: 0; overflow: clip; flex-shrink: 0; }
 .field-sequence-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; position: relative; }
-.field-sequence-label { font-size: 17px; margin: 0 0 18px; }
+.field-sequence-label { font-size: 19px; margin: 0 0 18px; }
 .field-progress { align-self: start; font-size: 10px; flex-shrink: 0; padding-top: 4px; }
 .field-list-scroll { overflow: hidden; padding-bottom: 7px; }
 .field-people { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; padding: 0; }
@@ -32,7 +44,7 @@
 .building-roof { grid-area: 1 / 1; height: 76px; position: relative; margin-inline: -18px; }
 .building-roof svg { width: 100%; height: 100%; }
 .building-columns, .pillar-panels { grid-area: 2 / 1; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 22px; }
-.building-columns { pointer-events: none; min-height: clamp(480px, calc(100svh - 390px), 660px); }
+.building-columns { pointer-events: none; min-height: clamp(420px, calc(100svh - 490px), 560px); }
 .building-bay { position: relative; overflow: clip; background: transparent; }
 .building-column { display: flex; flex-direction: column; width: 92%; margin-inline: auto; height: 100%; position: relative; }
 .column-capital { height: 42px; background: linear-gradient(to bottom, white 0 4px, #e5e3e8 4px 5px, white 5px 9px, #e5e3e8 9px 11px, white 11px); clip-path: polygon(0 0, 100% 0, 100% 30%, 94% 30%, 92% 70%, 89% 100%, 11% 100%, 8% 70%, 6% 30%, 0 30%); flex-shrink: 0; }
@@ -41,7 +53,7 @@
 .column-ordinal { display: none; }
 .column-plinth { height: 38px; background: linear-gradient(to top, white 0 3px, #e5e3e8 3px 4px, white 4px 8px, #e5e3e8 8px 10px, white 10px); clip-path: polygon(11% 0, 89% 0, 92% 35%, 94% 65%, 100% 65%, 100% 100%, 0 100%, 0 65%, 6% 65%, 8% 35%); flex-shrink: 0; }
 .pillar-panels { position: relative; z-index: 1; }
-.pillar-panel, .pillar-panel:last-child { display: flex; flex-direction: column; align-items: center; border: 0; width: 72%; justify-self: center; padding: 48px 6px 44px; min-width: 0; background: transparent; color: var(--purple); text-align: center; container-type: inline-size; }
+.pillar-panel, .pillar-panel:last-child { display: flex; flex-direction: column; align-items: center; border: 0; width: 72%; justify-self: center; padding: 36px 6px 32px; min-width: 0; background: transparent; color: var(--purple); text-align: center; container-type: inline-size; }
 .foundation-number { font-size: clamp(88px, 8vw, 126px); color: var(--purple); }
 .pillar-word { font-size: clamp(24px, 19cqw, 39px); margin: 20px 0 16px; }
 .pillar-meaning h4 { font-size: 18px; }
@@ -68,7 +80,7 @@
 }
 @media (max-width: 959px) {
   .program-window-field .program-window-copy { grid-template-columns: 1fr; gap: 16px; }
-  .program-window-field h3 { font-size: 44px; }.program-window-field .program-window-tagline { font-size: 22px; }
+  .program-window-field h3 { font-size: 50px; }.program-window-field .program-window-tagline { font-size: 25px; }
   .program-window-field .field-people { grid-template-columns: repeat(5, 155px); }
   .field-person button > span:nth-child(2) { font-size: 21px; }
 }
@@ -92,9 +104,9 @@
   .experience-nav .micro { display: none; }
   .program-window-field { padding: 16px; gap: 16px; }
   .program-window-field h3 { font-size: clamp(29px, 8.6vw, 42px); }
-  .program-window-field h3 { gap: 10px; font-size: clamp(24px, 7.3vw, 36px); }
-  .program-window-field .program-window-tagline { font-size: 19px; margin-top: 9px; }
-  .program-window-field .program-window-description .section-lead { font-size: 16px; }
+  .program-window-field h3 { gap: 10px; font-size: clamp(27px, 8vw, 40px); }
+  .program-window-field .program-window-tagline { font-size: 21px; margin-top: 9px; }
+  .program-window-field .program-window-description .section-lead { font-size: 17px; }
   .field-format { font-size: 13px; margin-top: 9px; }
   .program-window .field { padding: 14px 14px 10px; }
   .field-sequence-label { font-size: 14px; margin-bottom: 14px; }
@@ -130,11 +142,11 @@
 }
 @media (max-height: 760px) and (min-width: 960px) {
   .program-window-field { gap: 15px; padding-block: 16px; }
-  .program-window-field h3 { font-size: 36px; }.program-window-field .program-window-tagline { font-size: 18px; }
-  .program-window-field .program-window-description .section-lead { font-size: 15px; }.field-format { font-size: 13px; margin-top: 6px; }
-  .program-window .field { padding: 14px 18px; }.field-sequence-label { margin-bottom: 10px; font-size: 14px; }
+  .program-window-field h3 { font-size: 42px; }.program-window-field .program-window-tagline { font-size: 21px; }
+  .program-window-field .program-window-description .section-lead { font-size: 17px; }.field-format { font-size: 14px; margin-top: 6px; }
+  .program-window .field { padding: 14px 18px; }.field-sequence-label { margin-bottom: 10px; font-size: 15px; }
   .field-person button { min-height: 68px; padding: 10px 12px 14px; }.field-person button > .micro { margin-bottom: 7px; }
-  .field-person button > span:nth-child(2) { font-size: 18px; }.field-scroll-hint { margin-top: 7px; }
+  .field-person button > span:nth-child(2) { font-size: 20px; }.field-scroll-hint { margin-top: 7px; }
   .building-roof { height: 50px; }.building-columns { height: 150px; }
   .foundation-scene-heading { margin-bottom: 8px; }.pillar-panels { margin-top: 14px; }
   .foundation-controls { margin-top: 10px; }.foundation-directions { padding-top: 8px; }
@@ -155,14 +167,14 @@
 /* With motion off, every description and perspective is exposed in normal flow. */
 @media (min-width: 960px) and (max-width: 1199px) {
   .program-window-field { padding: 20px 28px; gap: 18px; }
-  .program-window-field h3 { font-size: 36px; }.program-window-field .program-window-tagline { font-size: 18px; }
-  .program-window-field .program-window-description .section-lead { font-size: 16px; line-height: 1.5; }
-  .field-format { font-size: 14px; line-height: 1.5; margin-top: 8px; }
+  .program-window-field h3 { font-size: 42px; }.program-window-field .program-window-tagline { font-size: 21px; }
+  .program-window-field .program-window-description .section-lead { font-size: 18px; line-height: 1.5; }
+  .field-format { font-size: 15px; line-height: 1.5; margin-top: 8px; }
 }
 @media (min-width: 960px) and (max-height: 600px) {
   .program-window-field { gap: 10px; padding: 6px 24px; }
-  .program-window-field h3 { font-size: 30px; }.program-window-field .program-window-tagline { font-size: 16px; margin-top: 7px; }
-  .program-window-field .program-window-description .section-lead { font-size: 14px; line-height: 1.4; }
+  .program-window-field h3 { font-size: 33px; }.program-window-field .program-window-tagline { font-size: 17px; margin-top: 7px; }
+  .program-window-field .program-window-description .section-lead { font-size: 15px; line-height: 1.4; }
   .field-format { font-size: 12px; line-height: 1.4; margin-top: 5px; }
   .program-window .field { padding: 10px 14px; }.field-sequence-label { font-size: 12px; margin-bottom: 7px; }
   .field-person button { min-height: 52px; padding: 7px 10px 10px; }.field-person button > .micro { font-size: 8px; margin-bottom: 4px; }
@@ -184,6 +196,6 @@
 }
 @media print {
   .foundation-nav, .foundation-directions { display: none !important; }
-  .building-column, .building-roof, .pillar-panel { transform: none !important; opacity: 1 !important; visibility: visible !important; }
+  .building-column, .building-roof, .building-steps, .pillar-panel { transform: none !important; opacity: 1 !important; visibility: visible !important; }
   .pillar-panels { display: block; }.pillar-panel { display: block; padding-block: 20px !important; }
 }

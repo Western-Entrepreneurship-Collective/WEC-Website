@@ -27,8 +27,6 @@
 
 
 .ecosystem-camera { position: relative; width: 100%; height: 100%; }
-[data-spatial-story] .ecosystem-map { perspective: 1200px; overflow: clip; overflow-clip-margin: 18px; }
-[data-spatial-story] .ecosystem-camera { transform-origin: 18% 52%; }
 
 [data-spatial-story] .join-composition { perspective: 1100px; isolation: isolate; }
 .join-fragments { position: absolute; inset: 0; transform-style: preserve-3d; z-index: -1; }
@@ -48,5 +46,5 @@
 }
 @media print {
   .motion-art { display: none !important; }
-  .ecosystem-camera, .ecosystem-node, .ecosystem-wec, .ecosystem-centre { transform: none !important; opacity: 1 !important; visibility: visible !important; }
+  .ecosystem-camera { transform: none !important; opacity: 1 !important; visibility: visible !important; }
 }

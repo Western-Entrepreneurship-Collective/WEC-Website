@@ -1,6 +1,6 @@
 # Verification record
 
-Verified locally on Windows on 2026-09-12.
+Scroll and pacing revision verified locally on macOS on 2026-09-13. Earlier visual and performance records below were collected on Windows on 2026-09-12.
 
 ## Automated checks
 
@@ -9,24 +9,28 @@ Verified locally on Windows on 2026-09-12.
 | ESLint | Passed, no errors or warnings |
 | TypeScript | Passed |
 | Production build | Passed; homepage statically prerendered |
-| Playwright | 82 passed across five profiles; three desktop-only skips for the phone rotation scenario |
+| Playwright | All 124 applicable cases passed across the full run and targeted rerun; six expected desktop skips for mobile-only scenarios |
 | Axe | No detected violations in the configured WCAG A/AA and accessible-label checks |
 | Asset provenance | Four supplied logo PNGs and all four added photographs match their source files byte-for-byte |
 | Dependency audit at installation | No reported vulnerabilities |
 
 Browser profiles: desktop Chromium, Firefox, and WebKit at 1440 × 1000; Chromium and WebKit mobile emulation at 390 × 844. WebKit testing is browser-engine coverage, not a claim that physical Safari/iPhone devices were tested.
 
-The sixteen shared scenarios cover section order, internal anchors, image availability, page overflow, audience selection, dialogs, keyboard focus, motion preferences and cleanup, and direct-anchor reloads. The door scenario checks forward/reverse passage, working About controls, and cleanup. The foundation scenario verifies automatic entry, sequential rises and reverse motion, fixed document position, viewport containment, boundary/Escape release, and all five descriptions in reading mode. The prompt and community controls are checked with keyboard input. The other spatial scenes are checked for scroll response and cleanup. Additional scenarios verify the Experience scroll budget and ecosystem arrow alignment.
+The suite scenarios cover section order, internal anchors, image availability, page overflow, audience selection, dialogs, keyboard focus, motion preferences and cleanup, and direct-anchor reloads. The door scenario checks forward/reverse passage, working About controls, and cleanup. The foundation scenario verifies automatic entry, sequential rises and reverse motion, fixed document position, viewport containment, boundary/Escape release, and all five descriptions in reading mode. The prompt and community controls are checked with keyboard input. The other spatial scenes are checked for scroll response and cleanup. Additional scenarios verify the Experience scroll budget and ecosystem arrow alignment.
 
 The program tests check the absence of diagrams and internal scroll regions, forward/reverse window changes with unchanged document position, overlapping navigation, content/footer containment, preserved anchors, one/two/three filled header dots, and all program numbers. Field advances and reverses through Founders, Investors, and Alumni inside the third window, then returns to Labs without moving the document. Tests also check boundary release and selection/counter synchronization across repeated motion-mode changes. Each remaining perspective has two sentences beneath its name.
 
-The Experience budget test confirms that 43.2px stays on Studio and 172.8px total completes all five sequence positions, four times the previous per-step input. It observes all three Field states in order while the document stays fixed. The latest native-touch check through Chromium CDP confirms that 60px stays on Studio, 120px cumulative reaches Labs, and 180px completes all Field highlights with no page movement; the next swipe releases scrolling. Native wheel checks in Chromium, Firefox, and WebKit measure 85px page travel for 100px input, compared with 170px previously. The independent global and Experience slowdown factors remain intact.
+The earlier Experience budget test confirmed that 35px stayed on Studio and 88px total completed all five positions, with Field highlights advancing in order while the document stays fixed. The new scroll regression scenarios cover pending-input cancellation, rapid reversals, both scene boundaries, touch direction changes, interrupted anchor navigation, slow scene entry, a complete forward/reverse page traversal, mobile-menu scrolling, and the roof/base fades. Page movement retains its .85 wheel and .75 touch multipliers.
+
+The latest full run produced 122 passes, six expected skips, and two timing/rounding failures in the tests. The wheel-reversal assertion now waits for an actual scroll frame; the slow-entry gesture crosses WebKit's rounded trigger coordinate. All ten cases for those two scenarios then passed across the five profiles. A separate Chromium mobile check used native touch dispatch to verify forward and reverse program movement without document drift. Desktop and mobile captures also confirm the roof/base are hidden before the first pillar, visible with it, and hidden again on reversal.
 
 Community tests confirm keyboard operation, expanded-state announcements, descriptions immediately adjacent to the selected button, and collapse on a second click. The accessibility audit includes visible-label/accessible-name and WCAG A/AA checks. The full suite passes, including the additional phone rotation scenario in both mobile engines. That scenario verifies that rotation releases the document lock, exposes all programs and pillar descriptions, and restores animated navigation in portrait.
 
 The subsequent portrait and pillar-shape revision passed production build, lint, and all 15 relevant asset, foundation-motion, and accessibility scenarios across the five profiles. Chromium and WebKit visual checks confirm the narrower shafts and flared capitals/bases fit desktop and mobile layouts, including 1200 x 960 and 320 x 740. The supplied presenter photo loads correctly and matches its source file.
 
 ## Responsive and visual review
+
+The enlarged Experience and Pillars title revision passed production build, lint, and all 25 relevant browser cases across the five profiles after a targeted rerun. The mobile Chromium pillar test now records its baseline after native PageDown settles; all three repeated runs passed. Forward and reverse navigation assertions verify that both headings remain fully in view below the site header. Desktop, tablet, and narrow/short viewport captures verify title, content, and control placement. These captures are saved as `artifacts/titles-field-*.png` and `artifacts/titles-pillars-*.png`.
 
 The mobile refinement audit passed all sixteen Chromium/WebKit combinations at 320 x 568, 320 x 740, 360 x 640, 375 x 667, 390 x 844, 430 x 932, 740 x 360, and 844 x 390. It checks program and footer containment, absence of internal program scrolling, pavilion fit, ecosystem labels, and 44px minimum dimensions for the primary navigation, pillar buttons, and program footer controls. Short screens switch to normal document flow. Run scripts/mobile-audit.mjs against port 3000; results are saved in artifacts/mobile-audit.json.
 
@@ -36,33 +40,14 @@ The larger door, with its logo and headline attached to the face, was captured i
 
 The two program photos, Community collage, and ecosystem web were reviewed at 1440 x 1000, 1024 x 768, 390 x 844, 375 x 667, 320 x 740, and 960 x 500. Final WebKit captures report no page errors, program-body overflow, footer overflow, or image/footer overlap. All four images match the supplied originals byte-for-byte. The vertical Community frame now uses the separately supplied presenter portrait.
 
-The final Chromium responsive audit passed all fourteen viewport sizes from 320px to 1920px wide. It checks reading-mode text bounds, each active program window, content/footer containment, absence of internal scroll, and the complete foundation scene. The review caught and fixed Field footer crowding at 375 x 812 and 1366 x 650. The audit waits for the full 800ms window transition before measuring. Narrow-screen Field cells move horizontally as selection changes; reading mode exposes all three in normal flow.
+The final Chromium responsive audit passed all fourteen viewport sizes from 320px to 1920px wide. It checks reading-mode text bounds, each active program window, content/footer containment, absence of internal scroll, and the complete foundation scene. The review caught and fixed Field footer crowding at 375 x 812 and 1366 x 650. The audit waits for window transitions to settle before measuring. Narrow-screen Field cells move horizontally as selection changes; reading mode exposes all three in normal flow.
 
 The pavilion has a white roof, shafts, flared capitals/bases, and steps, with purple text. Lavender bay backgrounds are removed. Large layouts show descriptions on the columns; widths below 1200px or heights at most 959px use the selected description beneath the building. The complete pavilion fits the audited viewports, including 960 x 500 and 1920 x 1080. Disabling motion exposes all descriptions. No roof label, standing count, or common-ground band is shown.
 
-The refined ecosystem has eight aligned cards and eleven connections. Automated checks across all five browser/device profiles verify endpoints, the visible WEC-to-hub arrow, card bounds, and absence of card overlap. Sampled points along every path also stay clear of unrelated cards. A ResizeObserver keeps paths attached during responsive changes. The dotted background, orbit lines, irregular shapes, and hub ornament are removed.
+The autumn-inspired exterior and matching classroom rebuild passed production build and lint. The scene now uses stepped cream framing, blue glazing, an aqua sky, golden garden foliage, and a warm oak / teal classroom. The half-length path, early copy reveal, building plaque, and 2.5× labels remain intact. All 35 targeted scenarios across five browser profiles passed. Tests verify below-ground sign positions during growth, all six raised signs within the canvas, doors closed until arrival, opaque viewport coverage through the bottom edge, matching camera / canvas bounds at the handoff, and seat positions within two pixels before and after it. Each modeled person is directly selectable, and full-text controls support keyboard input. Additional checks confirm that the lower-left introduction and every selected answer fit in the viewport without overlapping the six controls. Rendered classroom images before and after the handoff match within an average RGB difference of 2/255 across all five browser profiles; captures are aligned to each canvas to account for the few pixels of document travel. The halved journey stays below 0.9 viewport heights while its canvas still fills the screen. The caption is already visible during entry at 88% progress. Font-size assertions verify 32.5px desktop and 27.5px mobile text, exactly 2.5× the previous sizes. Additional 320px, 768px, and 1024px checks confirm non-overlapping cards and working selections. Mobile copy remains above every selected answer. Initial loading, reading mode, the WebGL-unavailable fallback, accessibility audits, and complete forward/reverse traversal also pass. WebKit captures at 1440 × 1000, 1024 × 768, 768 × 1024, 390 × 844, and 320 × 740 report no page errors or text overflow. The new garden exterior and redesigned classroom fallback images were regenerated without baked-in interface labels. Desktop and mobile visual review confirms the new palette, softened foliage, and coordinated room furnishings. Run `scripts/capture-ecosystem.mjs`, optionally with `SCENE_BROWSER=webkit`, to reproduce scene captures; `scripts/capture-campus-fallbacks.mjs` exports the local fallback images.
 
-Visual artifacts are ignored by Git. scripts/capture-door.mjs captures six door positions at four sizes; DOOR_BROWSER=webkit selects WebKit. scripts/capture-foundations.mjs captures Field and the pavilion at six sizes. scripts/capture-editorial.mjs captures About, Community, Ecosystem, and all three program windows, recording geometry and page errors. SCENE_BROWSER=webkit selects WebKit for these scene captures. scripts/capture-motion.mjs records each program and Field state. Screenshots and reports are under artifacts/.
+The subsequent palette refinement preserves the architecture and animation while replacing saturated blue and orange with off-white, sage glass and foliage, pale oak, and restrained purple details. Section controls inherit the site’s purple and green tokens. Production build and lint pass, as do 20 targeted interaction / handoff / fallback cases and five accessibility cases across the five browser profiles. Refreshed WebKit captures at all five scene sizes report no page errors or text overflow. Both fallback images now use the muted palette.
 
-## Performance measurement
+The deliberate-scroll pacing revision passes production build, lint, and all 95 selected browser cases across the five profiles. Cards and pillars now require 320px per step; Field highlights require 240px. Tests verify sub-threshold input stays on the current item, partial input survives brief reading pauses in both directions, touch reversals cancel stale movement, and keyboard navigation and exit release remain functional. The initial Morrissette approach keeps its previous distance, while progress after 60% takes eight times more scrolling. Camera / lighting continuity, opaque viewport coverage, reverse travel, motion cleanup, and complete forward/reverse page traversal pass with the longer scene. Updated WebKit captures at five viewport sizes report no page errors or text overflow.
 
-The initial local production Lighthouse audit, before subsequent hierarchy, scroll, spatial, open-studio, and photography revisions, used default simulated mobile settings and reported:
-
-| Category / metric | Result |
-| --- | --- |
-| Performance | 96 / 100 |
-| Accessibility | 100 / 100 |
-| Best practices | 100 / 100 |
-| SEO | 100 / 100 |
-| First contentful paint | 1.4 s |
-| Largest contentful paint | 2.8 s |
-| Total blocking time | 20 ms |
-| Cumulative layout shift | 0.001 |
-
-These are local lab measurements, not field data or a guarantee for every device and host. The audit report has no runtime error or run warnings. The Lighthouse CLI encountered a Windows temporary-profile cleanup error after saving the valid HTML and JSON reports. Subsequent changes added an explicit high-priority hero image request and improved accessible labels; the final browser and build checks were rerun afterward.
-
-The app icon was reduced from 1,137,184 bytes to 33,831 bytes. Core wordmarks retain the original PNG pixels. Font binaries are local, lower-page marks load lazily, and the animation engine is split out of the initial render.
-
-## Remaining configuration
-
-Real membership and event destinations were not supplied. Their configured unavailable states are tested; live registration services cannot be verified until official URLs are provided. The public origin also needs to be set before deployment. No public deployment, real registration, or message to another person was performed.
+The label-fade and front-door pacing refinement passes production build, lint, and 30 targeted cases across five browser profiles. Labels are hidden at 90%, approximately half visible at 95%, and fully visible at 98.5%; reverse traversal restores the partial fade. Connector lines share the reveal. Front-door holding distance is reduced by 20% (6.4× original), while entry after 72% remains at 8×. Camera continuity, full-screen coverage, direct person selection, reading mode, WebGL fallback, and accessibility checks pass. Five refreshed WebKit viewport captures include the partial-label reveal and report no page errors or text overflow.

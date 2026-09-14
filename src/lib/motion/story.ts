@@ -14,59 +14,93 @@ export function setupStory(root: HTMLDivElement) {
   const media = gsap.matchMedia();
   let alive = true;
   let refreshFrame = 0;
+  let navigationFrame = 0;
   let activeSequence: ScrollSequence | undefined;
   let experienceSequence: ScrollSequence | undefined;
   let foundationSequence: ScrollSequence | undefined;
   let navigating = false;
-  const lenis = new Lenis({ lerp: .18 / PAGE_SCROLL_SLOWDOWN, wheelMultiplier: 1.7 / PAGE_SCROLL_SLOWDOWN, touchMultiplier: 1.5 / PAGE_SCROLL_SLOWDOWN, syncTouch: true, syncTouchLerp: .18 / PAGE_SCROLL_SLOWDOWN, smoothWheel: true, autoRaf: false, anchors: false });
+  const lenis: Lenis = new Lenis({
+    lerp: .18 / PAGE_SCROLL_SLOWDOWN, wheelMultiplier: 1.7 / PAGE_SCROLL_SLOWDOWN, touchMultiplier: 1.5 / PAGE_SCROLL_SLOWDOWN,
+    syncTouch: true, syncTouchLerp: .18 / PAGE_SCROLL_SLOWDOWN, smoothWheel: true, autoRaf: false, anchors: false,
+    virtualScroll: ({ deltaY, event }) => {
+      // A gesture consumed by a scene must not also move the page on release.
+      if (event.defaultPrevented) return false;
+      if (event.type === "wheel" && !event.ctrlKey && deltaY && lenis.velocity && Math.sign(deltaY) !== Math.sign(lenis.velocity)) {
+        lenis.scrollTo(window.scrollY, { immediate: true, force: true });
+      }
+      return true;
+    },
+  });
   const tick = (time: number) => lenis.raf(time * 1000);
   lenis.on("scroll", ScrollTrigger.update);
   gsap.ticker.add(tick);
   const modalObserver = new MutationObserver(() => {
-    if (root.querySelector("dialog[open]")) { activeSequence?.release(); lenis.stop(); }
-    else lenis.start();
+    if (root.querySelector("dialog[open], .menu-is-open")) { activeSequence?.release(); lenis.stop(); }
+    else if (!activeSequence) lenis.start();
   });
   root.querySelectorAll("dialog").forEach(dialog => modalObserver.observe(dialog, { attributes: true, attributeFilter: ["open"] }));
+  const header = root.querySelector(".site-header");
+  if (header) modalObserver.observe(header, { attributes: true, attributeFilter: ["class"] });
 
   function scrollToHash(hash: string, immediate = false, focus = false) {
     const target = document.getElementById(decodeURIComponent(hash.replace(/^#/, "")));
     if (!target) return;
+    navigating = true;
     activeSequence?.release();
     const program = target.closest<HTMLElement>(".program-window");
     if (program && experienceSequence) {
       experienceSequence.navigate([...root.querySelectorAll(".program-window")].indexOf(program));
       if (focus) program.querySelector<HTMLElement>(".program-window-body")?.focus({ preventScroll: true });
+      navigating = false;
       return;
     }
     const pillar = target.closest<HTMLElement>(".pillar-panel");
     if (pillar && foundationSequence) {
       foundationSequence.navigate([...root.querySelectorAll(".pillar-panel")].indexOf(pillar) + 1);
+      navigating = false;
       return;
     }
     if (focus) {
       if (!target.hasAttribute("tabindex")) target.setAttribute("tabindex", "-1");
       target.focus({ preventScroll: true });
     }
-    navigating = true;
-    const navigationOffset = parseFloat(getComputedStyle(root).getPropertyValue("--nav-height")) + 16;
-    lenis.scrollTo(target, { offset: hash === "#hero" ? 0 : -navigationOffset, immediate, force: true, duration: .65 * PAGE_SCROLL_SLOWDOWN, onComplete: () => { navigating = false; } });
+    const navigationOffset = parseFloat(getComputedStyle(root).getPropertyValue("--nav-height")) + (target.id === "find-your-place" ? 0 : 16);
+    // Numeric destinations avoid counting CSS scroll margins/padding again in Lenis.
+    const destination = hash === "#hero" ? 0 : target.getBoundingClientRect().top + window.scrollY - navigationOffset;
+    lenis.scrollTo(destination, { immediate, force: true, duration: .65 * PAGE_SCROLL_SLOWDOWN, onComplete: () => { navigating = false; } });
+  }
+
+  function onNavigationInput(event: WheelEvent | TouchEvent | KeyboardEvent) {
+    if (!navigating || event.defaultPrevented) return;
+    if (event instanceof WheelEvent && (event.ctrlKey || !event.deltaY || Math.abs(event.deltaX) > Math.abs(event.deltaY))) return;
+    if (event instanceof KeyboardEvent && (event.ctrlKey || event.metaKey || event.altKey || !["ArrowDown", "ArrowUp", "PageDown", "PageUp", "Home", "End", " "].includes(event.key) || (event.target as Element).closest("input, textarea, select, [contenteditable=true]"))) return;
+    navigating = false;
+    cancelAnimationFrame(navigationFrame);
+    lenis.scrollTo(window.scrollY, { immediate: true, force: true });
   }
 
   function onAnchor(event: MouseEvent) {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     const anchor = (event.target as Element).closest<HTMLAnchorElement>('a[href^="#"]');
-    if (!anchor || anchor.classList.contains("skip-link") || anchor.closest(".mobile-menu")) return;
+    if (!anchor || anchor.classList.contains("skip-link")) return;
     const hash = anchor.getAttribute("href");
     if (!hash || hash === "#" || !document.getElementById(hash.substring(1))) return;
     event.preventDefault();
     if (location.hash !== hash) history.pushState(null, "", hash);
-    scrollToHash(hash, false, true);
+    cancelAnimationFrame(navigationFrame);
+    if (anchor.closest(".mobile-menu")) {
+      navigating = true;
+      navigationFrame = requestAnimationFrame(() => scrollToHash(hash, false, true));
+    } else scrollToHash(hash, false, true);
   }
-  const onPopState = () => { activeSequence?.release(); if (location.hash) scrollToHash(location.hash, true); else lenis.scrollTo(0, { immediate: true }); };
+  const onPopState = () => { cancelAnimationFrame(navigationFrame); activeSequence?.release(); scrollToHash(location.hash || "#hero", true); };
   const onPageShow = () => ScrollTrigger.refresh();
   root.addEventListener("click", onAnchor);
   window.addEventListener("popstate", onPopState);
   window.addEventListener("pageshow", onPageShow);
+  window.addEventListener("wheel", onNavigationInput, { passive: true, capture: true });
+  window.addEventListener("touchstart", onNavigationInput, { passive: true, capture: true });
+  window.addEventListener("keydown", onNavigationInput, true);
 
   const context = gsap.context(() => {
     // One restrained entrance. No loading screen, and no delayed access to copy.
@@ -89,7 +123,7 @@ export function setupStory(root: HTMLDivElement) {
     });
   }, root);
 
-  media.add({ desktop: "(min-width: 960px) and (min-height: 500px)", wide: "(min-width: 760px)", tall: "(min-height: 600px)", roomForScenes: "(min-height: 640px), (min-width: 960px) and (min-height: 500px)", compactBuilding: "(max-width: 1199px), (max-height: 959px)", always: "all" }, condition => {
+  media.add({ desktop: "(min-width: 960px) and (min-height: 500px)", wide: "(min-width: 760px)", tall: "(min-height: 600px)", journeyHeight: "(min-height: 640px)", roomForScenes: "(min-height: 640px), (min-width: 960px) and (min-height: 500px)", compactBuilding: "(max-width: 1199px), (max-height: 959px)", always: "all" }, condition => {
     const isDesktop = !!condition.conditions?.desktop;
     if (isDesktop) root.dataset.storyDesktop = "true";
     if (condition.conditions?.roomForScenes) root.dataset.scrollScenes = "true";
@@ -115,6 +149,9 @@ export function setupStory(root: HTMLDivElement) {
 
     return () => {
       desktop.revert();
+      gsap.set(root.querySelectorAll(".ecosystem-scene-stage, .arrival-directory, .journey-welcome, .journey-instruction, .audience"), { clearProps: "transform,transformOrigin,opacity,visibility,backgroundColor,pointerEvents" });
+      const journey = root.querySelector<HTMLElement>(".ecosystem-scene");
+      if (journey) journey.dataset.progress = "0";
       // Release the foundation entrance for the linear reading layout.
       gsap.set(root.querySelectorAll(".pillar-panel"), { clearProps: "transform,opacity,visibility" });
       // Scrubbed from/to values can leave their neutral transform inline.
@@ -174,9 +211,13 @@ export function setupStory(root: HTMLDivElement) {
   return () => {
     alive = false;
     cancelAnimationFrame(refreshFrame);
+    cancelAnimationFrame(navigationFrame);
     root.removeEventListener("click", onAnchor);
     window.removeEventListener("popstate", onPopState);
     window.removeEventListener("pageshow", onPageShow);
+    window.removeEventListener("wheel", onNavigationInput, true);
+    window.removeEventListener("touchstart", onNavigationInput, true);
+    window.removeEventListener("keydown", onNavigationInput, true);
     media.revert();
     context.revert();
     gsap.ticker.remove(tick);

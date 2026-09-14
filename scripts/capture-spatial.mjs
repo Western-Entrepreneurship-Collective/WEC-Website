@@ -20,7 +20,7 @@ for (const [engine, driver] of [["chromium", chromium], ["webkit", webkit]]) {
   for (const [name, selector, offsets] of [
     ["hero", ".hero-stage", [0, 300]],
     ["proof", ".about-evidence", [-850, -400]],
-    ["ecosystem", ".ecosystem-map", [-600, -350, -120]],
+    ["ecosystem", ".ecosystem-scene", [-600, -350, -120]],
     ["join", ".join-composition", [-900, -650, -250]],
     ["foundations", ".foundation-structure", [-850, -450]],
     ["community", ".community-wall", [-850, -250]],

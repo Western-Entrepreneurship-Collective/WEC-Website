@@ -1,0 +1,15 @@
+import { chromium } from 'playwright';
+const browser=await chromium.launch();
+const page=await browser.newPage({viewport:{width:1440,height:1000}});
+await page.goto('http://localhost:3000/#ecosystem',{waitUntil:'networkidle'});
+await page.locator('.campus-render-journey[data-ready] canvas').waitFor();
+await page.addStyleTag({content:'.site-header,.journey-welcome,.journey-instruction,.arrival-directory,.campus-seat-labels,.campus-label-leaders,.classroom-caption,.audience-answer { visibility: hidden !important; }'});
+const start=await page.locator('.ecosystem-scene').evaluate(el=>el.getBoundingClientRect().top+scrollY-parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nav-height')));
+await page.evaluate(y=>scrollTo(0,y),start-2);
+await page.waitForTimeout(600);
+await page.locator('.campus-render-journey canvas').screenshot({path:'public/images/campus-fallback.png'});
+await page.locator('.starting-room').scrollIntoViewIfNeeded();
+await page.locator('.campus-render-room[data-ready] canvas').waitFor();
+await page.waitForTimeout(300);
+await page.locator('.campus-render-room canvas').screenshot({path:'public/images/classroom-fallback.png'});
+await browser.close();

@@ -21,7 +21,7 @@ test("full motion is the default despite system or legacy preferences", async ({
   await page.addInitScript(() => localStorage.setItem("wec-motion", "off"));
   await page.goto("/");
   await expect(page.locator(".wec-site")).toHaveAttribute("data-motion", "full");
-  await expect(page.locator(".pin-spacer")).toHaveCount(1);
+  await expect(page.locator(".pin-spacer")).toHaveCount(2);
   await expect.poll(() => page.locator(".arrow").first().evaluate(element => getComputedStyle(element).transitionDuration)).toBe("0.24s");
   await page.locator(".motion-toggle").click();
   await expect(page.locator(".wec-site")).toHaveAttribute("data-motion", "reduced");
@@ -107,12 +107,12 @@ test("navigation, scroll chapters, and motion cleanup work", async ({ page, isMo
     await page.getByRole("navigation", { name: "Mobile navigation" }).getByRole("link", { name: /Pillars/ }).click();
     await expect(page.getByRole("button", { name: "Open navigation" })).toBeVisible();
     await expect(page).toHaveURL(/#pillars$/);
-    await expect(page.locator(".pin-spacer")).toHaveCount(1);
+    await expect(page.locator(".pin-spacer")).toHaveCount(2);
   } else {
     await expect(page.locator(".wec-site")).toHaveAttribute("data-story-desktop", "true");
     await page.getByRole("navigation", { name: "Main navigation" }).getByRole("link", { name: "Pillars" }).click();
-    await expect(page.locator(".foundation-intro")).toBeInViewport();
-    await expect(page.locator(".pin-spacer")).toHaveCount(1);
+    await expect(page.locator("#pillars-heading")).toBeInViewport();
+    await expect(page.locator(".pin-spacer")).toHaveCount(2);
     await expect(page.locator(".foundation-nav button")).toHaveCount(5);
     await expect(page.locator(".building-column")).toHaveCount(5);
   }
@@ -141,7 +141,6 @@ test("spatial layers respond to scrolling and fully release into reading mode", 
   for (const [trigger, layer, before, after] of [
     [".hero-stage", ".hero-room", 0, -220],
     [".about-evidence", ".proof-guide-horizontal", .9, .35],
-    [".ecosystem-map", ".ecosystem-camera", .7, .1],
     [".join-composition", ".join-fragment", .9, .15],
   ] as const) {
     const position = await page.locator(trigger).evaluate(element => element.getBoundingClientRect().top + scrollY);
@@ -156,7 +155,7 @@ test("spatial layers respond to scrolling and fully release into reading mode", 
   await expect(page.locator(".wec-site")).not.toHaveAttribute("data-spatial-story");
   await expect(page.locator(".pin-spacer")).toHaveCount(0);
   for (const decoration of await page.locator(".motion-art").all()) await expect(decoration).not.toBeVisible();
-  await expect(page.locator(".ecosystem-camera")).not.toHaveAttribute("style", /transform/);
+  await expect(page.locator(".arrival-directory")).not.toHaveAttribute("style", /transform/);
   for (const title of await page.locator(".pillar-word").all()) await expect(title).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -271,7 +270,7 @@ test("field highlights consume scrolling while the surrounding page stays fixed"
   for (const i of [1, 2, 1, 0]) {
     const forward = i > Number(await page.locator(".field").getAttribute("data-active-person"));
     if (isMobile) await page.keyboard.press(forward ? "ArrowDown" : "ArrowUp");
-    else await page.mouse.wheel(0, forward ? 15 : -15);
+    else await page.mouse.wheel(0, forward ? 240 : -240);
     await page.waitForTimeout(300);
     const active = page.locator(".field-person.is-active");
     await expect(active).toHaveCount(1);
@@ -282,7 +281,7 @@ test("field highlights consume scrolling while the surrounding page stays fixed"
     await expect(page.locator("#experience")).toHaveAttribute("data-active-program", "2");
   }
   if (isMobile) await page.keyboard.press("ArrowUp");
-  else await page.mouse.wheel(0, -15);
+  else await page.mouse.wheel(0, -240);
   await expect(page.locator("#experience")).toHaveAttribute("data-active-program", "1");
   expect(await page.evaluate(() => scrollY)).toBeCloseTo(position, 0);
   await page.keyboard.press("Escape");
@@ -316,16 +315,19 @@ test("five building pillars rise sequentially while the document stays locked", 
   else await page.mouse.wheel(0, 160);
   await expect(page.locator(".wec-site")).toHaveAttribute("data-scroll-locked", "pillars");
   await expect(page.locator("#pillars")).toHaveAttribute("data-raised-pillars", "0");
-  const position = await page.evaluate(() => scrollY);
   await page.waitForTimeout(250);
+  // Native PageDown may finish a frame after capture; measure the aligned scene.
+  const position = await page.evaluate(() => scrollY);
   for (const raised of [1, 2, 3, 4, 5, 4, 3, 2, 1]) {
     const forward = raised > Number(await page.locator("#pillars").getAttribute("data-raised-pillars"));
     if (isMobile) await page.keyboard.press(forward ? "ArrowDown" : "ArrowUp");
-    else await page.mouse.wheel(0, forward ? 36 : -36);
+    else await page.mouse.wheel(0, forward ? 320 : -320);
     await page.waitForTimeout(250);
     await expect(page.locator("#pillars")).toHaveAttribute("data-raised-pillars", String(raised));
     await expect(page.locator(".building-column.is-raised")).toHaveCount(raised);
     await expect(page.locator(`#pillar-${raised - 1}`)).toBeVisible();
+    await expect(page.locator("#pillars-heading")).toBeInViewport({ ratio: 1 });
+    expect(await page.locator("#pillars-heading").evaluate(el => el.getBoundingClientRect().top >= document.querySelector(".site-header")!.getBoundingClientRect().bottom)).toBeTruthy();
     expect(await page.evaluate(() => scrollY)).toBeCloseTo(position, 0);
   }
   expect(await page.locator(".foundation-scene").evaluate(element => element.getBoundingClientRect().bottom <= innerHeight + 1)).toBeTruthy();
@@ -353,8 +355,10 @@ test("program scrolling advances whole windows without internal scrolling", asyn
     const forward = index > Number(await page.locator("#experience").getAttribute("data-active-program"));
     await page.waitForTimeout(550);
     if (isMobile) await page.keyboard.press(forward ? "PageDown" : "PageUp");
-    else await page.mouse.wheel(0, forward ? 72 : index === 1 ? -15 : -72);
+    else await page.mouse.wheel(0, forward ? (index === 1 ? 480 : 720) : index === 1 ? -240 : -720);
     await expect(page.locator("#experience")).toHaveAttribute("data-active-program", String(index));
+    await expect(page.locator("#experience-heading")).toBeInViewport({ ratio: 1 });
+    expect(await page.locator("#experience-heading").evaluate(el => el.getBoundingClientRect().top >= document.querySelector(".site-header")!.getBoundingClientRect().bottom)).toBeTruthy();
     expect(await page.evaluate(() => scrollY)).toBeCloseTo(position, 0);
     const body = page.locator(`#experience-program-${index} .program-window-body`);
     expect(await body.evaluate(element => ["auto", "scroll"].includes(getComputedStyle(element).overflowY))).toBeFalsy();

@@ -1,4 +1,5 @@
 import gsap from "gsap";
+import { journeyProgress, MORRISSETTE_SCROLL_SCALE } from "./pacing";
 
 // Called within the story's responsive GSAP context so all layers revert together.
 export function setupSpatialStory(root: HTMLElement, desktop: boolean, wide: boolean, pinDoor: boolean) {
@@ -19,7 +20,7 @@ export function setupSpatialStory(root: HTMLElement, desktop: boolean, wide: boo
   // The actual About section travels underneath the opening. Removing the
   // aperture at the end reveals that content without a duplicate landing scene.
   doorway.fromTo(find(".door-handle"), { rotation: 0 }, { rotation: -24, duration: .12, ease: "power2.out" }, .01)
-    .fromTo(find(".door-leaf"), { transformPerspective: 1400, z: 16, rotationY: 0 }, { transformPerspective: 1400, z: 16, rotationY: -108, duration: .6, ease: "power2.inOut" }, .04)
+    .fromTo(find(".door-leaf"), { transformPerspective: 1400, z: 16, rotationY: 0 }, { transformPerspective: 1400, z: 16, rotationY: -108, duration: .36, ease: "power2.inOut" }, .04)
     .fromTo(room, { scale: 1, x: 0, y: 0, transformOrigin: () => `${pivot().x}px ${pivot().y}px` }, {
       scale: () => Math.max(stage.clientWidth / (frame.clientWidth - 28), (innerHeight - navHeight()) / (frame.clientHeight - 20)) * 1.25,
       x: () => stage.clientWidth / 2 - room.offsetLeft - pivot().x,
@@ -27,10 +28,11 @@ export function setupSpatialStory(root: HTMLElement, desktop: boolean, wide: boo
       duration: .84, ease: "power2.inOut",
     }, .2)
     .fromTo(all(".door-coordinate, .door-floor, .hero-meta, .hero-foot"), { autoAlpha: 1 }, { autoAlpha: 0, duration: .2, immediateRender: false }, .18)
-    .to(find(".door-interior"), { opacity: 0, duration: .16 }, .5)
+    // Keep the complete collage visible as the leaf opens, then move through it.
+    .to(find(".door-interior"), { opacity: 0, duration: .16 }, .72)
     .to(find(".door-leaf"), { opacity: 0, duration: .18 }, .64)
-    .to(find(".door-aperture"), { opacity: 0, duration: .18 }, .6)
-    .to(stage, { backgroundColor: "rgba(230,221,240,0)", duration: .18 }, .6)
+    .to(find(".door-aperture"), { opacity: 0, duration: .18 }, .72)
+    .to(stage, { backgroundColor: "rgba(230,221,240,0)", duration: .18 }, .72)
     .set(stage, { pointerEvents: "none" }, .4);
 
   const proof = gsap.timeline({ scrollTrigger: { id: "story-proof", trigger: find(".about-evidence"), start: "top 92%", end: "center 52%", scrub: .45, invalidateOnRefresh: true } });
@@ -40,13 +42,32 @@ export function setupSpatialStory(root: HTMLElement, desktop: boolean, wide: boo
     .fromTo(find(".proof-guides"), { opacity: .1 }, { opacity: .35, duration: 1 }, 0)
     .fromTo(find(".evidence-number"), { opacity: .5 }, { opacity: 1, duration: .8 }, .2);
 
-  const map = find(".ecosystem-map");
-  const camera = find(".ecosystem-camera");
-  const ecosystem = gsap.timeline({ scrollTrigger: {
-    id: "story-ecosystem", trigger: map, start: "top 85%", end: "top 45%", scrub: .2, invalidateOnRefresh: true,
+  const journey = find(".ecosystem-scene");
+  const journeyStage = find(".ecosystem-scene-stage");
+  const immersiveJourney = innerHeight >= 640;
+  const travel = { progress: 0 };
+  gsap.set(journey, { "--journey-scroll-scale": immersiveJourney ? MORRISSETTE_SCROLL_SCALE : 1 });
+  const ecosystem = gsap.timeline({ paused: true });
+  ecosystem.to(travel, { progress: 1, duration: 1, ease: "none", onUpdate: () => { journey.dataset.progress = travel.progress.toFixed(4); } }, 0)
+    .fromTo(find(".journey-welcome"), { autoAlpha: 1, y: 0 }, { autoAlpha: 0, y: -15, duration: .12 }, .05)
+    .fromTo(find(".arrival-directory"), { autoAlpha: 0, y: 24 }, { autoAlpha: 1, y: 0, duration: .12 }, .43)
+    .to(find(".arrival-directory"), { autoAlpha: 0, y: -12, duration: .045 }, .725)
+    .fromTo(find(".journey-instruction"), { autoAlpha: 1 }, { autoAlpha: 0, duration: .08 }, .75);
+  // Both full-screen views have the same camera and dimensions at this boundary.
+  // Keep an opaque viewport covering all subsequent page content until the handoff.
+  // Scrubbed progress trails the scroll, so the swap follows the pin itself:
+  // a flick or a jump past the end would otherwise leave the finished approach
+  // sitting over the classroom it just handed off to.
+  const handoff = (done: boolean) => { if (immersiveJourney) gsap.set(journeyStage, { autoAlpha: done ? 0 : 1, pointerEvents: done ? "none" : "auto" }); };
+
+  gsap.fromTo(ecosystem, { time: 0 }, { time: 1, duration: 1, ease: immersiveJourney ? journeyProgress : "none", scrollTrigger: {
+    id: "story-ecosystem", trigger: journeyStage,
+    start: () => immersiveJourney ? `top ${navHeight()}px` : "top 85%",
+    end: () => immersiveJourney ? `+=${journey.offsetHeight}` : "top 15%",
+    pin: immersiveJourney, pinSpacing: false, scrub: .45, invalidateOnRefresh: true,
+    onLeave: () => handoff(true), onEnterBack: () => handoff(false),
+    onRefresh: self => handoff(self.progress >= 1),
   } });
-  // Move the complete diagram as one surface so arrows never detach from cards.
-  ecosystem.fromTo(camera, { scale: .96, y: 18 }, { scale: 1, y: 0, duration: 1, ease: "power1.out" });
 
   const join = gsap.timeline({ scrollTrigger: { id: "story-arrival", trigger: find(".join-composition"), start: "top 95%", end: wide ? "center 65%" : "top 20%", scrub: .55, invalidateOnRefresh: true } });
   const offsets = [[-160, -100, 220], [170, -65, -180], [-100, 145, -120], [160, 120, 280]];

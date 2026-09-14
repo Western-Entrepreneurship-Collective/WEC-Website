@@ -26,7 +26,7 @@
   .program-window-footer > span { display: none; }
   .program-window-footer .text-link { width: 100%; justify-content: space-between; min-height: 46px; padding-block: 10px; font-size: 15px; border-bottom: 0; }
   .program-window-with-photo { padding: 16px; gap: 12px; }
-  .program-window-with-photo .program-details { font-size: 14px; line-height: 1.5; }
+  .program-window-with-photo .program-details { font-size: 15px; line-height: 1.5; }
   .program-window-media { min-height: 110px; max-height: 190px; }.program-window-media figcaption { font-size: 9px; letter-spacing: .04em; }
   .field-person-copy { font-size: 15px; line-height: 1.5; }.field-person button { min-height: 48px; }
   .experience-foot { padding-block: 25px 44px; }.experience-foot > span { display: none; }
@@ -54,9 +54,9 @@
 }
 @media (max-width: 759px) and (max-height: 740px) {
   .program-window-with-photo { padding: 11px 14px; gap: 9px; }
-  .program-window-with-photo h3 { font-size: 28px; }
-  .program-window-with-photo .section-lead { font-size: 14px; line-height: 1.45; }
-  .program-window-with-photo .program-details { font-size: 13px; line-height: 1.45; }
+  .program-window-with-photo h3 { font-size: 31px; }
+  .program-window-with-photo .section-lead { font-size: 15px; line-height: 1.45; }
+  .program-window-with-photo .program-details { font-size: 14px; line-height: 1.45; }
   .program-window-media { min-height: 80px; max-height: 115px; }
   .field-person-copy { font-size: 14px; line-height: 1.45; padding-bottom: 12px; }
   .program-window-field .program-window-description .section-lead { font-size: 14px; }
@@ -70,6 +70,55 @@
 @media (max-width: 759px) and (max-height: 680px) {
   .program-window-field { padding-block: 7px; gap: 8px; }
 }
+/* Reserve space for the section titles above the active scenes. */
+@media (min-width: 760px) and (max-width: 959px) {
+  .program-window-field { gap: 14px; padding: 18px 24px; }
+  .program-window-field .program-window-copy { gap: 10px; }
+  .program-window-field h3 { font-size: 42px; }
+  .program-window-field .program-window-tagline { font-size: 23px; }
+  .program-window .field { padding: 18px; }
+}
+@media (min-width: 960px) and (max-height: 760px) {
+  .program-window-field { padding-block: 8px; gap: 8px; }
+  .program-window .field { padding: 10px 14px; }
+  .field-person-copy { padding-bottom: 10px; }
+  .field-sequence-label { margin-bottom: 6px; }
+  .field-person button { min-height: 46px; padding-top: 8px; }
+}
+@media (max-width: 759px) and (max-height: 740px) {
+  .experience-nav { padding-bottom: 8px; }
+  .program-window-field { padding-block: 6px; gap: 4px; }
+  .program-window .field { padding: 8px; }
+  .field-person-copy { padding-bottom: 8px; }
+  .program-window-field .program-window-copy { gap: 5px; }
+  .field-person button { min-height: 46px; }
+  .foundation-scene-heading { margin-bottom: 8px; }
+  .pillar-panels { margin-top: 8px; }
+  .foundation-controls { margin-top: 6px; }
+  .foundation-directions { padding-top: 4px; }
+}
+@media (min-width: 960px) and (max-height: 600px) {
+  .experience .scene-title, .pillars .scene-title { font-size: 36px; margin-bottom: 8px; }
+  .experience-nav { padding-bottom: 4px; }
+  .program-window-bar { padding-block: 6px; }
+  .program-window-with-photo { grid-template-columns: minmax(0, 3fr) minmax(0, 1fr); padding-block: 4px; gap: 20px; }
+  .program-window-with-photo .program-window-copy { gap: 20px; }
+  .program-window-with-photo .program-details { margin-top: 6px; }
+  .program-window-field { padding-block: 2px; gap: 5px; }
+  .program-window .field { padding-block: 4px; }
+  .field-person-copy { padding-bottom: 2px; }
+  .field-sequence-label { margin-bottom: 2px; }
+  .field-person-copy { line-height: 1.25; }
+  .field-person button { min-height: 36px; padding-block: 4px; }
+  .foundation-scene-heading { margin-bottom: 4px; }
+  .building-columns { height: 50px; }
+  .pillar-panels { margin-top: 6px; }
+  .foundation-number { font-size: 52px; }
+  .foundation-structure .pillar-panel { padding-block: 4px; }
+  .foundation-controls { margin-top: 4px; }
+  .foundation-directions { padding-top: 0; }
+}
+
 /* Landscape phones retain the full story in normal flow. */
 @media (max-height: 499px) {
   .wec-site:not([data-scroll-scenes]) .program-window-body { padding: 24px; }

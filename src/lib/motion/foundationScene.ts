@@ -1,7 +1,7 @@
 import gsap from "gsap";
 import type Lenis from "lenis";
 import { createScrollSequence, type ScrollSequence } from "./scrollSequence";
-import { PAGE_SCROLL_SLOWDOWN } from "./pacing";
+import { PAGE_SCROLL_SLOWDOWN, PILLAR_GESTURE } from "./pacing";
 
 export function setupFoundationScene(root: HTMLElement, lenis: Lenis, controls: {
   canEnter: () => boolean;
@@ -14,6 +14,7 @@ export function setupFoundationScene(root: HTMLElement, lenis: Lenis, controls: 
   const panels = [...section.querySelectorAll<HTMLElement>(".pillar-panel")];
   const buttons = [...section.querySelectorAll<HTMLButtonElement>(".foundation-nav button")];
   const roof = section.querySelector<HTMLElement>(".building-roof")!;
+  const steps = section.querySelector<HTMLElement>(".building-steps")!;
   const instruction = section.querySelector<HTMLElement>(".foundation-instruction")!;
   const compact = matchMedia("(max-width: 1199px), (max-height: 959px)").matches;
   section.dataset.sequence = "true";
@@ -27,21 +28,23 @@ export function setupFoundationScene(root: HTMLElement, lenis: Lenis, controls: 
       const pose = { yPercent: i < raised ? 0 : 103 };
       if (immediate) gsap.set(column, pose);
       else gsap.to(column, { ...pose, duration: .18 * PAGE_SCROLL_SLOWDOWN, ease: "power2.out", overwrite: true });
-      const visible = compact ? i === selected : i < raised;
+      const visible = raised > 0 && (compact ? i === selected : i < raised);
       const textPose = { autoAlpha: visible ? 1 : 0, y: visible ? 0 : 16 };
       if (immediate) gsap.set(panels[i], textPose);
       else gsap.to(panels[i], { ...textPose, duration: .18 * PAGE_SCROLL_SLOWDOWN, overwrite: true });
       if (i === selected && raised > 0) buttons[i].setAttribute("aria-current", "true");
       else buttons[i].removeAttribute("aria-current");
     });
-    gsap.set(roof, { opacity: 1 });
+    const structurePose = { autoAlpha: raised > 0 ? 1 : 0 };
+    if (immediate) gsap.set([roof, steps], structurePose);
+    else gsap.to([roof, steps], { ...structurePose, duration: .18 * PAGE_SCROLL_SLOWDOWN, ease: "power2.out", overwrite: true });
   }
   show(0, true);
   const sequence = createScrollSequence({
     root, section, scene, lenis, ...controls,
     start: () => `top ${parseFloat(getComputedStyle(root).getPropertyValue("--nav-height")) + 14}px`,
-    count: 6, onChange: raised => show(raised), gestureThreshold: 18 * PAGE_SCROLL_SLOWDOWN, cooldownMs: 100 * PAGE_SCROLL_SLOWDOWN,
-    onRelease: () => show(5),
+    count: 6, onChange: raised => show(raised), gestureThreshold: PILLAR_GESTURE, cooldownMs: 100 * PAGE_SCROLL_SLOWDOWN,
+    onRelease: direction => show(direction < 0 ? 0 : 5),
   });
   const onPillar = (event: Event) => {
     const index = (event as CustomEvent<number>).detail;
@@ -51,8 +54,8 @@ export function setupFoundationScene(root: HTMLElement, lenis: Lenis, controls: 
   return { sequence, dispose() {
     sequence.destroy();
     section.removeEventListener("wec:pillar", onPillar);
-    gsap.killTweensOf([...columns, ...panels, roof]);
-    gsap.set([...columns, ...panels, roof], { clearProps: "transform,opacity,visibility" });
+    gsap.killTweensOf([...columns, ...panels, roof, steps]);
+    gsap.set([...columns, ...panels, roof, steps], { clearProps: "transform,opacity,visibility" });
     columns.forEach(column => column.classList.remove("is-raised"));
     buttons.forEach(button => button.removeAttribute("aria-current"));
     instruction.textContent = "Scroll to raise the pillars ↓";

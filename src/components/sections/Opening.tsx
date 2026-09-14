@@ -47,11 +47,10 @@ export function Experience() {
   return <section className="experience brand-section" id="experience" aria-labelledby="experience-heading" ref={sectionRef}>
     <div className="experience-intro section-pad">
       <span className="studio-status micro"><i /> Ideas welcome. Work in progress, too.</span>
-      <SectionHeading id="experience-heading">{c.experience.label}</SectionHeading>
-      <div className="experience-top"><RevealHeading as="p" lines={c.experience.headline} /><p className="section-lead">{c.experience.description}</p></div>
     </div>
     <div className="experience-stack">
       <div className="experience-stage">
+        <h2 className="section-heading scene-title" id="experience-heading">{c.experience.label}</h2>
         <div className="experience-nav" role="group" aria-label="Explore the WEC programs">{c.experience.programs.map((program, i) => <button key={program.number} onClick={() => showProgram(i)} aria-controls={`experience-program-${i}`}><span className="micro">{program.number}</span>{program.name}</button>)}</div>
         <div className="experience-windows">{c.experience.programs.map((program, i) => <article className={`program-window program-window-${i}`} id={`experience-program-${i}`} key={program.number} aria-labelledby={`program-heading-${i}`}>
           <div className="program-window-bar"><span className="window-marks" aria-hidden="true">{[0, 1, 2].map(dot => <i key={dot} className={dot <= i ? "is-filled" : undefined} />)}</span><span className="micro">WEC experience</span><span className="micro">{program.number} / 03</span></div>
@@ -67,6 +66,5 @@ export function Experience() {
         </article>)}</div>
       </div>
     </div>
-    <div className="experience-foot section-pad"><p>{c.experience.note}</p><span className="micro">The work starts here <Arrow down /></span></div>
   </section>;
 }

@@ -14,12 +14,17 @@
 .door-trim::before { content: ""; position: absolute; inset: -23px -23px -9px; border: 1px solid var(--purple); border-bottom: 0; }
 .door-aperture { position: absolute; inset: 0; background: white; overflow: hidden; }
 .door-interior { position: absolute; inset: 0; color: var(--green); background: white; }
-.door-room-line { position: absolute; border: 0 solid var(--purple-muted); }
-.door-room-line.line-left { left: 25%; top: 18%; bottom: 20%; border-left-width: 1px; }
-.door-room-line.line-right { right: 25%; top: 18%; bottom: 20%; border-right-width: 1px; }
-.door-room-line.line-top { top: 18%; left: 25%; right: 25%; border-top-width: 1px; }
-.door-room-line.line-bottom { bottom: 20%; left: 25%; right: 25%; border-bottom-width: 1px; }
-.door-welcome { position: absolute; inset: 44% 8% auto; text-align: center; font-family: var(--hand); font-size: clamp(19px, 2vw, 30px); line-height: 1.4; }
+/* One continuous photo wall; every tile shares its edges with its neighbors. */
+.door-collage { position: absolute; inset: 0; display: grid; grid-template-columns: .85fr 1.3fr .85fr; grid-template-rows: 8fr 9fr 8fr; grid-template-areas: "conversations conversations connections" "presentation welcome applause" "ventures founders founders"; gap: 0; container-type: inline-size; }
+.door-collage-photo { position: relative; min-width: 0; min-height: 0; overflow: hidden; }
+.door-collage-photo img { display: block; object-fit: cover; border: 0; border-radius: 0; }
+.door-collage-conversations { grid-area: conversations; }
+.door-collage-connections { grid-area: connections; }
+.door-collage-presentation { grid-area: presentation; }
+.door-collage-applause { grid-area: applause; }
+.door-collage-ventures { grid-area: ventures; }
+.door-collage-founders { grid-area: founders; }
+.door-welcome { grid-area: welcome; display: grid; place-items: center; min-width: 0; background: var(--white); color: var(--green); text-align: center; font-family: var(--display); font-size: 5.4cqw; font-weight: 600; line-height: 1.12; letter-spacing: -.05em; white-space: nowrap; }
 .door-leaf { position: absolute; inset: 0; transform-origin: left center; transform: perspective(1400px) translateZ(16px); transform-style: preserve-3d; z-index: 5; }
 .door-leaf-face, .door-leaf-back { position: absolute; inset: 0; background: var(--purple); border: 1px solid var(--purple-muted); backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .door-leaf-face { transform: translateZ(3px); }

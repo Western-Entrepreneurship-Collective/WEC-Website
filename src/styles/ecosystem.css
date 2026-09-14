@@ -1,53 +1,97 @@
-/* A measured network: aligned cards and consistent connections. */
+/* A quiet campus palette: white, sage and restrained WEC purple. */
+.ecosystem.section-pad { background: #f0f2ef; padding-bottom: 0; z-index: 2; }
 .ecosystem-intro { align-items: start; }
-.ecosystem-map { position: relative; height: auto; margin-top: 42px; padding: 26px 32px 12px; border: 1px solid #ddd5e6; border-radius: 16px; background: var(--paper); }
-.ecosystem-map-heading { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-bottom: 20px; border-bottom: 1px solid #e5dfea; }
-.ecosystem-world { position: static; font-size: 10px; color: var(--green); margin: 0; }
-.ecosystem-legend { display: flex; align-items: center; gap: 9px; font-size: 9px; color: var(--muted); }
-.ecosystem-legend i { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
-.ecosystem-camera { --map-compact: 0; position: relative; width: 100%; height: 480px; }
-.ecosystem-web { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
-.ecosystem-web .ecosystem-arrow { fill: none; stroke: var(--purple); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-.ecosystem-web .ecosystem-arrow.is-accent { stroke: var(--green); stroke-width: 1.2; }
-.ecosystem-web marker path { fill: none; stroke: var(--purple); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-.ecosystem-web marker[id$="-green"] path { stroke: var(--green); }
-.ecosystem-wec, .ecosystem-centre, .ecosystem-node { position: absolute; inset: auto; left: var(--node-x); top: var(--node-y); transform: translate(-50%, -50%); margin: 0; z-index: 1; }
-.ecosystem-wec { --node-x: 50%; --node-y: 60px; width: 126px; padding: 15px 20px; border: 1px solid #b5cbc1; border-radius: 12px; background: white; box-shadow: none; }
-.ecosystem-wec::before { content: none; }.ecosystem-wec .micro { color: var(--green); font-size: 9px; }
-.ecosystem-wec .wec-logo { width: 100%; margin-top: 10px; }
-.ecosystem-centre { --node-x: 50%; --node-y: 53%; width: 238px; padding: 27px 20px; border: 1.5px solid var(--purple); border-radius: 14px; text-align: center; background: var(--lavender); box-shadow: 0 5px 18px #582c8309; }
-.ecosystem-centre > .micro { display: block; color: var(--green); font-size: 9px; margin-bottom: 12px; line-height: 1.5; letter-spacing: .06em; }
-.ecosystem-centre h3 { font-size: 30px; font-weight: 500; line-height: 1.15; letter-spacing: -.035em; }.ecosystem-centre::after { content: none; }
-.ecosystem-nodes { display: contents; padding: 0; }
-.ecosystem-node { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 70px; width: 190px; padding: 16px; border: 1px solid #d7cce2; border-radius: 12px; background: white; font-size: 16px; line-height: 1.4; text-align: center; }
-.ecosystem-node > .ecosystem-node-dot { display: block; width: 5px; height: 5px; background: var(--green); border-radius: 50%; flex-shrink: 0; margin: 0; }
-.ecosystem-node-0, .ecosystem-node-2, .ecosystem-node-4 { --node-x: 15%; }
-.ecosystem-node-1, .ecosystem-node-3, .ecosystem-node-5 { --node-x: 85%; }
-.ecosystem-node-0, .ecosystem-node-1 { --node-y: 25%; }
-.ecosystem-node-2, .ecosystem-node-3 { --node-y: 53%; }
-.ecosystem-node-4, .ecosystem-node-5 { --node-y: 81%; }
-[data-spatial-story] .ecosystem-map { perspective: none; overflow: visible; }
-[data-spatial-story] .ecosystem-camera { transform-origin: center; }
-.ecosystem-bottom { min-height: 0; padding: 22px 0 0; }.ecosystem-bottom .venture-line { display: none; }
-@media (min-width: 760px) and (max-width: 1099px) {
-  .ecosystem-map { padding: 22px; }.ecosystem-camera { height: 460px; }
-  .ecosystem-centre { width: 194px; padding: 24px 12px; }.ecosystem-centre h3 { font-size: 26px; }
-  .ecosystem-centre > .micro { font-size: 8px; }.ecosystem-node { width: 150px; font-size: 14px; padding: 12px; }
-  .ecosystem-legend { display: none; }
+.ecosystem-scene { --journey-height: calc(100dvh - var(--nav-height)); position: relative; width: 100vw; margin-left: calc(50% - 50vw); margin-top: 30px; }
+.ecosystem-scene-stage { position: relative; width: 100%; background: #f0f2ef; z-index: 3; }
+.journey-viewport { position: relative; height: var(--journey-height); min-height: 0; overflow: clip; }
+.campus-render { position: absolute; inset: 0; overflow: hidden; }
+.campus-render canvas, .campus-fallback { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.campus-fallback { object-fit: cover; }
+.campus-render[data-ready] .campus-fallback { visibility: hidden; }
+.campus-render:not([data-ready]) canvas { visibility: hidden; }
+.journey-welcome { position: absolute; top: 9%; left: 4%; max-width: 260px; pointer-events: none; }
+.journey-welcome > .micro { color: var(--green); font-size: 10px; }
+.journey-welcome p { font-family: var(--display); font-size: clamp(24px,3vw,40px); letter-spacing: -.05em; margin: 9px 0 12px; line-height: 1.1; }
+.journey-welcome > span:last-child { display: block; font-size: 12px; max-width: 180px; line-height: 1.5; }
+.journey-welcome > span:last-child span { margin-left: 8px; }
+.arrival-directory { position: absolute; inset: auto 2% 9%; }
+.arrival-caption { color: var(--green); text-align: center; margin-bottom: 18px; font-size: 10px; }
+.opportunity-signs { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px 22px; }
+.opportunity-sign { display: flex; align-items: center; gap: 12px; min-height: 70px; padding: 15px 24px 15px 16px; background: #fff; color: #582c83; border: 1px solid #d6d0db; border-bottom: 5px solid #b9adbf; box-shadow: 0 12px 20px #21132f14; clip-path: polygon(0 0, 92% 0, 100% 50%, 92% 100%, 0 100%); }
+.sign-index { font-size: 10px; color: #776784; }
+.opportunity-name { font-family: "Caveat", cursive; font-size: clamp(20px,2vw,28px); font-weight: 600; line-height: 1.15; }
+.sign-arrow { margin-left: auto; font-size: 20px; }
+.journey-instruction { position: absolute; inset: auto 3% 20px; display: flex; justify-content: space-between; color: var(--green); font-size: 9px; }
+[data-spatial-story] .arrival-directory { opacity: 0; visibility: hidden; }
+@media (min-height: 640px) {
+  [data-spatial-story] .ecosystem-scene { height: calc((var(--journey-height) + min(70svh,700px)) * .5 * var(--journey-scroll-scale, 1)); }
+  [data-spatial-story] .journey-viewport { min-height: 0; }
 }
+/* The classroom remains the same full-screen canvas at the end of the approach. */
+.audience { background: #f8f7f9; padding: 0; z-index: 1; }
+.classroom-stage { position: relative; width: 100%; height: calc(100dvh - var(--nav-height)); overflow: hidden; background: #f8f7f9; }
+.starting-room { position: absolute; inset: 0; }
+.campus-render canvas { cursor: pointer; }
+.classroom-caption { position: absolute; bottom: 34px; left: 4vw; width: min(32vw, 430px); pointer-events: none; }
+.classroom-caption .section-heading { font-size: 11px; margin-bottom: 12px; }
+.classroom-caption .section-heading::before { display: none; }
+.classroom-headline { font-family: var(--display); font-size: clamp(25px, 2.8vw, 42px); line-height: 1.08; letter-spacing: -.05em; }
+.classroom-headline span { display: block; }
+.classroom-intro { font-size: 13px; line-height: 1.5; margin-top: 12px; max-width: 32ch; }
+.campus-seat-labels { position: absolute; inset: 0; pointer-events: none; }
+.campus-person { position: absolute; z-index: 2; width: clamp(260px, 24vw, 350px); min-height: 44px; display: grid; place-items: center; padding: 9px 12px; border: 1px solid #d6cddd; background: #fffffff5; color: #582c83; border-radius: 9px; box-shadow: 0 4px 14px #21132f12; font-family: var(--body); font-size: 32.5px; line-height: 1.05; letter-spacing: -.045em; text-align: center; transform: translate(-50%, -100%); pointer-events: auto; cursor: pointer; }
+.campus-person::after { display: none; content: ''; position: absolute; top: 100%; left: 50%; height: 8px; width: 1px; background: #ab9dbb; }
+.campus-person { transition-property: color, background-color, border-color; }
+.campus-person:hover, .campus-person[aria-pressed="true"] { border-color: #806396; background: #eee7f4; }
+.campus-render-journey .campus-seat-labels { visibility: hidden; }
+.campus-render-journey[data-classroom="true"] .campus-seat-labels { visibility: visible; }
+.audience .audience-answer { position: absolute; bottom: 28px; right: 4vw; left: auto; transform: none; width: min(390px, 35vw); min-height: 0; display: block; border: 1px solid #d6cddd; border-radius: 9px; padding: 15px 20px; background: #fffffff7; box-shadow: 0 5px 18px #21132f10; }
+.audience .audience-answer p { font-size: 14px; line-height: 1.45; }
+.audience .audience-answer .text-link { margin: 6px 0 0; padding: 7px 0; font-size: 13px; }
+.campus-render:not([data-ready]) .circle-people { inset: auto 4% 285px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.campus-render:not([data-ready]) .circle-person { position: relative; transform: none; width: 100%; left: auto !important; top: auto !important; }
+.campus-render:not([data-ready]) .circle-person::after { display: none; }
+[data-motion="reduced"] .journey-welcome { display: none; }
+[data-spatial-story] .journey-viewport:has(.campus-render[data-ready]) .arrival-directory { width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 @media (max-width: 759px) {
-  .ecosystem-map { padding: 18px 12px 0; margin-top: 28px; border-radius: 12px; }
-  .ecosystem-map-heading { display: block; padding-bottom: 16px; }.ecosystem-world { font-size: 9px; text-align: center; }.ecosystem-legend { justify-content: center; font-size: 9px; letter-spacing: .04em; margin-top: 8px; }
-  .ecosystem-camera { --map-compact: 1; height: 580px; }
-  .ecosystem-wec { --node-y: 48px; width: 112px; padding: 12px 16px; }.ecosystem-wec .wec-logo { margin-top: 8px; }
-  .ecosystem-centre { --node-y: 185px; width: 184px; padding: 20px 14px; }.ecosystem-centre h3 { font-size: 25px; }.ecosystem-centre > .micro { font-size: 8px; margin-bottom: 9px; }
-  .ecosystem-node { width: 42%; min-height: 70px; padding: 13px 7px; font-size: 14px; gap: 0; }
-  .ecosystem-node > .ecosystem-node-dot { display: none; }
-  .ecosystem-node-0, .ecosystem-node-2, .ecosystem-node-4 { --node-x: 27%; }
-  .ecosystem-node-1, .ecosystem-node-3, .ecosystem-node-5 { --node-x: 73%; }
-  .ecosystem-node-0, .ecosystem-node-1 { --node-y: 310px; }
-  .ecosystem-node-2, .ecosystem-node-3 { --node-y: 415px; }
-  .ecosystem-node-4, .ecosystem-node-5 { --node-y: 520px; }
-  .ecosystem-bottom { padding-top: 18px; font-size: 14px; }.ecosystem-bottom > span { max-width: none; }
+  .ecosystem-scene { margin-top: 16px; }
+  .journey-welcome { top: 5%; left: 5%; }.journey-welcome p { font-size: 27px; }.journey-welcome > span:last-child { font-size: 11px; }
+  .arrival-directory { inset: auto 3% 8%; }.opportunity-signs { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; }
+  .opportunity-sign { padding: 10px 14px 10px 8px; gap: 5px; min-height: 67px; }.opportunity-name { font-size: 19px; overflow-wrap: anywhere; }.sign-index { font-size: 8px; }.sign-arrow { display: none; }
+  .arrival-caption { font-size: 8px; margin-bottom: 12px; }.journey-instruction { font-size: 7px; bottom: 14px; }
+  .classroom-caption { bottom: var(--classroom-copy-bottom, 134px); left: 5vw; width: 90vw; }.classroom-caption .section-heading { font-size: 9px; margin-bottom: 7px; }
+  .classroom-headline { font-size: 25px; }.classroom-intro { font-size: 11px; max-width: 42ch; margin-top: 7px; }
+  .campus-person { width: calc(50% - 4px); min-height: 44px; padding: 6px 3px; font-size: 27.5px; }
+  .audience .audience-answer { bottom: 16px; right: 5vw; width: 90vw; display: block; padding: 12px 14px; }.audience .audience-answer p { font-size: 13px; }.audience .audience-answer .text-link { margin-top: 5px; font-size: 12px; }
+  .campus-render:not([data-ready]) .circle-people { grid-template-columns: repeat(2,1fr); }
 }
-@media print { .ecosystem-camera { transform: none !important; opacity: 1 !important; } }
+@media (max-height: 639px) {
+  .journey-welcome { display: none; }
+  .journey-viewport, .classroom-stage { min-height: 560px; }
+  [data-spatial-story] .arrival-directory { opacity: 1 !important; visibility: visible !important; transform: none !important; }
+  [data-spatial-story] .journey-viewport:has(.campus-render[data-ready]) .arrival-directory { width: auto; height: auto; margin: 0; overflow: visible; clip-path: none; white-space: normal; }
+}
+@media print {
+  .ecosystem-scene { height: auto !important; }.ecosystem-scene-stage { transform: none !important; opacity: 1 !important; visibility: visible !important; }
+  .arrival-directory { opacity: 1 !important; visibility: visible !important; }.campus-render canvas { display: none; }.campus-render .campus-fallback { visibility: visible; }
+}
+
+.journey-classroom-caption { opacity: 0; visibility: hidden; }
+.campus-label-leaders { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; stroke: #8b7997; stroke-width: 1; opacity: .6; }
+.campus-render:not([data-ready]) .campus-label-leaders { display: none; }
+.campus-render-journey:not([data-classroom="true"]) .campus-label-leaders { visibility: hidden; }
+
+.ecosystem, .audience { color: var(--purple); }
+.ecosystem .section-heading::before, .audience .section-heading::before { background: #034638; }
+.ecosystem-intro .reveal-heading { color: #582c83; }
+.ecosystem-intro .section-lead { color: #514957; }
+.journey-welcome { padding: 18px 20px; border-radius: 12px; background: #ffffffe8; box-shadow: 0 5px 22px #21132f10; }
+.journey-welcome > .micro { color: #034638; }
+.journey-instruction { color: #582c83; }
+.classroom-headline { color: #582c83; }
+.classroom-intro, .audience-answer { color: #514957; }
+.sign-index { color: #776784; }
+
+/* Scrub the reveal in both directions; the room inherits the fully visible end state. */
+.campus-render-journey .campus-seat-labels { opacity: var(--seat-label-opacity, 0); }
+.campus-render-journey .campus-label-leaders { opacity: calc(.6 * var(--seat-label-opacity, 0)); }
