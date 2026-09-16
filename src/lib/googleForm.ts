@@ -28,7 +28,7 @@ export type Answers = {
   building: string;
   signature: string;
   evidence: string;
-  hardest: string;
+  favourite: string;
 };
 
 export type Field = keyof Answers;
@@ -38,7 +38,7 @@ export const YEARS = ["Year 1", "Year 2", "Year 3", "Year 4", "Graduate", "Alumn
 export const BLANK: Answers = {
   // Year starts EMPTY on purpose: a pre-picked "Year 1" gets sent by people
   // who never looked at it.
-  name: "", email: "", year: "", building: "", signature: "", evidence: "", hardest: "",
+  name: "", email: "", year: "", building: "", signature: "", evidence: "", favourite: "",
 };
 
 /** The word typed into each question when making the pre-filled link. */
@@ -48,12 +48,12 @@ export const PLACEHOLDERS: Record<Exclude<Field, "year">, string> = {
   building: "BUILDING",
   signature: "SIGNATURE",
   evidence: "EVIDENCE",
-  hardest: "HARDEST",
+  favourite: "FAVOURITE",
 };
 
 export const REQUIRED: Field[] = ["name", "email", "year", "building", "signature"];
 const MAX_LENGTH: Record<Field, number> = {
-  name: 200, email: 200, year: 20, building: 2000, signature: 200, evidence: 2000, hardest: 2000,
+  name: 200, email: 200, year: 20, building: 2000, signature: 200, evidence: 2000, favourite: 2000,
 };
 
 // ─── Email rule ──────────────────────────────────────────────────────────────

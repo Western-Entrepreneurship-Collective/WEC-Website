@@ -35,7 +35,7 @@ type Status = "idle" | "sending" | "joined" | "mail-opened" | "failed";
 
 const FIELD_NAMES: Record<Field, string> = {
   name: "Name", email: "Email", year: "Year", building: "What you're building",
-  signature: "Signature", evidence: "Made or shipped", hardest: "Hardest part",
+  signature: "Signature", evidence: "Made or shipped", favourite: "Favourite thing",
 };
 
 function mailtoFor(v: Answers, EMAIL: string) {
@@ -51,8 +51,8 @@ function mailtoFor(v: Answers, EMAIL: string) {
     "What have you made or shipped, if anything?",
     v.evidence || "Not answered",
     "",
-    "What is the hardest part right now?",
-    v.hardest || "Not answered",
+    "What is your favourite thing about entrepreneurship?",
+    v.favourite || "Not answered",
   ];
   // ⛔ The address is NOT percent encoded. encodeURIComponent turns "@" into
   // "%40" and some mail clients then fail to parse the recipient at all.
@@ -242,8 +242,8 @@ export function JoinForm({ label, className }: { label: string; className: strin
                 </label>
 
                 <label>
-                  <span>Hardest part right now? <em>Optional</em></span>
-                  <textarea value={v.hardest} onChange={set("hardest")} rows={2} />
+                  <span>Favourite thing about entrepreneurship? <em>Optional</em></span>
+                  <textarea value={v.favourite} onChange={set("favourite")} rows={2} />
                 </label>
 
                 {/* Hidden from people and screen readers. Only bots fill it in. */}

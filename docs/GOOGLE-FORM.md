@@ -6,7 +6,10 @@ Connecting them takes one link. About 10 minutes.
 
 ## 1. Make the Form (on the club's Google account, not a personal one)
 
-Create a new Google Form. Add these questions, in any order:
+Create a new Google Form. Add these questions, in any order. **The wording is
+yours** — the site identifies each question by the placeholder word in step 2,
+not by its title, so phrase them however students should read them on the
+Sheet. Only the Year options below are matched exactly.
 
 | Question | Type | Required |
 |---|---|---|
@@ -16,7 +19,7 @@ Create a new Google Form. Add these questions, in any order:
 | What are you building, or curious about? | Paragraph | yes |
 | Signature (typed full name) | Short answer | yes |
 | Made or shipped anything? | Paragraph | no |
-| Hardest part right now? | Paragraph | no |
+| Favourite thing about entrepreneurship? | Paragraph | no |
 
 Settings that must be like this, or Google refuses the site's answers:
 
@@ -24,6 +27,8 @@ Settings that must be like this, or Google refuses the site's answers:
   already collects and checks the @uwo.ca email.
 - **Restrict to users in your organization / Require sign in: OFF.**
 - **Limit to 1 response: OFF.**
+- **The two optional questions must be optional in Google.** Marking one required
+  passes the step 4 check but makes Google reject any sign up that leaves it blank.
 - Do not add response validation on the Google side. The site checks the email.
 - If Year options are renamed, Google rejects answers. Keep them exactly as above.
 
@@ -41,7 +46,7 @@ Form editor → **⋮ menu → Get pre-filled link**. Type these exact words as 
 | What are you building | `BUILDING` |
 | Signature | `SIGNATURE` |
 | Made or shipped | `EVIDENCE` |
-| Hardest part | `HARDEST` |
+| Favourite thing | `FAVOURITE` |
 
 Press **Get link**, then **Copy link**. It looks like
 `https://docs.google.com/forms/d/e/1FAIpQL.../viewform?usp=pp_url&entry.123=NAME&...`

@@ -42,7 +42,8 @@ function readQuestions(html: string): Question[] | null {
 
 const LABELS: Record<Field, string> = {
   name: "Name", email: "Email", year: "Year", building: "What are you building",
-  signature: "Signature", evidence: "Made or shipped anything", hardest: "Hardest part",
+  signature: "Signature", evidence: "Made or shipped anything",
+  favourite: "Favourite thing about entrepreneurship",
 };
 
 export async function checkGoogleForm(form: Extract<GoogleForm, { ok: true }>): Promise<FormCheck> {
