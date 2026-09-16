@@ -61,11 +61,18 @@ function mailtoFor(v: Answers, EMAIL: string) {
     + `&body=${encodeURIComponent(lines.join("\n"))}`;
 }
 
-export function JoinForm({ label, className }: { label: string; className: string }) {
+/**
+ * The questions, the validation and the three delivery routes, with NO dialog
+ * around them. Two places render this: the Join WEC dialog below, and the
+ * standalone /apply page the printed QR code lands on. The QR is the reason it
+ * is split out — a scan must show the form itself, not a button that opens one.
+ *
+ * The heading tag is a prop because the same markup is an h2 inside the dialog
+ * (which already has its own heading structure) and the h1 of the /apply page.
+ */
+export function JoinFormBody({ headingTag: Heading = "h2" }: { headingTag?: "h1" | "h2" }) {
   const EMAIL = contactEmail;
   const viaGoogle = googleForm.ok;
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const [v, setV] = useState<Answers>(BLANK);
   const [website, setWebsite] = useState("");
@@ -81,25 +88,6 @@ export function JoinForm({ label, className }: { label: string; className: strin
     setV(prev => ({ ...prev, [k]: e.target.value }));
     setErrors(prev => (prev[k] ? { ...prev, [k]: undefined } : prev));
   };
-
-  function close() {
-    dialogRef.current?.close();
-    buttonRef.current?.focus();
-  }
-
-  function trapFocus(event: KeyboardEvent<HTMLDialogElement>) {
-    if (event.key !== "Tab") return;
-    const controls = [...event.currentTarget.querySelectorAll<HTMLElement>(
-      "button:not([disabled]), a[href], input:not([tabindex='-1']), select, textarea")];
-    const first = controls[0];
-    const last = controls.at(-1);
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault(); last?.focus();
-    }
-    if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault(); first?.focus();
-    }
-  }
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -149,38 +137,9 @@ export function JoinForm({ label, className }: { label: string; className: strin
 
   return (
     <>
-      <button
-        className={className}
-        ref={buttonRef}
-        onClick={() => dialogRef.current?.showModal()}
-        aria-haspopup="dialog"
-      >
-        {label}<Arrow diagonal />
-      </button>
-
-      <dialog
-        ref={dialogRef}
-        className="join-dialog join-form-dialog"
-        aria-labelledby="join-form-title"
-        // ⛔ Without this the form cannot scroll at all. story.ts stops Lenis
-        // while any dialog is open, and a stopped Lenis cancels every wheel and
-        // touch on the page unless the element opts out with this attribute.
-        // Measured: form 1067px tall in a 553px window, wheel moved it 0px.
-        data-lenis-prevent
-        onKeyDown={trapFocus}
-        onClick={event => { if (event.target === event.currentTarget) close(); }}
-        onClose={() => buttonRef.current?.focus()}
-      >
-        <div className="dialog-inner">
-          <button className="dialog-close" onClick={close} aria-label="Close dialog" autoFocus>
-            <span aria-hidden="true">×</span>
-          </button>
-          <Logo />
-          <p className="micro">Western Entrepreneurship Collective</p>
-
           {status === "joined" ? (
             <div role="status">
-              <h2 id="join-form-title">You&rsquo;re in.</h2>
+              <Heading id="join-form-title">You&rsquo;re in.</Heading>
               <p className="join-done">
                 Welcome to WEC{firstName ? `, ${firstName}` : ""}. We&rsquo;ll be in touch
                 at <strong>{v.email.trim()}</strong>.
@@ -188,7 +147,7 @@ export function JoinForm({ label, className }: { label: string; className: strin
             </div>
           ) : status === "mail-opened" ? (
             <div role="status">
-              <h2 id="join-form-title">Almost done.</h2>
+              <Heading id="join-form-title">Almost done.</Heading>
               <p className="join-done">
                 Your email app opened with your answers filled in. Press send
                 there to finish. If it didn&rsquo;t open,{" "}
@@ -198,7 +157,7 @@ export function JoinForm({ label, className }: { label: string; className: strin
             </div>
           ) : (
             <>
-              <h2 id="join-form-title">Join WEC</h2>
+              <Heading id="join-form-title">Join WEC</Heading>
               <p>Free to join. Takes about a minute.</p>
               <form className="join-form" ref={formRef} onSubmit={submit} noValidate>
                 <label>
@@ -276,6 +235,68 @@ export function JoinForm({ label, className }: { label: string; className: strin
               </form>
             </>
           )}
+    </>
+  );
+}
+
+/**
+ * The Join WEC button and the dialog it opens. Unchanged behaviour: the form
+ * itself now lives in JoinFormBody so /apply can render it without a dialog.
+ */
+export function JoinForm({ label, className }: { label: string; className: string }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  function close() {
+    dialogRef.current?.close();
+    buttonRef.current?.focus();
+  }
+
+  function trapFocus(event: KeyboardEvent<HTMLDialogElement>) {
+    if (event.key !== "Tab") return;
+    const controls = [...event.currentTarget.querySelectorAll<HTMLElement>(
+      "button:not([disabled]), a[href], input:not([tabindex='-1']), select, textarea")];
+    const first = controls[0];
+    const last = controls.at(-1);
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault(); last?.focus();
+    }
+    if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault(); first?.focus();
+    }
+  }
+
+  return (
+    <>
+      <button
+        className={className}
+        ref={buttonRef}
+        onClick={() => dialogRef.current?.showModal()}
+        aria-haspopup="dialog"
+      >
+        {label}<Arrow diagonal />
+      </button>
+
+      <dialog
+        ref={dialogRef}
+        className="join-dialog join-form-dialog"
+        aria-labelledby="join-form-title"
+        // ⛔ Without this the form cannot scroll at all. story.ts stops Lenis
+        // while any dialog is open, and a stopped Lenis cancels every wheel and
+        // touch on the page unless the element opts out with this attribute.
+        // Measured: form 1067px tall in a 553px window, wheel moved it 0px.
+        data-lenis-prevent
+        onKeyDown={trapFocus}
+        onClick={event => { if (event.target === event.currentTarget) close(); }}
+        onClose={() => buttonRef.current?.focus()}
+      >
+        <div className="dialog-inner">
+          <button className="dialog-close" onClick={close} aria-label="Close dialog" autoFocus>
+            <span aria-hidden="true">×</span>
+          </button>
+          <Logo />
+          <p className="micro">Western Entrepreneurship Collective</p>
+          <JoinFormBody />
         </div>
       </dialog>
     </>

@@ -1,0 +1,59 @@
+/* The /apply landing page: what a phone sees after scanning a printed QR code.
+   It reuses the .join-form rules from globals.css so the questions look and
+   behave identically to the Join WEC dialog. Only the shell around them is new.
+
+   The whole page is one column and never exceeds 620px, because the only
+   device that matters here is a phone held at a booth. */
+
+.apply-page {
+  min-height: 100svh;
+  background: var(--paper);
+  color: var(--purple);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 0 0 56px;
+}
+
+.apply-head {
+  width: 100%;
+  background: var(--purple);
+  color: var(--white);
+  padding: 22px var(--gutter) 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.apply-brand { display: block; line-height: 0; }
+.apply-head .wec-logo { width: 190px; height: auto; }
+.apply-head .micro { color: var(--purple-muted); font-size: 10px; }
+
+/* The questions sit on white so the form reads as the page's one job. */
+.apply-card {
+  width: min(620px, calc(100% - 32px));
+  background: var(--white);
+  border: 1px solid var(--line);
+  padding: clamp(24px, 5vw, 44px);
+  margin-top: clamp(20px, 4vw, 36px);
+}
+
+/* .dialog-inner supplies these inside the dialog; out here they are ours. */
+.apply-card h1 { font-size: clamp(34px, 8vw, 44px); line-height: 1.08; letter-spacing: -.045em; }
+.apply-card > div > h1 { margin-bottom: 4px; }
+.apply-card > p { color: var(--muted); margin-top: 16px; font-size: 14px; }
+.apply-card .join-form { margin-top: 24px; }
+.apply-card .join-done { color: var(--muted); margin-top: 18px; font-size: 15px; line-height: 1.6; }
+.apply-card :focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+
+.apply-foot { margin-top: 28px; padding-inline: var(--gutter); }
+.apply-foot .text-link { font-size: 13px; }
+
+@media (max-width: 480px) {
+  .apply-head { padding-top: 18px; }
+  .apply-head .wec-logo { width: 156px; }
+  .apply-card { width: calc(100% - 24px); }
+}

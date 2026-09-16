@@ -72,10 +72,25 @@ test("CTA availability dialogs are honest, keyboard accessible, and restore focu
   await button.click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("Membership details aren’t available");
+  // Join has two correct outcomes and which one appears is a build-time
+  // setting, not a bug: with NEXT_PUBLIC_WEC_GOOGLE_FORM_URL set the dialog
+  // asks the questions, and without it the dialog says so honestly rather than
+  // pretending to collect anything. Assert whichever this build was configured
+  // for, so the suite passes both before and after the Form is connected.
+  const asksTheQuestions = await dialog.locator("form.join-form").count() > 0;
+  if (asksTheQuestions) {
+    await expect(dialog.getByRole("heading", { name: "Join WEC" })).toBeVisible();
+    await expect(dialog.getByRole("button", { name: "Join WEC", exact: true })).toBeVisible();
+  } else {
+    await expect(dialog).toContainText("Membership details aren’t available");
+  }
   await expect(dialog.getByRole("button", { name: "Close dialog" })).toBeFocused();
   await page.keyboard.press("Shift+Tab");
-  await expect(dialog.getByRole("link")).toBeFocused();
+  // The trap wraps from the close button back to the last control: the submit
+  // button in the form, the "Explore the experience" link in the honest dialog.
+  await expect(asksTheQuestions
+    ? dialog.getByRole("button", { name: "Join WEC", exact: true })
+    : dialog.getByRole("link")).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
   await expect(button).toBeFocused();

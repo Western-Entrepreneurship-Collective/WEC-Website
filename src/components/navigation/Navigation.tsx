@@ -47,10 +47,10 @@ export function Navigation() {
   return <header className={`site-header ${open ? "menu-is-open" : ""}`} ref={headerRef}>
     <a className="nav-brand" href="#hero" aria-label="WEC — Western Entrepreneurship Collective — back to the beginning" onClick={() => setOpen(false)}><Logo priority /><span className="nav-descriptor">Western Entrepreneurship <br />Collective</span></a>
     <nav className="desktop-nav" aria-label="Main navigation">{siteContent.navigation.map(item => <a key={item.href} href={item.href}>{item.label}</a>)}</nav>
-    <a className="nav-join" href="#join">Join WEC <Arrow diagonal /></a>
+    <a className="nav-join" href="/apply">Join WEC <Arrow diagonal /></a>
     <button ref={buttonRef} className="menu-toggle" aria-expanded={open} aria-controls="mobile-navigation" aria-label={open ? "Close navigation" : "Open navigation"} onClick={() => setOpen(!open)}><span /><span /></button>
     <div className="mobile-menu" id="mobile-navigation" hidden={!open} ref={menuRef}>
-      <nav aria-label="Mobile navigation">{[...siteContent.navigation, { label: "Join WEC", href: "#join" }].map((item, i) => <a href={item.href} key={item.href} onClick={() => setOpen(false)}><span className="micro">0{i + 1}</span>{item.label}<Arrow /></a>)}</nav>
+      <nav aria-label="Mobile navigation">{[...siteContent.navigation, { label: "Join WEC", href: "/apply" }].map((item, i) => <a href={item.href} key={item.href} onClick={() => setOpen(false)}><span className="micro">0{i + 1}</span>{item.label}<Arrow /></a>)}</nav>
       <p className="micro">By Founders, for Founders.</p>
     </div>
   </header>;
