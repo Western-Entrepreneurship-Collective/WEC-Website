@@ -1,4 +1,6 @@
 // All editorial copy and destinations live here. No prototype facts are carried over.
+import { parseEmailRule, parseGoogleForm } from "@/lib/googleForm";
+
 function officialDestination(value: string | undefined): string | null {
   if (!value?.trim()) return null;
   try {
@@ -13,6 +15,31 @@ export const destinations = {
   join: officialDestination(process.env.NEXT_PUBLIC_WEC_JOIN_URL),
   events: officialDestination(process.env.NEXT_PUBLIC_WEC_EVENTS_URL),
 };
+
+// ⛔ THE CONTACT ADDRESS HAS NO DEFAULT, AND THAT IS THE WHOLE POINT.
+//
+// Both WEC sites carried `hello@wecollective.ca` as the club's address.
+// Checked on 2026-09-13: that domain is NOT the club's. It is PARKED AT
+// GODADDY by a third party, and it has live MX records, so mail addressed to
+// it does not obviously bounce. Every signup would have handed a student's
+// name and email to a stranger, and the student would have believed they had
+// applied.
+//
+// So there is no fallback value here on purpose. If nobody has set an address
+// the club actually controls, the signup form does not render at all and the
+// existing honest dialog is shown instead. A form that collects nothing is bad;
+// a form that quietly posts people's details to a domain squatter is worse.
+export const contactEmail = ((): string | null => {
+  const value = process.env.NEXT_PUBLIC_WEC_CONTACT_EMAIL?.trim();
+  if (!value) return null;
+  return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value) ? value : null;
+})();
+
+// The club's Google Form, from its pre-filled link. See src/lib/googleForm.ts
+// and docs/GOOGLE-FORM.md. Not set means the sign up form falls back to email.
+export const googleForm = parseGoogleForm(process.env.NEXT_PUBLIC_WEC_GOOGLE_FORM_URL);
+// "western" (default): uwo.ca, *.uwo.ca, ivey.ca, *.ivey.ca. "any": any email.
+export const emailRule = parseEmailRule(process.env.NEXT_PUBLIC_WEC_EMAIL_RULE);
 
 export const siteContent = {
   name: "Western Entrepreneurship Collective",

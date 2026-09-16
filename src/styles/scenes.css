@@ -89,7 +89,7 @@
   .foundation-scene-heading > p { font-size: 20px; }
   .building-roof { height: 60px; }
   .building-columns { min-height: 0; height: clamp(190px, calc(100svh - 540px), 280px); }
-  .column-ordinal { display: block; position: absolute; inset: 18px 0 auto; font-family: var(--display); font-size: clamp(44px, 7vw, 88px); text-align: center; }
+  .column-ordinal { display: block; position: absolute; inset: 18px 0 auto; font-family: var(--display); font-size: clamp(44px, 7vw, 88px); line-height: 1; text-align: center; }
   .pillar-panels { grid-area: 4 / 1; grid-template-columns: 1fr; gap: 0; margin-top: 20px; }
   .pillar-panel, .pillar-panel:last-child { display: grid; grid-template-columns: 60px 155px 1fr; gap: 20px; width: 100%; padding: 12px; border-bottom: 1px solid #cbb9df44; background: white; container-type: normal; }
   [data-sequence] .pillar-panel { grid-area: 1 / 1; border: 0; padding-block: 12px; }
@@ -181,7 +181,9 @@
   .field-person button > span:nth-child(2) { font-size: 16px; }.field-scroll-hint { display: none; }
   .program-window-2 .program-window-footer { padding-block: 6px; }.program-window-2 .text-link { font-size: 14px; padding-block: 4px; }
   .building-roof { height: 32px; }
-  .building-columns { height: 65px; }.column-ordinal { font-size: 32px; inset-block-start: 0; }
+  /* The shaft here is 23px tall once capital and plinth are taken off, so a
+     32px number with normal line height lost 17px off its bottom. */
+  .building-columns { height: 65px; }.column-ordinal { font-size: 20px; line-height: 1; inset-block-start: 2px; }
   .column-capital { height: 15px; }.column-plinth { height: 12px; }
   [data-sequence] .pillar-panel { padding-block: 6px; }
   .foundation-controls { margin-top: 6px; }.foundation-directions { padding-top: 4px; }
