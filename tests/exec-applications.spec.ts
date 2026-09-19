@@ -8,7 +8,8 @@
 import { test, expect, type Page } from "@playwright/test";
 import { E2E_FAKE_ORIGIN, ENTRY } from "./support/fakeGoogle";
 
-const PAGE = "/exec-applications";
+const PAGE = "/apply/executives";
+const MEMBER = "/apply/member";
 
 function words(n: number, word = "idea") { return new Array(n).fill(word).join(" "); }
 
@@ -177,9 +178,9 @@ test("stays closed, and cannot be filled in, unless the Form is connected AND re
   await expect(page.getByRole("button", { name: "Continue" })).toBeDisabled();
 });
 
-test("the member sign up at /apply is unchanged, and Join links to the exec page", async ({ page }, testInfo) => {
+test("the member sign up is unchanged at its new path, and Join links to the exec page", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium", "browser independent");
-  await page.goto("/apply");
+  await page.goto(MEMBER);
   await expect(page.getByRole("heading", { level: 1, name: "Join WEC" })).toBeVisible();
   await expect(page.locator("form.join-form")).toBeVisible();
   await expect(page.locator(".exec-page, .exec-card")).toHaveCount(0);
@@ -192,4 +193,37 @@ test("the member sign up at /apply is unchanged, and Join links to the exec page
   await link.click();
   await expect(page).toHaveURL(new RegExp(`${PAGE}$`));
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Let's get to know you.");
+});
+
+test("the /apply chooser offers both applications and leads to each", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "browser independent");
+  await page.goto("/apply");
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("What are you applying for?");
+
+  // Two doors, each pointing at its own page. The exec one is a link here
+  // because playwright.config.ts gives the server a connected Form.
+  const member = page.getByRole("link", { name: /Become a member/ });
+  const exec = page.getByRole("link", { name: /Apply for the exec team/ });
+  await expect(member).toHaveAttribute("href", MEMBER);
+  await expect(exec).toHaveAttribute("href", PAGE);
+
+  await exec.click();
+  await expect(page).toHaveURL(new RegExp(`${PAGE}$`));
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Let's get to know you.");
+
+  await page.goto("/apply");
+  await page.getByRole("link", { name: /Become a member/ }).click();
+  await expect(page).toHaveURL(new RegExp(`${MEMBER}$`));
+  await expect(page.getByRole("heading", { level: 1, name: "Join WEC" })).toBeVisible();
+  await expect(page.locator("form.join-form")).toBeVisible();
+});
+
+test("every Join WEC call to action still goes straight to the member form", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium", "browser independent");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.addInitScript(() => localStorage.setItem("wec-motion-v2", "off"));
+  await page.goto("/");
+  // Nobody who has already chosen should be shown the chooser.
+  await expect(page.locator(".nav-join")).toHaveAttribute("href", MEMBER);
+  expect(await page.locator(`a[href="/apply"]`).count()).toBe(0);
 });

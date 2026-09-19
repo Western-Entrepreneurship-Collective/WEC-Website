@@ -25,14 +25,10 @@
  */
 
 // ─── Where it lives ──────────────────────────────────────────────────────────
-// ⛔ BOTH PATHS ARE PLACEHOLDERS the club chooses. In the App Router a folder's
-// name IS the URL, so each constant must match its folder:
-//   EXEC_APPLICATIONS_PATH → src/app/exec-applications/
-//   EXEC_APPLICATIONS_API  → src/app/api/exec-applications/
-// Neither may be /apply or /api/join: those belong to the member sign up.
-// See "Choosing the final URL" in docs/EXEC-APPLICATIONS-FORM.md.
-export const EXEC_APPLICATIONS_PATH = "/exec-applications";
-export const EXEC_APPLICATIONS_API = "/api/exec-applications";
+// The addresses live in src/lib/applyRoutes.ts, which holds nothing else, so a
+// component that needs only a path does not pull all twelve roles in with it.
+// Re-exported here because this file is what the flow already imports.
+export { APPLY_PATH, EXEC_APPLICATIONS_API, EXEC_APPLICATIONS_PATH, MEMBER_APPLY_PATH } from "@/lib/applyRoutes";
 
 /**
  * The hidden trap field's name, shared by the page and the route.

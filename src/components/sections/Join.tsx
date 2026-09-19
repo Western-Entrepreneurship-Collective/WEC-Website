@@ -8,7 +8,7 @@ import { JoinFragments } from "@/components/graphics/StoryLayers";
 import { Spark } from "@/components/graphics/StudioGraphics";
 import { JoinForm } from "@/components/sections/JoinForm";
 import Link from "next/link";
-import { EXEC_APPLICATIONS_PATH } from "@/lib/execApplications";
+import { EXEC_APPLICATIONS_PATH } from "@/lib/applyRoutes";
 
 function DestinationAction({ kind }: { kind: "join" | "events" }) {
   const dialogRef = useRef<HTMLDialogElement>(null);

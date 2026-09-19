@@ -1,15 +1,19 @@
 # Connecting the exec applications page to a Google Form
 
-The executive applications page at **`/exec-applications`** is built and works.
+The executive applications page at **`/apply/executives`** is built and works.
 It has nowhere to send an application until the steps below are done, so until
 then it says, in plain words, that applications are not open. It never pretends
 to submit.
 
-⛔ **`/apply` and `/api/join` are not this page.** They belong to the member sign
-up (docs/GOOGLE-FORM.md). The exec page, its API route and its settings are
-separate files and separate environment variables, and nothing here reads or
-changes the sign up. And `/exec-applications` is itself a **placeholder**: see
-section 9, "Choosing the final URL".
+`/apply` is a **chooser** with one door per application: `/apply/member` (the
+membership sign up) and `/apply/executives` (this one). Every "Join WEC" call to
+action on the site points straight at `/apply/member`, so nobody who has already
+chosen is made to choose again.
+
+⛔ **`/apply/member` and `/api/join` are not this page.** They belong to the
+member sign up (docs/GOOGLE-FORM.md). The exec page, its API route and its
+settings are separate files and separate environment variables, and nothing here
+reads or changes the sign up.
 
 Everything an applicant types goes into ONE place: a Google Form, which writes it
 into that Form's linked Google Sheet. **The Sheet is the only store.** There is no
@@ -20,7 +24,9 @@ database, no admin dashboard and no login on this site, by design.
 | `src/lib/execApplications.ts` | every question, word limit, role and check, plus the pre-filled-link reader. Read by the page AND the route, so they cannot disagree |
 | `src/lib/execApplicationsServer.ts` | server only: allowed hosts, the Form check, its 5 minute cache, the setup key, the rate limit |
 | `src/app/api/exec-applications/route.ts` | `GET` (is it open?) and `POST` (send one application to Google) |
-| `src/app/exec-applications/page.tsx` | the page shell: the WEC mark and one line |
+| `src/app/apply/executives/page.tsx` | the page shell: the WEC mark and one line |
+| `src/app/apply/page.tsx` | the chooser: member or exec. Reads `WEC_APPLY_GOOGLE_FORM_URL` at request time so a closed application says so |
+| `src/lib/applyRoutes.ts` | the four addresses, and nothing else, so a component needing a path does not import all twelve roles |
 | `src/components/sections/ExecApplicationsForm.tsx` | the five stages |
 | `src/styles/exec-applications.css` | its styles, all scoped to `.exec-` classes, tokens from `tokens.css` |
 | `docs/make-exec-applications-form.gs` | builds the Form and its Sheet in one run (optional, section 1) |
@@ -353,30 +359,40 @@ address: see the note on `contactEmail` in `src/data/siteContent.ts`.
 
 ---
 
-## 9. Choosing the final URL
+## 9. Changing the URL
 
-**`/exec-applications` is a placeholder.** The club decides the final path. It
-must not be `/apply` or anything under it: that belongs to the member sign up.
+The three application addresses live in `src/lib/applyRoutes.ts`:
 
-In the App Router a folder's name IS the URL, so the path lives in the folder
-name plus ONE constant. To change `/exec-applications` to, say,
-`/team-applications`:
+| Constant | Path | Folder |
+|---|---|---|
+| `APPLY_PATH` | `/apply` | `src/app/apply/` |
+| `MEMBER_APPLY_PATH` | `/apply/member` | `src/app/apply/member/` |
+| `EXEC_APPLICATIONS_PATH` | `/apply/executives` | `src/app/apply/executives/` |
+
+In the App Router a folder's name IS the URL, so a path is its folder name plus
+its constant, and the two must match. To rename `/apply/executives` to, say,
+`/apply/team`:
 
 | What | Change |
 |---|---|
-| the page | `git mv src/app/exec-applications src/app/team-applications` |
-| the one constant | `EXEC_APPLICATIONS_PATH` in `src/lib/execApplications.ts` → `"/team-applications"` |
+| the page | `git mv src/app/apply/executives src/app/apply/team` |
+| the one constant | `EXEC_APPLICATIONS_PATH` in `src/lib/applyRoutes.ts` → `"/apply/team"` |
+| the browser tests | `PAGE` in `tests/exec-applications.spec.ts` |
 
 The home page link ("Exec team applications", in `src/components/sections/Join.tsx`),
-the page's canonical URL and the tests all read that constant, so nothing else
-changes. Then `npm run build` and run the tests in section 7.
+the chooser's card, the navigation and each page's canonical URL all read those
+constants, so nothing else changes. Then `npm run build` and run the tests in
+section 7.
+
+⛔ If `/apply/member` moves, printed QR codes and the navigation both have to be
+checked: the navigation reads the constant, a printed code does not.
 
 **The API path** only needs changing if the club wants that renamed too:
 
 | What | Change |
 |---|---|
 | the route | `git mv src/app/api/exec-applications src/app/api/<new-name>` |
-| the constant | `EXEC_APPLICATIONS_API` in `src/lib/execApplications.ts` |
+| the constant | `EXEC_APPLICATIONS_API` in `src/lib/applyRoutes.ts` |
 | the server tests' request URL | `BASE` in `tests/exec-applications-api.spec.ts` (cosmetic; they call the route directly) |
 | the setup check hint in the log | the path in `route.ts` ("Run the detailed setup check") |
 | this document | the URLs in section 4 |
