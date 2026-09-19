@@ -185,6 +185,12 @@ a:hover > .arrow, button:hover > .arrow { translate: 3px -2px; }
 .join-primary:hover { background: transparent; color: var(--white); }
 .join-secondary { font-size: 16px; display: inline-flex; align-items: center; gap: 16px; padding: 13px 0; border-bottom: 1px solid white; }
 .join-secondary .arrow { width: 20px; }
+/* The one small way into the exec applications page. A plain link under the two
+   calls to action, outside .join-actions. The only motion here is the .join-composition
+   scroll trigger, which re-measures on refresh, so the slightly taller frame is fine. */
+.join-exec { margin-top: 30px; }
+.join-exec .text-link { font-size: 13px; gap: 16px; }
+.join-exec .arrow { width: 18px; }
 .join-signoff { display: flex; justify-content: space-between; align-items: end; margin-top: 78px; }
 .join-signoff .wec-logo { width: 175px; }
 .join-signoff .micro { font-size: 9px; }

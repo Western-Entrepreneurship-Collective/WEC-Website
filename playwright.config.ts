@@ -1,7 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
+import { E2E_FAKE_ORIGIN, prefilledUrl } from "./tests/support/fakeGoogle";
 
 export default defineConfig({
   testDir: "./tests",
+  // The exec applications tests submit to a local stand-in for Google, never a real Form.
+  globalSetup: "./tests/support/globalSetup.ts",
   timeout: 45000,
   expect: { timeout: 8000 },
   fullyParallel: true,
@@ -15,5 +18,7 @@ export default defineConfig({
     { name: "mobile-chromium", use: { ...devices["Pixel 7"], viewport: { width: 390, height: 844 } } },
     { name: "mobile-webkit", use: { ...devices["iPhone 13"], viewport: { width: 390, height: 844 } } },
   ],
-  webServer: { command: "npm run start -- --port 3001", url: "http://localhost:3001", reuseExistingServer: !process.env.CI, timeout: 60000 },
+  webServer: { command: "npm run start -- --port 3001", url: "http://localhost:3001", reuseExistingServer: !process.env.CI, timeout: 60000,
+    // Server-side only, and only for the exec applications page. The member sign up settings are untouched.
+    env: { WEC_APPLY_GOOGLE_FORM_URL: prefilledUrl(E2E_FAKE_ORIGIN), WEC_GOOGLE_FORM_TEST_HOST: new URL(E2E_FAKE_ORIGIN).host } },
 });
