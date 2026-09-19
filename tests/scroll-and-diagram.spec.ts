@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { journeyScrollProgress } from '../src/lib/motion/pacing';
+import { EXPERIENCE_PACING, MORRISSETTE_SCROLL_SCALE, journeyScrollProgress } from '../src/lib/motion/pacing';
 
 test('Experience advances all five positions with deliberate input while keeping the page fixed', async ({ page }) => {
   await page.goto('/#venture-studio');
@@ -17,14 +17,18 @@ test('Experience advances all five positions with deliberate input while keeping
     }).observe(document.querySelector('.field')!, { attributes: true });
   });
   const position = await page.evaluate(() => scrollY);
-  // A 480px hold on Venture Studio, 720px on Founder Labs, then two 240px
-  // highlights complete the sequence.
+  // A hold on Venture Studio, a longer one on Founder Labs, then two field
+  // highlights complete the sequence. The deltas are READ FROM THE PACING, not
+  // typed in: SCENE_SPEEDUP changes what a hold costs, and a test that spelled
+  // the old numbers out would fail the day the scenes were made faster.
   // Dispatch exact normalized input: WebKit rounds native wheel pixels, and
   // mobile WebKit does not implement Playwright's mouse wheel API.
-  await page.evaluate(() => document.body.dispatchEvent(new WheelEvent('wheel', { deltaY: 479, cancelable: true, bubbles: true })));
+  const justShort = EXPERIENCE_PACING.program.gesture[0] - 1;
+  const theRest = EXPERIENCE_PACING.program.gesture[1] + EXPERIENCE_PACING.field.gesture * 2 + 1;
+  await page.evaluate(d => document.body.dispatchEvent(new WheelEvent('wheel', { deltaY: d, cancelable: true, bubbles: true })), justShort);
   await expect(page.locator('#experience')).toHaveAttribute('data-active-program', '0');
   expect(await page.evaluate(() => scrollY)).toBeCloseTo(position, 0);
-  await page.evaluate(() => document.body.dispatchEvent(new WheelEvent('wheel', { deltaY: 1201, cancelable: true, bubbles: true })));
+  await page.evaluate(d => document.body.dispatchEvent(new WheelEvent('wheel', { deltaY: d, cancelable: true, bubbles: true })), theRest);
   await expect(page.locator('.field')).toHaveAttribute('data-active-person', '2');
   await expect(page.locator('#experience')).toHaveAttribute('data-active-program', '2');
   expect(await page.evaluate(() => (window as unknown as {fieldSteps: string[]}).fieldSteps)).toEqual(['1','2']);
@@ -64,7 +68,11 @@ test('the 3D approach shows all six signs at the entrance before opening the doo
   await page.evaluate(async () => { await document.fonts.ready; await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))); });
   const start = await page.locator('.ecosystem-scene').evaluate(el => el.getBoundingClientRect().top + scrollY - parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nav-height')));
   const travel = await page.locator('.ecosystem-scene').evaluate(el => (el as HTMLElement).offsetHeight);
-  expect(travel).toBeGreaterThan((await page.evaluate(()=>innerHeight))*2.5);
+  // ecosystem.css sizes this scene by --journey-scroll-scale, so its height IS
+  // the journey's scroll cost. "At least 2.5 viewports" was only ever true at
+  // SCENE_SPEEDUP 1; the invariant that survives a speed change is that the
+  // scene is as long as the pacing says it should be.
+  expect(travel).toBeGreaterThan((await page.evaluate(()=>innerHeight))*MORRISSETTE_SCROLL_SCALE*.7);
   // The approach stays short; the front-door hold is slightly faster than the interior entry.
   expect(travel * journeyScrollProgress(.6)).toBeLessThan((await page.evaluate(()=>innerHeight))*.55);
   const canvas = page.locator('.campus-render-journey canvas');

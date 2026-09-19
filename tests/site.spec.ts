@@ -1,5 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+// Read the scene prices rather than spelling them out: SCENE_SPEEDUP changes
+// what a step costs, and a wheel delta typed in here would silently start
+// advancing several steps the day the scenes were made faster.
+import { EXPERIENCE_PACING, PILLAR_GESTURE } from "../src/lib/motion/pacing";
 
 const sections = ["hero", "about", "experience", "community", "pillars", "ecosystem", "find-your-place", "join"];
 
@@ -285,7 +289,7 @@ test("field highlights consume scrolling while the surrounding page stays fixed"
   for (const i of [1, 2, 1, 0]) {
     const forward = i > Number(await page.locator(".field").getAttribute("data-active-person"));
     if (isMobile) await page.keyboard.press(forward ? "ArrowDown" : "ArrowUp");
-    else await page.mouse.wheel(0, forward ? 240 : -240);
+    else await page.mouse.wheel(0, forward ? EXPERIENCE_PACING.field.gesture : -EXPERIENCE_PACING.field.gesture);
     await page.waitForTimeout(300);
     const active = page.locator(".field-person.is-active");
     await expect(active).toHaveCount(1);
@@ -296,7 +300,7 @@ test("field highlights consume scrolling while the surrounding page stays fixed"
     await expect(page.locator("#experience")).toHaveAttribute("data-active-program", "2");
   }
   if (isMobile) await page.keyboard.press("ArrowUp");
-  else await page.mouse.wheel(0, -240);
+  else await page.mouse.wheel(0, -EXPERIENCE_PACING.field.gesture);
   await expect(page.locator("#experience")).toHaveAttribute("data-active-program", "1");
   expect(await page.evaluate(() => scrollY)).toBeCloseTo(position, 0);
   await page.keyboard.press("Escape");
@@ -327,6 +331,9 @@ test("five building pillars rise sequentially while the document stays locked", 
   await page.evaluate(y => scrollTo(0, y), entry);
   await page.waitForTimeout(150);
   if (isMobile) await page.keyboard.press("PageDown");
+  // Page distance, NOT a gesture price: this covers the 70px the scroll above
+  // deliberately stopped short and engages the pin. It is unrelated to
+  // PILLAR_GESTURE and must not be derived from it.
   else await page.mouse.wheel(0, 160);
   await expect(page.locator(".wec-site")).toHaveAttribute("data-scroll-locked", "pillars");
   await expect(page.locator("#pillars")).toHaveAttribute("data-raised-pillars", "0");
@@ -336,7 +343,7 @@ test("five building pillars rise sequentially while the document stays locked", 
   for (const raised of [1, 2, 3, 4, 5, 4, 3, 2, 1]) {
     const forward = raised > Number(await page.locator("#pillars").getAttribute("data-raised-pillars"));
     if (isMobile) await page.keyboard.press(forward ? "ArrowDown" : "ArrowUp");
-    else await page.mouse.wheel(0, forward ? 320 : -320);
+    else await page.mouse.wheel(0, forward ? PILLAR_GESTURE : -PILLAR_GESTURE);
     await page.waitForTimeout(250);
     await expect(page.locator("#pillars")).toHaveAttribute("data-raised-pillars", String(raised));
     await expect(page.locator(".building-column.is-raised")).toHaveCount(raised);
@@ -370,7 +377,9 @@ test("program scrolling advances whole windows without internal scrolling", asyn
     const forward = index > Number(await page.locator("#experience").getAttribute("data-active-program"));
     await page.waitForTimeout(550);
     if (isMobile) await page.keyboard.press(forward ? "PageDown" : "PageUp");
-    else await page.mouse.wheel(0, forward ? (index === 1 ? 480 : 720) : index === 1 ? -240 : -720);
+    else await page.mouse.wheel(0, forward
+      ? (index === 1 ? EXPERIENCE_PACING.program.gesture[0] : EXPERIENCE_PACING.program.gesture[1])
+      : index === 1 ? -EXPERIENCE_PACING.field.gesture : -EXPERIENCE_PACING.program.gesture[1]);
     await expect(page.locator("#experience")).toHaveAttribute("data-active-program", String(index));
     await expect(page.locator("#experience-heading")).toBeInViewport({ ratio: 1 });
     expect(await page.locator("#experience-heading").evaluate(el => el.getBoundingClientRect().top >= document.querySelector(".site-header")!.getBoundingClientRect().bottom)).toBeTruthy();

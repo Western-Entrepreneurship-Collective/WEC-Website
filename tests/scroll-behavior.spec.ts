@@ -1,4 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
+import { EXPERIENCE_PACING, PILLAR_GESTURE } from "../src/lib/motion/pacing";
 
 async function wheel(page: Page, deltaY: number) {
   // Normalized wheel events also exercise the controller on mobile WebKit.
@@ -189,8 +190,10 @@ test("mobile navigation stops background scrolling and lands below the header", 
 
 test("Field and pillars accumulate deliberate scrolling across brief reading pauses", async ({ page }) => {
   for (const scene of [
-    { hash: '#from-the-field', selector: '.field', attribute: 'data-active-person', before: '0', after: '1', partial: 120 },
-    { hash: '#pillar-0', selector: '#pillars', attribute: 'data-raised-pillars', before: '1', after: '2', partial: 160 },
+    // Half of what the step costs, so one nudge is never enough and two are.
+    // Read from the pacing: SCENE_SPEEDUP changes the price of a step.
+    { hash: '#from-the-field', selector: '.field', attribute: 'data-active-person', before: '0', after: '1', partial: EXPERIENCE_PACING.field.gesture / 2 },
+    { hash: '#pillar-0', selector: '#pillars', attribute: 'data-raised-pillars', before: '1', after: '2', partial: PILLAR_GESTURE / 2 },
   ]) {
     await ready(page, scene.hash);
     const position = await page.evaluate(() => scrollY);
