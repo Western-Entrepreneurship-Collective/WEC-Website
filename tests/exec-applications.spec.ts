@@ -10,6 +10,7 @@ import { E2E_FAKE_ORIGIN, ENTRY } from "./support/fakeGoogle";
 
 const PAGE = "/apply/executives";
 const MEMBER = "/apply/member";
+const APPLY = "/apply";
 
 function words(n: number, word = "idea") { return new Array(n).fill(word).join(" "); }
 
@@ -218,12 +219,17 @@ test("the /apply chooser offers both applications and leads to each", async ({ p
   await expect(page.locator("form.join-form")).toBeVisible();
 });
 
-test("every Join WEC call to action still goes straight to the member form", async ({ page }, testInfo) => {
+test("every Join WEC call to action on the home page goes to the chooser", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium", "browser independent");
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(() => localStorage.setItem("wec-motion-v2", "off"));
   await page.goto("/");
-  // Nobody who has already chosen should be shown the chooser.
-  await expect(page.locator(".nav-join")).toHaveAttribute("href", MEMBER);
-  expect(await page.locator(`a[href="/apply"]`).count()).toBe(0);
+  // One door: the header, the mobile menu, the Collective link and the Join
+  // section's button all land on /apply. None of them skips ahead to the
+  // member form, and none of them opens a dialog instead of going anywhere.
+  await expect(page.locator(".nav-join")).toHaveAttribute("href", APPLY);
+  await expect(page.locator("#join").getByRole("link", { name: "Join WEC", exact: true })).toHaveAttribute("href", APPLY);
+  expect(await page.locator(`a[href="${APPLY}"]`).count(), "every Join call to action").toBeGreaterThanOrEqual(4);
+  expect(await page.locator(`a[href="${MEMBER}"]`).count(), "nothing skips the chooser").toBe(0);
+  expect(await page.getByRole("button", { name: "Join WEC", exact: true }).count(), "no dialog button").toBe(0);
 });

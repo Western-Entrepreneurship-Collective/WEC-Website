@@ -6,9 +6,8 @@ import { RevealHeading, SectionHeading, TextLink } from "@/components/ui/Editori
 import { contactEmail, destinations, googleForm, siteContent as c } from "@/data/siteContent";
 import { JoinFragments } from "@/components/graphics/StoryLayers";
 import { Spark } from "@/components/graphics/StudioGraphics";
-import { JoinForm } from "@/components/sections/JoinForm";
 import Link from "next/link";
-import { EXEC_APPLICATIONS_PATH } from "@/lib/applyRoutes";
+import { APPLY_PATH, EXEC_APPLICATIONS_PATH } from "@/lib/applyRoutes";
 
 function DestinationAction({ kind }: { kind: "join" | "events" }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -20,20 +19,22 @@ function DestinationAction({ kind }: { kind: "join" | "events" }) {
 
   if (destination) return <a className={className} href={destination}>{label}<Arrow diagonal /></a>;
 
-  // ⭐ NO OFFICIAL JOIN PAGE YET, SO ASK HERE INSTEAD OF APOLOGISING.
-  // The booth on 17 September runs 3pm to 6pm and a QR code is the only thing
-  // between a conversation and a member. "Membership details aren't available
-  // on the website yet" converts nobody. The events dialog is untouched,
-  // because there is nothing to collect for an event that is not scheduled.
+  // ⭐ EVERY JOIN WEC CALL TO ACTION GOES TO THE SAME PLACE: the chooser at
+  // /apply, which asks whether this is a membership or an exec application.
+  // This button used to open the sign up in a dialog. It no longer does, so
+  // that the header, the mobile menu, the Collective link and this button all
+  // behave identically — one door, whichever one a reader presses.
   // ⛔ The instant NEXT_PUBLIC_WEC_JOIN_URL is set this branch stops running
   // and the real link wins, with nothing to undo.
-  // ⛔ AND ONLY IF THERE IS AN ADDRESS THE CLUB ACTUALLY OWNS.
-  // Without one it falls through to the existing honest dialog, because the
-  // address both sites were carrying belongs to a domain squatter. See the
-  // note on contactEmail in siteContent.
-  // The club's Google Form counts as such a destination too: answers go to its
-  // Sheet, which the club owns.
-  if (kind === "join" && (googleForm.ok || contactEmail)) return <JoinForm label={label} className={className} />;
+  // ⛔ AND ONLY IF THERE IS SOMEWHERE FOR THE ANSWERS TO GO. Without a Google
+  // Form or an address the club actually owns, it falls through to the honest
+  // dialog below rather than walking someone to a form that cannot deliver:
+  // the address both sites were carrying belongs to a domain squatter. See the
+  // note on contactEmail in siteContent. The events dialog is untouched,
+  // because there is nothing to collect for an event that is not scheduled.
+  if (kind === "join" && (googleForm.ok || contactEmail)) {
+    return <Link className={className} href={APPLY_PATH}>{label}<Arrow diagonal /></Link>;
+  }
 
   function close() { dialogRef.current?.close(); buttonRef.current?.focus(); }
   function trapFocus(event: KeyboardEvent<HTMLDialogElement>) {

@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import { Arrow } from "@/components/graphics/DraftGraphics";
-import { MEMBER_APPLY_PATH } from "@/lib/applyRoutes";
+import { APPLY_PATH } from "@/lib/applyRoutes";
 import { ClassroomCaption } from "@/components/graphics/ClassroomCaption";
 import { StartingCircle } from "@/components/graphics/StartingCircle";
 import { EcosystemJourney } from "@/components/graphics/EcosystemJourney";
@@ -16,7 +16,7 @@ export function Community() {
     <SectionHeading id="community-heading">{c.community.label}</SectionHeading><div className="community-intro"><RevealHeading as="p" lines={c.community.headline} /><p className="section-lead">{c.community.description}</p></div>
     <div className="community-wall">
       <div className="community-photo-wall"><figure className="community-poster"><Image src="/images/community-conversation.png" alt="Three people sharing a conversation at an entrepreneurship gathering." fill sizes="(max-width: 759px) 85vw, 40vw" /><figcaption>Find your<br /><em>people.</em></figcaption></figure><figure className="community-photo-detail"><Image src="/images/community-speaker.jpg" alt="A presenter speaking into a microphone beside purple, green, and gold balloons." fill sizes="(max-width: 759px) 40vw, 20vw" /><figcaption className="micro">Start with hello.</figcaption></figure></div>
-      <div className="community-formats"><span className="micro">Different ways to get together</span><div className="community-choices" role="group" aria-label="Community gatherings">{c.community.events.map((event, i) => <div className="community-choice" key={event}><button onClick={() => setSelected(selected === i ? -1 : i)} aria-expanded={selected === i} aria-controls={`community-answer-${i}`}><span className="micro" aria-hidden="true">0{i + 1}</span><span>{event}</span><Arrow diagonal /></button><div className="community-answer" id={`community-answer-${i}`} hidden={selected !== i}><span className="community-answer-mark" aria-hidden="true">↳</span><p>{c.community.eventNotes[i]}</p></div></div>)}</div><TextLink href={MEMBER_APPLY_PATH}>Come find your people</TextLink></div>
+      <div className="community-formats"><span className="micro">Different ways to get together</span><div className="community-choices" role="group" aria-label="Community gatherings">{c.community.events.map((event, i) => <div className="community-choice" key={event}><button onClick={() => setSelected(selected === i ? -1 : i)} aria-expanded={selected === i} aria-controls={`community-answer-${i}`}><span className="micro" aria-hidden="true">0{i + 1}</span><span>{event}</span><Arrow diagonal /></button><div className="community-answer" id={`community-answer-${i}`} hidden={selected !== i}><span className="community-answer-mark" aria-hidden="true">↳</span><p>{c.community.eventNotes[i]}</p></div></div>)}</div><TextLink href={APPLY_PATH}>Come find your people</TextLink></div>
     </div>
   </section>;
 }
