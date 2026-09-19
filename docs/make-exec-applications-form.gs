@@ -55,13 +55,13 @@ function makeWecApplicationsForm() {
 
   short('Full name', true);
   short('Western email', true);
-  short('Personal email', true);
+  short('Personal email', false);
   short('Phone number', false);
   choice('Year of study', YEARS, true);
   short('Program / faculty', true);
   short('LinkedIn', false);
   short('Portfolio or website', false);
-  short('Resume link', true);
+  short('Resume link', false);
   para('Short introduction', true);
   para('General question 1', true);
   para('General question 2', true);

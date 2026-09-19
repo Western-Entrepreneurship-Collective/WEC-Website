@@ -53,13 +53,13 @@ it is the order the Sheet's columns will appear in, so it is worth keeping.
 |---|---|---|---|---|
 | 1 | Full name | Short answer | yes | |
 | 2 | Western email | Short answer | yes | |
-| 3 | Personal email | Short answer | yes | |
+| 3 | Personal email | Short answer | **no** | |
 | 4 | Phone number | Short answer | **no** | |
 | 5 | Year of study | **Multiple choice** | yes | options exactly: `1st Year`, `2nd Year`, `3rd Year`, `4th Year`, `Graduate`, `Other` |
 | 6 | Program / faculty | Short answer | yes | |
 | 7 | LinkedIn | Short answer | **no** | |
 | 8 | Portfolio or website | Short answer | **no** | |
-| 9 | Resume link | Short answer | yes | a link, not a file. See "Why the resume is a link" below |
+| 9 | Resume link | Short answer | **no** | a link, not a file. See "Why the resume is a link" below |
 | 10 | Short introduction | Paragraph | yes | |
 | 11 | General question 1 | Paragraph | yes | |
 | 12 | General question 2 | Paragraph | yes | |

@@ -229,13 +229,13 @@ test("7  a broken application gets 400 and a plain sentence per field", async ()
   connect();
   const v = application("email-newsletter");
   v.westernEmail = "test.applicant@example.com";   // not a Western address
-  v.resume = "";                         // required
+  v.resume = "drive.google.com/file/d/abc";  // optional, but must be a real link
   v.r3 = words(80);                      // the subject line is 50 words
   const out = await post(v);
   expect(out.status).toBe(400);
   expect(out.body.error).toBe("invalid");
   expect(out.body.errors.westernEmail).toMatch(/Western email/);
-  expect(out.body.errors.resume).toBeTruthy();
+  expect(out.body.errors.resume).toMatch(/start the link with https/);
   expect(out.body.errors.r3).toMatch(/limit is 50/);
   expect(google.received, "nothing goes to Google until it is valid").toHaveLength(0);
 });
@@ -287,7 +287,7 @@ test("10  every required field, emptied on its own, is refused with its own sent
   connect();
   // Each is emptied by itself in an otherwise perfect application, so a pass
   // here cannot come from some other field failing.
-  for (const id of ["name", "westernEmail", "personalEmail", "year", "program", "resume", "intro", "g1", "g2"] as const) {
+  for (const id of ["name", "westernEmail", "year", "program", "intro", "g1", "g2"] as const) {
     const v = application("director-admin");
     v[id] = "";
     const out = await post(v);
@@ -530,4 +530,23 @@ test("21  WEC_GOOGLE_FORM_TEST_HOST is ignored in production", async () => {
   delete process.env.VERCEL_ENV;
   resetExecApplicationsState();
   expect((await post(application("outreach"))).body, "outside production it is used").toEqual({ ok: true });
+});
+
+test("22  personal email and the resume link may be left blank, and are then not sent at all", async () => {
+  connect();
+  const v = application("vp-content");
+  v.personalEmail = "";
+  v.resume = "";
+  const out = await post(v);
+  expect(out.body, "a blank optional field must not stop an application").toEqual({ ok: true });
+  expect(google.received).toHaveLength(1);
+  const got = google.received[0];
+  // Omitted, not sent empty. A Google question that is still required would
+  // refuse the whole submission for a blank answer, so the Form's copies of
+  // these two must be optional as well: docs/EXEC-APPLICATIONS-FORM.md §1.
+  expect(got[ENTRY.personalEmail]).toBeUndefined();
+  expect(got[ENTRY.resume]).toBeUndefined();
+  // Everything else still arrives.
+  expect(got[ENTRY.westernEmail]).toBe("test.applicant@uwo.ca");
+  expect(got[ENTRY.role]).toBe("VP Content");
 });
