@@ -274,6 +274,24 @@ export const FIELDS: { id: FieldId; ph: string | null; label?: string }[] = [
 // applicant but share slots, so they are checked by the flow, not by entry id.
 export const REQUIRED: FieldId[] = ["name", "westernEmail", "personalEmail", "year", "program", "resume", "intro", "g1", "g2", "role", "r1", "r2", "r3"];
 
+/**
+ * The fields an application ALWAYS carries a value for.
+ *
+ * Everything else — the optional ones, and every role slot, since only the
+ * chosen role's questions are filled — can arrive blank, and answersToSend
+ * omits a blank rather than sending an empty string.
+ *
+ * ⛔ SO THE FORM'S COPY OF ANYTHING NOT LISTED HERE MUST BE OPTIONAL. Google
+ * refuses an entire submission when a required question is missing from it,
+ * with a bare 400 and no reason attached. The setup check reads this list and
+ * says so in plain words rather than leaving it to be discovered by the first
+ * applicant who skips a question.
+ */
+export const ALWAYS_SENT: FieldId[] = [
+  ...[...ABOUT, ...GENERAL].filter(f => f.req).map(f => f.id),
+  ROLE_FIELD.id,
+];
+
 // Long enough for the longest answer plus its question text, short enough that
 // nobody can post a novel. 250 words is about 1,700 characters. An answer over
 // it is REFUSED with a sentence saying so, never cut short: a silently

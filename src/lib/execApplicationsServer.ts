@@ -10,7 +10,7 @@
  * ⛔ Answers are never stored here and never logged.
  */
 import { timingSafeEqual } from "node:crypto";
-import { FIELDS, REQUIRED, ROLE_FIELD, YEARS, parseExecForm, type ExecForm, type FieldId } from "@/lib/execApplications";
+import { ALWAYS_SENT, FIELDS, REQUIRED, ROLE_FIELD, YEARS, parseExecForm, type ExecForm, type FieldId } from "@/lib/execApplications";
 
 type ConnectedForm = Extract<ExecForm, { ok: true }>;
 export type FormCheck = { ok: boolean; problems: string[] };
@@ -122,10 +122,21 @@ export async function checkExecForm(form: ConnectedForm): Promise<FormCheck> {
       }
     }
   }
-  const linked = new Set(Object.values(form.entries));
+  // A question the Form insists on is only safe if the site guarantees an
+  // answer for it. Two ways it is not: the site fills nothing into it at all,
+  // or the site fills it only when the applicant happens to answer. Both end
+  // the same way — Google refuses the whole application with a bare 400 — so
+  // both are named here rather than left for a real applicant to find.
+  const alwaysSent = new Set<FieldId>(ALWAYS_SENT);
+  const idByEntry = new Map((Object.entries(form.entries) as [FieldId, string][]).map(([id, entry]) => [entry, id]));
   for (const q of questions) {
-    if (q.required && !linked.has(q.entry)) {
+    if (!q.required) continue;
+    const id = idByEntry.get(q.entry);
+    if (!id) {
       problems.push(`"${q.title}" is required in the Form but the site does not fill it in. Make it optional, or delete it.`);
+    } else if (!alwaysSent.has(id)) {
+      problems.push(`"${q.title}" is required in the Form, but an applicant is allowed to leave it blank. `
+        + "A blank answer is not sent at all, and Google then refuses the whole application. Make it optional in the Form.");
     }
   }
   for (const id of REQUIRED) {

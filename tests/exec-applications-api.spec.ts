@@ -550,3 +550,29 @@ test("22  personal email and the resume link may be left blank, and are then not
   expect(got[ENTRY.westernEmail]).toBe("test.applicant@uwo.ca");
   expect(got[ENTRY.role]).toBe("VP Content");
 });
+
+test("23  a Form that still demands an optional answer is named, not left to an applicant", async () => {
+  // The exact trap behind making personal email and the resume link optional:
+  // the site stops requiring them, the Form is not changed to match, and the
+  // first applicant who skips one has their whole application refused by
+  // Google with a bare 400. The setup check has to say this out loud.
+  const stillRequired = questions().map(q =>
+    q.entry === ENTRY.personalEmail || q.entry === ENTRY.resume ? { ...q, required: true } : q);
+  const server = startFakeGoogle({ questions: stillRequired });
+  await new Promise<void>(resolve => server.listen(0, "127.0.0.1", () => resolve()));
+  const port = (server.address() as { port: number }).port;
+  process.env.WEC_APPLY_GOOGLE_FORM_URL = prefilledUrl(`http://127.0.0.1:${port}`);
+  process.env.WEC_GOOGLE_FORM_TEST_HOST = `127.0.0.1:${port}`;
+
+  const out = await detail();
+  expect(out.body.ready, "a Form that would refuse a valid application is not ready").toBe(false);
+  for (const label of ["Personal email", "Resume link"]) {
+    expect(
+      out.body.problems.some((p: string) => p.includes(label) && /allowed to leave it blank/.test(p)),
+      `${label} should be named: ${JSON.stringify(out.body.problems)}`,
+    ).toBe(true);
+  }
+  // And it says what to do about it.
+  expect(out.body.problems.some((p: string) => /Make it optional in the Form/.test(p))).toBe(true);
+  await new Promise<void>(resolve => server.close(() => resolve()));
+});
