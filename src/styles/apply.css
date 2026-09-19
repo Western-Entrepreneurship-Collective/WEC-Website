@@ -57,3 +57,63 @@
   .apply-head .wec-logo { width: 156px; }
   .apply-card { width: calc(100% - 24px); }
 }
+
+/* ─── The /apply chooser ──────────────────────────────────────────────────────
+   Two cards inside the same white card the questions use, so the chooser and
+   the form it leads to read as one place. Stacked at every width: there are
+   only ever two, and side by side would make the second look like a footnote
+   on a phone. */
+
+.apply-choose > p { margin-top: 12px; }
+
+.apply-choices {
+  list-style: none;
+  margin: clamp(22px, 4vw, 30px) 0 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.apply-choice {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  padding: clamp(16px, 3.4vw, 22px);
+  border: 1px solid var(--line);
+  background: var(--paper);
+  color: inherit;
+  text-decoration: none;
+  transition: background .18s ease, border-color .18s ease, transform .18s ease;
+}
+
+.apply-choice .micro { grid-row: 1 / span 2; color: var(--muted); padding-top: 4px; }
+
+.apply-choice-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: clamp(19px, 4.4vw, 23px);
+  letter-spacing: -.03em;
+  line-height: 1.15;
+}
+
+.apply-choice-title svg { flex: none; }
+.apply-choice-note { color: var(--muted); font-size: 14px; line-height: 1.55; }
+
+a.apply-choice:hover,
+a.apply-choice:focus-visible { background: var(--white); border-color: var(--purple); }
+
+@media (hover: hover) {
+  a.apply-choice:hover { transform: translateY(-2px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .apply-choice { transition: none; }
+  a.apply-choice:hover { transform: none; }
+}
+
+/* Applications that are not open are still worth showing: it answers the
+   question the visitor came with. It is a div, not a link, so nothing here is
+   focusable or clickable. */
+.apply-choice.is-closed { opacity: .62; }
+.apply-choice.is-closed .apply-choice-title { color: var(--muted); }

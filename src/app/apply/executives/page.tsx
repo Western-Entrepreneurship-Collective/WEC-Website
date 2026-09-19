@@ -6,12 +6,12 @@ import { EXEC_APPLICATIONS_PATH } from "@/lib/execApplications";
 import "@/styles/exec-applications.css";
 
 /**
- * WEC Executive Applications 2026-27.
+ * WEC Executive Applications 2026-27, one of the two doors off the /apply
+ * chooser (the other is /apply/member, the membership sign up).
  *
- * ⛔ THE PATH IS A PLACEHOLDER the club chooses. This folder's name IS the URL
- * and must match EXEC_APPLICATIONS_PATH in src/lib/execApplications.ts. It is
- * NOT /apply: that page belongs to the member sign up. See "Choosing the final
- * URL" in docs/EXEC-APPLICATIONS-FORM.md.
+ * ⛔ This folder's name IS the URL and must match EXEC_APPLICATIONS_PATH in
+ * src/lib/execApplications.ts. It must stay off /apply/member and /api/join,
+ * which belong to the member sign up.
  *
  * It opens straight on the form. There is no landing page and no hero on
  * purpose: the club designs its own. Above the questions there is only the WEC
