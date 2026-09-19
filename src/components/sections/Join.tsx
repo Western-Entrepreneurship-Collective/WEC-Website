@@ -7,6 +7,8 @@ import { contactEmail, destinations, googleForm, siteContent as c } from "@/data
 import { JoinFragments } from "@/components/graphics/StoryLayers";
 import { Spark } from "@/components/graphics/StudioGraphics";
 import { JoinForm } from "@/components/sections/JoinForm";
+import Link from "next/link";
+import { EXEC_APPLICATIONS_PATH } from "@/lib/execApplications";
 
 function DestinationAction({ kind }: { kind: "join" | "events" }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -47,7 +49,7 @@ function DestinationAction({ kind }: { kind: "join" | "events" }) {
 }
 
 export function Join() {
-  return <section className="join brand-section section-pad" id="join" aria-labelledby="join-heading"><SectionHeading id="join-heading">{c.join.label}</SectionHeading><div className="join-composition"><DraftFrame className="join-frame" /><JoinFragments /><div className="join-sticker"><Spark /><span>Come as<br />you are.</span></div><RevealHeading as="p" lines={c.join.headline} /><div className="join-lower"><p className="section-lead">{c.join.description}</p><div className="join-actions"><DestinationAction kind="join" /><DestinationAction kind="events" /></div></div><div className="join-signoff"><span className="micro">{c.join.annotation}</span><Logo reversed /></div></div></section>;
+  return <section className="join brand-section section-pad" id="join" aria-labelledby="join-heading"><SectionHeading id="join-heading">{c.join.label}</SectionHeading><div className="join-composition"><DraftFrame className="join-frame" /><JoinFragments /><div className="join-sticker"><Spark /><span>Come as<br />you are.</span></div><RevealHeading as="p" lines={c.join.headline} /><div className="join-lower"><p className="section-lead">{c.join.description}</p><div className="join-actions"><DestinationAction kind="join" /><DestinationAction kind="events" /></div></div><p className="join-exec"><Link className="text-link" href={EXEC_APPLICATIONS_PATH}>Exec team applications<Arrow /></Link></p><div className="join-signoff"><span className="micro">{c.join.annotation}</span><Logo reversed /></div></div></section>;
 }
 
 export function Footer({ motionEnabled, toggleMotion }: { motionEnabled: boolean; toggleMotion: () => void }) {
