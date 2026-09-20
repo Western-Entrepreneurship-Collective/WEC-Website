@@ -551,11 +551,11 @@ test("22  personal email and the resume link may be left blank, and are then not
   expect(got[ENTRY.role]).toBe("VP Content");
 });
 
-test("23  a Form that still demands an optional answer is named, not left to an applicant", async () => {
-  // The exact trap behind making personal email and the resume link optional:
-  // the site stops requiring them, the Form is not changed to match, and the
-  // first applicant who skips one has their whole application refused by
-  // Google with a bare 400. The setup check has to say this out loud.
+test("23  a Form that still demands an optional answer warns, and does NOT close applications", async () => {
+  // ⛔ THIS HAPPENED LIVE. Reported as a problem, this shut the applications
+  // page for everyone, including the applicants who would have answered the
+  // question perfectly well. It is a warning: it is named loudly by the setup
+  // check, and the page stays open.
   const stillRequired = questions().map(q =>
     q.entry === ENTRY.personalEmail || q.entry === ENTRY.resume ? { ...q, required: true } : q);
   const server = startFakeGoogle({ questions: stillRequired });
@@ -565,14 +565,22 @@ test("23  a Form that still demands an optional answer is named, not left to an 
   process.env.WEC_GOOGLE_FORM_TEST_HOST = `127.0.0.1:${port}`;
 
   const out = await detail();
-  expect(out.body.ready, "a Form that would refuse a valid application is not ready").toBe(false);
+  expect(out.body.ready, "a mismatch like this must not close the page").toBe(true);
+  expect(out.body.problems, "and it is not a problem").toEqual([]);
   for (const label of ["Personal email", "Resume link"]) {
     expect(
-      out.body.problems.some((p: string) => p.includes(label) && /allowed to leave it blank/.test(p)),
-      `${label} should be named: ${JSON.stringify(out.body.problems)}`,
+      out.body.warnings.some((w: string) => w.includes(label) && /allowed to leave it blank/.test(w)),
+      `${label} should be warned about: ${JSON.stringify(out.body.warnings)}`,
     ).toBe(true);
   }
-  // And it says what to do about it.
-  expect(out.body.problems.some((p: string) => /Make it optional in the Form/.test(p))).toBe(true);
+  expect(out.body.warnings.some((w: string) => /Turn Required off/.test(w))).toBe(true);
+
+  // The page asks the public endpoint, which never carries warnings, and opens.
+  const publicAnswer = await GET(new Request(BASE));
+  expect(await publicAnswer.json()).toEqual({ connected: true, ready: true });
+
+  // And an application that answers the question still goes through.
+  const out2 = await post(application("vp-content"));
+  expect(out2.body).toEqual({ ok: true });
   await new Promise<void>(resolve => server.close(() => resolve()));
 });

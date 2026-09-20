@@ -13,7 +13,15 @@ import { timingSafeEqual } from "node:crypto";
 import { ALWAYS_SENT, FIELDS, REQUIRED, ROLE_FIELD, YEARS, parseExecForm, type ExecForm, type FieldId } from "@/lib/execApplications";
 
 type ConnectedForm = Extract<ExecForm, { ok: true }>;
-export type FormCheck = { ok: boolean; problems: string[] };
+/**
+ * problems  stop the page opening. Every one of them means Google would refuse
+ *           EVERY application, so letting people type is worse than saying so.
+ * warnings  do not. They mean some applications would be refused and others
+ *           would go through, and closing the page for everyone to prevent
+ *           that is the worse trade: it turns a partial failure into an
+ *           outage. They are reported by the setup check so they get fixed.
+ */
+export type FormCheck = { ok: boolean; problems: string[]; warnings: string[] };
 
 const CHECK_TTL_MS = 5 * 60 * 1000;       // the public Form check is reused for 5 minutes
 export const RATE_LIMIT = 5;              // submissions allowed per IP ...
@@ -85,22 +93,23 @@ export async function checkExecForm(form: ConnectedForm): Promise<FormCheck> {
   try {
     response = await fetch(form.viewUrl, { redirect: "manual", cache: "no-store", signal: AbortSignal.timeout(10_000) });
   } catch {
-    return { ok: false, problems: ["Could not reach the Google Form. Check the internet connection, then try again."] };
+    return { ok: false, problems: ["Could not reach the Google Form. Check the internet connection, then try again."], warnings: [] };
   }
   if (response.status >= 300 && response.status < 400) {
-    return { ok: false, problems: ["The Form asks people to sign in to Google. In the Form's Settings, turn off \"Restrict to users\" and any sign-in requirement."] };
+    return { ok: false, problems: ["The Form asks people to sign in to Google. In the Form's Settings, turn off \"Restrict to users\" and any sign-in requirement."], warnings: [] };
   }
   if (response.status !== 200) {
-    return { ok: false, problems: [`Google answered ${response.status} for the Form. It may be deleted, or the link is wrong.`] };
+    return { ok: false, problems: [`Google answered ${response.status} for the Form. It may be deleted, or the link is wrong.`], warnings: [] };
   }
   const html = await response.text();
   if (/no longer accepting responses/i.test(html)) {
-    return { ok: false, problems: ["The Form is closed. In the Form's Responses tab, turn on \"Accepting responses\"."] };
+    return { ok: false, problems: ["The Form is closed. In the Form's Responses tab, turn on \"Accepting responses\"."], warnings: [] };
   }
   const questions = readQuestions(html);
-  if (!questions) return { ok: false, problems: ["Could not read the Form's questions, so nothing could be checked. It may still work."] };
+  if (!questions) return { ok: false, problems: ["Could not read the Form's questions, so nothing could be checked. It may still work."], warnings: [] };
 
   const problems: string[] = [];
+  const warnings: string[] = [];
   const byEntry = new Map(questions.map(q => [q.entry, q]));
   for (const [id, entry] of Object.entries(form.entries) as [FieldId, string][]) {
     const q = byEntry.get(entry);
@@ -133,16 +142,23 @@ export async function checkExecForm(form: ConnectedForm): Promise<FormCheck> {
     if (!q.required) continue;
     const id = idByEntry.get(q.entry);
     if (!id) {
+      // Nothing is ever put in this one, so EVERY application is refused.
       problems.push(`"${q.title}" is required in the Form but the site does not fill it in. Make it optional, or delete it.`);
     } else if (!alwaysSent.has(id)) {
-      problems.push(`"${q.title}" is required in the Form, but an applicant is allowed to leave it blank. `
-        + "A blank answer is not sent at all, and Google then refuses the whole application. Make it optional in the Form.");
+      // ⛔ A WARNING, NOT A PROBLEM, AND THE DIFFERENCE MATTERS. Only the
+      // applications that leave this one blank are refused; the rest arrive
+      // exactly as they should. Closing the page would stop the people who
+      // would have answered it as well, to protect the people who would not.
+      // This shut applications down once already, live, and it must not again.
+      warnings.push(`"${q.title}" is required in the Form, but an applicant is allowed to leave it blank. `
+        + "Google refuses an application that skips it, though one that answers it goes through. "
+        + "Turn Required off on that question in the Form.");
     }
   }
   for (const id of REQUIRED) {
     if (!form.entries[id]) problems.push(`The site has no question to put "${labelFor(id)}" in.`);
   }
-  return { ok: problems.length === 0, problems };
+  return { ok: problems.length === 0, problems, warnings };
 }
 
 // ─── The cached public check ─────────────────────────────────────────────────
