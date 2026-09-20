@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Arrow, Logo } from "@/components/graphics/DraftGraphics";
 import { siteContent } from "@/data/siteContent";
-import { MEMBER_APPLY_PATH } from "@/lib/applyRoutes";
+import { APPLY_PATH } from "@/lib/applyRoutes";
 
 export function Navigation() {
   const [open, setOpen] = useState(false);
@@ -48,10 +48,10 @@ export function Navigation() {
   return <header className={`site-header ${open ? "menu-is-open" : ""}`} ref={headerRef}>
     <a className="nav-brand" href="#hero" aria-label="WEC — Western Entrepreneurship Collective — back to the beginning" onClick={() => setOpen(false)}><Logo priority /><span className="nav-descriptor">Western Entrepreneurship <br />Collective</span></a>
     <nav className="desktop-nav" aria-label="Main navigation">{siteContent.navigation.map(item => <a key={item.href} href={item.href}>{item.label}</a>)}</nav>
-    <a className="nav-join" href={MEMBER_APPLY_PATH}>Join WEC <Arrow diagonal /></a>
+    <a className="nav-join" href={APPLY_PATH}>Join WEC <Arrow diagonal /></a>
     <button ref={buttonRef} className="menu-toggle" aria-expanded={open} aria-controls="mobile-navigation" aria-label={open ? "Close navigation" : "Open navigation"} onClick={() => setOpen(!open)}><span /><span /></button>
     <div className="mobile-menu" id="mobile-navigation" hidden={!open} ref={menuRef}>
-      <nav aria-label="Mobile navigation">{[...siteContent.navigation, { label: "Join WEC", href: MEMBER_APPLY_PATH }].map((item, i) => <a href={item.href} key={item.href} onClick={() => setOpen(false)}><span className="micro">0{i + 1}</span>{item.label}<Arrow /></a>)}</nav>
+      <nav aria-label="Mobile navigation">{[...siteContent.navigation, { label: "Join WEC", href: APPLY_PATH }].map((item, i) => <a href={item.href} key={item.href} onClick={() => setOpen(false)}><span className="micro">0{i + 1}</span>{item.label}<Arrow /></a>)}</nav>
       <p className="micro">By Founders, for Founders.</p>
     </div>
   </header>;

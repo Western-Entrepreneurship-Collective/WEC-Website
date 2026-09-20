@@ -1,7 +1,7 @@
 import gsap from "gsap";
 import type Lenis from "lenis";
 import { createScrollSequence, type ScrollSequence } from "./scrollSequence";
-import { PAGE_SCROLL_SLOWDOWN, PILLAR_GESTURE } from "./pacing";
+import { PILLAR_COOLDOWN, PILLAR_GESTURE, PILLAR_TRANSITION } from "./pacing";
 
 export function setupFoundationScene(root: HTMLElement, lenis: Lenis, controls: {
   canEnter: () => boolean;
@@ -27,23 +27,23 @@ export function setupFoundationScene(root: HTMLElement, lenis: Lenis, controls: 
       column.classList.toggle("is-raised", i < raised);
       const pose = { yPercent: i < raised ? 0 : 103 };
       if (immediate) gsap.set(column, pose);
-      else gsap.to(column, { ...pose, duration: .18 * PAGE_SCROLL_SLOWDOWN, ease: "power2.out", overwrite: true });
+      else gsap.to(column, { ...pose, duration: PILLAR_TRANSITION, ease: "power2.out", overwrite: true });
       const visible = raised > 0 && (compact ? i === selected : i < raised);
       const textPose = { autoAlpha: visible ? 1 : 0, y: visible ? 0 : 16 };
       if (immediate) gsap.set(panels[i], textPose);
-      else gsap.to(panels[i], { ...textPose, duration: .18 * PAGE_SCROLL_SLOWDOWN, overwrite: true });
+      else gsap.to(panels[i], { ...textPose, duration: PILLAR_TRANSITION, overwrite: true });
       if (i === selected && raised > 0) buttons[i].setAttribute("aria-current", "true");
       else buttons[i].removeAttribute("aria-current");
     });
     const structurePose = { autoAlpha: raised > 0 ? 1 : 0 };
     if (immediate) gsap.set([roof, steps], structurePose);
-    else gsap.to([roof, steps], { ...structurePose, duration: .18 * PAGE_SCROLL_SLOWDOWN, ease: "power2.out", overwrite: true });
+    else gsap.to([roof, steps], { ...structurePose, duration: PILLAR_TRANSITION, ease: "power2.out", overwrite: true });
   }
   show(0, true);
   const sequence = createScrollSequence({
     root, section, scene, lenis, ...controls,
     start: () => `top ${parseFloat(getComputedStyle(root).getPropertyValue("--nav-height")) + 14}px`,
-    count: 6, onChange: raised => show(raised), gestureThreshold: PILLAR_GESTURE, cooldownMs: 100 * PAGE_SCROLL_SLOWDOWN,
+    count: 6, onChange: raised => show(raised), gestureThreshold: PILLAR_GESTURE, cooldownMs: PILLAR_COOLDOWN,
     onRelease: direction => show(direction < 0 ? 0 : 5),
   });
   const onPillar = (event: Event) => {

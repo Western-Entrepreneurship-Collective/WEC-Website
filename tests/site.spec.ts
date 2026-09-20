@@ -1,5 +1,9 @@
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+// Read the scene prices rather than spelling them out: SCENE_SPEEDUP changes
+// what a step costs, and a wheel delta typed in here would silently start
+// advancing several steps the day the scenes were made faster.
+import { EXPERIENCE_PACING, PILLAR_GESTURE } from "../src/lib/motion/pacing";
 
 const sections = ["hero", "about", "experience", "community", "pillars", "ecosystem", "find-your-place", "join"];
 
@@ -65,37 +69,35 @@ test("audience choices lead to the appropriate experience", async ({ page }) => 
   await expect(page.locator("#founder-labs")).toBeInViewport();
 });
 
-test("CTA availability dialogs are honest, keyboard accessible, and restore focus", async ({ page }) => {
+test("the Join CTA routes to the chooser, and the events dialog is honest and restores focus", async ({ page }) => {
   await useReadingMode(page);
   await page.goto("/#join");
-  const button = page.getByRole("button", { name: "Join WEC", exact: true });
+
+  // Join no longer opens a dialog. Every Join WEC control on the page is a
+  // link to /apply, so whichever one a reader presses behaves the same.
+  await expect(page.getByRole("button", { name: "Join WEC", exact: true })).toHaveCount(0);
+  const joinCta = page.locator("#join").getByRole("link", { name: "Join WEC", exact: true });
+  await expect(joinCta).toHaveAttribute("href", "/apply");
+  await joinCta.click();
+  await expect(page).toHaveURL(/\/apply$/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("What are you applying for?");
+  await page.goBack();
+
+  // Events still has nothing to collect for an unscheduled event, so its
+  // honest dialog stays, focus trap and all.
+  const button = page.getByRole("button", { name: "Attend an event" });
   await button.click();
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
-  // Join has two correct outcomes and which one appears is a build-time
-  // setting, not a bug: with NEXT_PUBLIC_WEC_GOOGLE_FORM_URL set the dialog
-  // asks the questions, and without it the dialog says so honestly rather than
-  // pretending to collect anything. Assert whichever this build was configured
-  // for, so the suite passes both before and after the Form is connected.
-  const asksTheQuestions = await dialog.locator("form.join-form").count() > 0;
-  if (asksTheQuestions) {
-    await expect(dialog.getByRole("heading", { name: "Join WEC" })).toBeVisible();
-    await expect(dialog.getByRole("button", { name: "Join WEC", exact: true })).toBeVisible();
-  } else {
-    await expect(dialog).toContainText("Membership details aren’t available");
-  }
+  await expect(dialog).toContainText("Event dates and registration details aren\u2019t available");
   await expect(dialog.getByRole("button", { name: "Close dialog" })).toBeFocused();
+  // The trap wraps from the close button back to the last control, the link.
   await page.keyboard.press("Shift+Tab");
-  // The trap wraps from the close button back to the last control: the submit
-  // button in the form, the "Explore the experience" link in the honest dialog.
-  await expect(asksTheQuestions
-    ? dialog.getByRole("button", { name: "Join WEC", exact: true })
-    : dialog.getByRole("link")).toBeFocused();
+  await expect(dialog.getByRole("link")).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(dialog).not.toBeVisible();
   await expect(button).toBeFocused();
-  await page.getByRole("button", { name: "Attend an event" }).click();
-  await expect(page.getByRole("dialog")).toContainText("Event dates and registration details aren’t available");
+  await button.click();
   await page.getByRole("dialog").getByRole("link").click();
   await expect(page).toHaveURL(/#experience$/);
 });
@@ -285,7 +287,7 @@ test("field highlights consume scrolling while the surrounding page stays fixed"
   for (const i of [1, 2, 1, 0]) {
     const forward = i > Number(await page.locator(".field").getAttribute("data-active-person"));
     if (isMobile) await page.keyboard.press(forward ? "ArrowDown" : "ArrowUp");
-    else await page.mouse.wheel(0, forward ? 240 : -240);
+    else await page.mouse.wheel(0, forward ? EXPERIENCE_PACING.field.gesture : -EXPERIENCE_PACING.field.gesture);
     await page.waitForTimeout(300);
     const active = page.locator(".field-person.is-active");
     await expect(active).toHaveCount(1);
@@ -296,7 +298,7 @@ test("field highlights consume scrolling while the surrounding page stays fixed"
     await expect(page.locator("#experience")).toHaveAttribute("data-active-program", "2");
   }
   if (isMobile) await page.keyboard.press("ArrowUp");
-  else await page.mouse.wheel(0, -240);
+  else await page.mouse.wheel(0, -EXPERIENCE_PACING.field.gesture);
   await expect(page.locator("#experience")).toHaveAttribute("data-active-program", "1");
   expect(await page.evaluate(() => scrollY)).toBeCloseTo(position, 0);
   await page.keyboard.press("Escape");
@@ -327,6 +329,9 @@ test("five building pillars rise sequentially while the document stays locked", 
   await page.evaluate(y => scrollTo(0, y), entry);
   await page.waitForTimeout(150);
   if (isMobile) await page.keyboard.press("PageDown");
+  // Page distance, NOT a gesture price: this covers the 70px the scroll above
+  // deliberately stopped short and engages the pin. It is unrelated to
+  // PILLAR_GESTURE and must not be derived from it.
   else await page.mouse.wheel(0, 160);
   await expect(page.locator(".wec-site")).toHaveAttribute("data-scroll-locked", "pillars");
   await expect(page.locator("#pillars")).toHaveAttribute("data-raised-pillars", "0");
@@ -336,7 +341,7 @@ test("five building pillars rise sequentially while the document stays locked", 
   for (const raised of [1, 2, 3, 4, 5, 4, 3, 2, 1]) {
     const forward = raised > Number(await page.locator("#pillars").getAttribute("data-raised-pillars"));
     if (isMobile) await page.keyboard.press(forward ? "ArrowDown" : "ArrowUp");
-    else await page.mouse.wheel(0, forward ? 320 : -320);
+    else await page.mouse.wheel(0, forward ? PILLAR_GESTURE : -PILLAR_GESTURE);
     await page.waitForTimeout(250);
     await expect(page.locator("#pillars")).toHaveAttribute("data-raised-pillars", String(raised));
     await expect(page.locator(".building-column.is-raised")).toHaveCount(raised);
@@ -370,7 +375,9 @@ test("program scrolling advances whole windows without internal scrolling", asyn
     const forward = index > Number(await page.locator("#experience").getAttribute("data-active-program"));
     await page.waitForTimeout(550);
     if (isMobile) await page.keyboard.press(forward ? "PageDown" : "PageUp");
-    else await page.mouse.wheel(0, forward ? (index === 1 ? 480 : 720) : index === 1 ? -240 : -720);
+    else await page.mouse.wheel(0, forward
+      ? (index === 1 ? EXPERIENCE_PACING.program.gesture[0] : EXPERIENCE_PACING.program.gesture[1])
+      : index === 1 ? -EXPERIENCE_PACING.field.gesture : -EXPERIENCE_PACING.program.gesture[1]);
     await expect(page.locator("#experience")).toHaveAttribute("data-active-program", String(index));
     await expect(page.locator("#experience-heading")).toBeInViewport({ ratio: 1 });
     expect(await page.locator("#experience-heading").evaluate(el => el.getBoundingClientRect().top >= document.querySelector(".site-header")!.getBoundingClientRect().bottom)).toBeTruthy();

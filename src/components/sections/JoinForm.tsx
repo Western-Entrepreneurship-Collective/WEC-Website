@@ -1,7 +1,11 @@
 "use client";
 
 /**
- * The sign up form, in the dialog that used to say membership is unavailable.
+ * The membership sign up form.
+ *
+ * It used to live in a dialog opened by the Join section's button. It does not
+ * any more: every Join WEC call to action now routes to /apply, and the form
+ * is rendered by /apply/member. This file is the form's body and nothing else.
  *
  * WHY THIS EXISTS
  *
@@ -26,8 +30,8 @@
  * or one sentence, because every extra question at a booth loses people.
  */
 
-import { useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { Arrow, Logo } from "@/components/graphics/DraftGraphics";
+import { useRef, useState, type FormEvent } from "react";
+import { Arrow } from "@/components/graphics/DraftGraphics";
 import { contactEmail, emailRule, googleForm } from "@/data/siteContent";
 import { BLANK, YEARS, validateAnswers, type Answers, type Field } from "@/lib/googleForm";
 
@@ -235,70 +239,6 @@ export function JoinFormBody({ headingTag: Heading = "h2" }: { headingTag?: "h1"
               </form>
             </>
           )}
-    </>
-  );
-}
-
-/**
- * The Join WEC button and the dialog it opens. Unchanged behaviour: the form
- * itself now lives in JoinFormBody so /apply can render it without a dialog.
- */
-export function JoinForm({ label, className }: { label: string; className: string }) {
-  const dialogRef = useRef<HTMLDialogElement>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
-
-  function close() {
-    dialogRef.current?.close();
-    buttonRef.current?.focus();
-  }
-
-  function trapFocus(event: KeyboardEvent<HTMLDialogElement>) {
-    if (event.key !== "Tab") return;
-    const controls = [...event.currentTarget.querySelectorAll<HTMLElement>(
-      "button:not([disabled]), a[href], input:not([tabindex='-1']), select, textarea")];
-    const first = controls[0];
-    const last = controls.at(-1);
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault(); last?.focus();
-    }
-    if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault(); first?.focus();
-    }
-  }
-
-  return (
-    <>
-      <button
-        className={className}
-        ref={buttonRef}
-        onClick={() => dialogRef.current?.showModal()}
-        aria-haspopup="dialog"
-      >
-        {label}<Arrow diagonal />
-      </button>
-
-      <dialog
-        ref={dialogRef}
-        className="join-dialog join-form-dialog"
-        aria-labelledby="join-form-title"
-        // ⛔ Without this the form cannot scroll at all. story.ts stops Lenis
-        // while any dialog is open, and a stopped Lenis cancels every wheel and
-        // touch on the page unless the element opts out with this attribute.
-        // Measured: form 1067px tall in a 553px window, wheel moved it 0px.
-        data-lenis-prevent
-        onKeyDown={trapFocus}
-        onClick={event => { if (event.target === event.currentTarget) close(); }}
-        onClose={() => buttonRef.current?.focus()}
-      >
-        <div className="dialog-inner">
-          <button className="dialog-close" onClick={close} aria-label="Close dialog" autoFocus>
-            <span aria-hidden="true">×</span>
-          </button>
-          <Logo />
-          <p className="micro">Western Entrepreneurship Collective</p>
-          <JoinFormBody />
-        </div>
-      </dialog>
     </>
   );
 }

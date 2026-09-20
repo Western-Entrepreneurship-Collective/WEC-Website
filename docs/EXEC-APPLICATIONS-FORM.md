@@ -53,13 +53,13 @@ it is the order the Sheet's columns will appear in, so it is worth keeping.
 |---|---|---|---|---|
 | 1 | Full name | Short answer | yes | |
 | 2 | Western email | Short answer | yes | |
-| 3 | Personal email | Short answer | yes | |
+| 3 | Personal email | Short answer | **no** | |
 | 4 | Phone number | Short answer | **no** | |
 | 5 | Year of study | **Multiple choice** | yes | options exactly: `1st Year`, `2nd Year`, `3rd Year`, `4th Year`, `Graduate`, `Other` |
 | 6 | Program / faculty | Short answer | yes | |
 | 7 | LinkedIn | Short answer | **no** | |
 | 8 | Portfolio or website | Short answer | **no** | |
-| 9 | Resume link | Short answer | yes | a link, not a file. See "Why the resume is a link" below |
+| 9 | Resume link | Short answer | **no** | a link, not a file. See "Why the resume is a link" below |
 | 10 | Short introduction | Paragraph | yes | |
 | 11 | General question 1 | Paragraph | yes | |
 | 12 | General question 2 | Paragraph | yes | |
@@ -77,9 +77,11 @@ empty columns. Instead every role's answers go into the same five slots, and
 Sheet reads on its own. Column 13 says which role it was.
 
 ⛔ **Anything marked "no" above must actually be optional in the Form.** Google
-refuses the whole submission if a question is required and the site does not fill
-it in, and its refusal says nothing about why. The setup check in section 4
-catches this.
+refuses the whole submission if a question is required and the answer is not
+there, and its refusal says nothing about why. That happens two ways: the site
+fills nothing into the question at all, or the site fills it only when the
+applicant answered it. The setup check in section 4 names both, by question
+title, so this never has to be discovered by a real applicant.
 
 ### Settings that must be like this
 

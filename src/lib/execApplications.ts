@@ -218,7 +218,7 @@ export type Question = {
 export const ABOUT: Question[] = [
   { id: "name", label: "Full name", ph: "NAME", req: true, kind: "text", placeholder: "Amara Osei" },
   { id: "westernEmail", label: "Western email", ph: "WESTERNEMAIL", req: true, kind: "email", rule: "western", placeholder: "you@uwo.ca", hint: "We reply here first." },
-  { id: "personalEmail", label: "Personal email", ph: "PERSONALEMAIL", req: true, kind: "email", rule: "any", placeholder: "you@gmail.com", hint: "In case your Western mail is full or you graduate." },
+  { id: "personalEmail", label: "Personal email", ph: "PERSONALEMAIL", req: false, kind: "email", rule: "any", placeholder: "you@gmail.com", hint: "Optional. In case your Western mail is full or you graduate." },
   { id: "phone", label: "Phone number", ph: "PHONE", req: false, kind: "phone", placeholder: "519 555 0134", hint: "Optional. Only used if we are trying to reach you about an interview." },
   { id: "year", label: "Year of study", ph: null, req: true, kind: "select", choices: YEARS },
   { id: "program", label: "Program / faculty", ph: "PROGRAM", req: true, kind: "text", placeholder: "Ivey HBA, Computer Science, Health Sci" },
@@ -232,9 +232,9 @@ export const ABOUT: Question[] = [
   // has Drive credentials, this field becomes an upload and the Form question
   // becomes a file question, and nothing else on this page has to change.
   {
-    id: "resume", label: "Resume link", ph: "RESUME", req: true, kind: "url",
+    id: "resume", label: "Resume link", ph: "RESUME", req: false, kind: "url",
     placeholder: "https://drive.google.com/...",
-    hint: "Required. Paste a link to your resume: a Google Drive or Dropbox file set to \"anyone with the link\", a LinkedIn profile, or your own site. We do not take file uploads.",
+    hint: "Optional. Paste a link to your resume: a Google Drive or Dropbox file set to \"anyone with the link\", a LinkedIn profile, or your own site. We do not take file uploads.",
   },
   {
     id: "intro", label: "Short introduction", ph: "INTRO", req: true, kind: "long", max: 150,
@@ -265,9 +265,32 @@ export const FIELDS: { id: FieldId; ph: string | null; label?: string }[] = [
   ...ABOUT, ...GENERAL, ROLE_FIELD, ...ROLE_SLOTS,
 ];
 
-// Required in the Form's eyes. The role questions are required of the
+// ⛔ THIS IS ABOUT WIRING, NOT ABOUT THE APPLICANT. Every field listed here
+// must have an entry.NNN in the pre-filled link, or the Form counts as not
+// connected and the page stays closed. Whether an applicant has to answer is
+// `req` on the question itself: personal email and the resume link are wired
+// up but optional, so an answer given always has somewhere to land, and a
+// blank one is simply not sent. The role questions are required of the
 // applicant but share slots, so they are checked by the flow, not by entry id.
 export const REQUIRED: FieldId[] = ["name", "westernEmail", "personalEmail", "year", "program", "resume", "intro", "g1", "g2", "role", "r1", "r2", "r3"];
+
+/**
+ * The fields an application ALWAYS carries a value for.
+ *
+ * Everything else — the optional ones, and every role slot, since only the
+ * chosen role's questions are filled — can arrive blank, and answersToSend
+ * omits a blank rather than sending an empty string.
+ *
+ * ⛔ SO THE FORM'S COPY OF ANYTHING NOT LISTED HERE MUST BE OPTIONAL. Google
+ * refuses an entire submission when a required question is missing from it,
+ * with a bare 400 and no reason attached. The setup check reads this list and
+ * says so in plain words rather than leaving it to be discovered by the first
+ * applicant who skips a question.
+ */
+export const ALWAYS_SENT: FieldId[] = [
+  ...[...ABOUT, ...GENERAL].filter(f => f.req).map(f => f.id),
+  ROLE_FIELD.id,
+];
 
 // Long enough for the longest answer plus its question text, short enough that
 // nobody can post a novel. 250 words is about 1,700 characters. An answer over
