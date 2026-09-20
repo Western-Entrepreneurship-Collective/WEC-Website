@@ -45,9 +45,11 @@ export async function GET(request: Request) {
   const { form, reason } = connectedForm();
   if (url.searchParams.get("detail") === "1") {
     if (!detailAllowed(url)) return send({ error: "forbidden", message: "The detailed setup check needs the right key." }, 403);
-    if (!form) return send({ connected: false, ready: false, problems: [reason] });
+    if (!form) return send({ connected: false, ready: false, problems: [reason], warnings: [] });
     const fresh = await freshCheck(form);
-    return send({ connected: true, ready: fresh.ok, problems: fresh.problems });
+    // warnings do not close the page, so they are easy to miss. They are
+    // returned here precisely so whoever runs this still sees them.
+    return send({ connected: true, ready: fresh.ok, problems: fresh.problems, warnings: fresh.warnings });
   }
   // The public answer: two booleans. No question titles, no problems list.
   if (!form) return send({ connected: false, ready: false });

@@ -77,11 +77,20 @@ empty columns. Instead every role's answers go into the same five slots, and
 Sheet reads on its own. Column 13 says which role it was.
 
 ⛔ **Anything marked "no" above must actually be optional in the Form.** Google
-refuses the whole submission if a question is required and the answer is not
-there, and its refusal says nothing about why. That happens two ways: the site
-fills nothing into the question at all, or the site fills it only when the
-applicant answered it. The setup check in section 4 names both, by question
-title, so this never has to be discovered by a real applicant.
+refuses a submission if a question is required and the answer is not there, and
+its refusal says nothing about why. That happens two ways, and the setup check
+in section 4 names both by question title:
+
+- The site fills **nothing** into the question, so **every** application is
+  refused. Reported as a **problem**, and the page closes: letting people type
+  an application that cannot arrive is worse than saying it is not open.
+- The site fills it **only when the applicant answered it**, so applications
+  that skip it are refused and the rest arrive fine. Reported as a **warning**,
+  and the page **stays open**. Closing it would stop the applicants who would
+  have answered the question, to protect the ones who would not.
+
+The distinction is not theoretical. Treating the second case as a problem took
+the live applications page down for everyone on 20 September 2026.
 
 ### Settings that must be like this
 

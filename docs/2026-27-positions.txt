@@ -1,0 +1,106 @@
+WEC EXECUTIVE TEAM 2026-27
+Every position, one line each, and whether it is filled.
+Last updated 19 September 2026.
+
+18 positions. 6 filled, 12 open.
+
+
+FILLED (6)
+==========
+
+President — Sebastian
+  Sets the vision and holds the club's relationships at the top: Morrissette
+  liaison, ratification, and senior sponsor and speaker relationships.
+
+VP Sponsorship — Owen
+  Builds the sponsor pipeline (Front Row Ventures, Ownr, MNP, Dragonfruit
+  Ventures and beyond), negotiates cash and in-kind support, delivers on
+  sponsor commitments, and secures member perks.
+
+VP Outreach — Luke
+  The club's face to the founder community: recruits guest speakers, builds
+  and schedules the mentor pool for Sunday build sessions, and maintains
+  alumni and Morrissette founder relationships.
+
+VP Finance — Rishabh
+  Owns the money: budget, membership fees, the prize pool, and sponsor funds
+  and deliverables.
+
+VP Operations — Sami
+  Owns the physical and administrative execution behind the scenes: room
+  bookings, catering, club portal and admin requirements, equipment, building
+  access, supplies, A/V, setup and teardown.
+
+VP Events — Ahad
+  Owns what happens at an event and how it feels: programming, format,
+  agendas, timelines, speaker coordination, judging flow and the run-of-show.
+
+
+OPEN (12) — applications are live
+=================================
+
+Applications are open now at /apply/executives. Each applicant answers the
+About you section and two general questions, then only their chosen role's
+questions.
+
+Vice Presidents (3)
+-------------------
+
+VP Content
+  What WEC makes and posts: series, campaigns, and the feed.
+
+VP Communications
+  Announcements, membership growth, and turning interest into attendance.
+
+VP Community
+  Whether members actually know each other: belonging, retention, the room.
+
+Directors & Coordinators (9)
+----------------------------
+
+Director of Admin
+  Systems and follow-through, and the record of who is doing what.
+
+Event Experience Coordinator
+  The experience rather than the agenda, from arrival to leaving.
+
+Director of Logistics
+  Rooms, food, gear, timing, and the fix when something goes wrong.
+
+Director of Financial Operations
+  Budgets, spend, receipts, and saying no early enough for it to matter.
+
+Speaker Acquisition Coordinator
+  Cold outreach to founders who owe us nothing, and getting to a yes.
+
+Outreach Coordinator
+  First message, follow-up, and a process that survives a hundred of them.
+
+Director of Video
+  Short video: shooting, cutting, and knowing what earns a watch.
+  (The only role with an optional link to past work.)
+
+Email & Newsletter Coordinator
+  The newsletter, the subject line, and a reason to open it.
+
+Director of Engagement
+  The gap between 300 members signed up and 30 in the room.
+
+
+NOTE ON OVERLAPPING NAMES
+=========================
+
+Four open roles sit close to a filled VP role, presumably as owner and
+executor. The names do not make that obvious to someone deciding where to
+apply:
+
+  VP Outreach (Luke)      vs  Outreach Coordinator (open)
+                          and Speaker Acquisition Coordinator (open)
+                              — Luke's role also recruits guest speakers
+  VP Finance (Rishabh)    vs  Director of Financial Operations (open)
+  VP Operations (Sami)    vs  Director of Logistics (open)
+                          and Director of Admin (open)
+  VP Events (Ahad)        vs  Event Experience Coordinator (open)
+
+Worth deciding whether the open role descriptions should say who they report
+to. The wording lives in one file: src/lib/execApplications.ts.
