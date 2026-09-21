@@ -12,9 +12,14 @@
  * student is only told they're in after Google accepted it.
  *
  * ⛔ No answers are stored here or logged. The Sheet is the only copy.
+ *
+ * ⛔ NOTHING IS SENT WITHOUT CONSENT. A submission without privacyAgreed set to
+ * true is refused before any answer is read, so nothing reaches Google unless
+ * the person ticked the box that links to /privacy (src/lib/privacy.ts).
  */
 import { cleanAnswers, parseEmailRule, parseGoogleForm, validateAnswers } from "@/lib/googleForm";
 import { checkGoogleForm } from "@/lib/googleFormCheck";
+import { hasConsent } from "@/lib/privacy";
 
 // Only Google may receive the answers. WEC_GOOGLE_FORM_TEST_HOST is server-only
 // and exists so the whole path can be tested against a local stand-in for Google.
@@ -55,6 +60,7 @@ export async function POST(request: Request) {
   if (body && typeof body === "object" && (body as Record<string, unknown>).website) {
     return Response.json({ ok: true });
   }
+  if (!hasConsent(body)) return Response.json({ error: "consent_required" }, { status: 400 });
   const answers = cleanAnswers(body);
   if (!answers) return Response.json({ error: "bad_request" }, { status: 400 });
   const errors = validateAnswers(answers, parseEmailRule(process.env.NEXT_PUBLIC_WEC_EMAIL_RULE));
