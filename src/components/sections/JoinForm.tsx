@@ -31,11 +31,9 @@
  */
 
 import { useRef, useState, type FormEvent } from "react";
-import Link from "next/link";
 import { Arrow } from "@/components/graphics/DraftGraphics";
 import { contactEmail, emailRule, googleForm } from "@/data/siteContent";
 import { BLANK, YEARS, validateAnswers, type Answers, type Field } from "@/lib/googleForm";
-import { CONSENT_ERROR, PRIVACY_CONSENT, PRIVACY_PATH } from "@/lib/privacy";
 
 type Status = "idle" | "sending" | "joined" | "mail-opened" | "failed";
 
@@ -84,10 +82,6 @@ export function JoinFormBody({ headingTag: Heading = "h2" }: { headingTag?: "h1"
   const [website, setWebsite] = useState("");
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [status, setStatus] = useState<Status>("idle");
-  // ⛔ Unticked on purpose. Nothing leaves the page, by any route, until it is
-  // ticked, and /api/join refuses a submission without it. See src/lib/privacy.ts.
-  const [agreed, setAgreed] = useState(false);
-  const [consentError, setConsentError] = useState(false);
 
   // ⛔ Editing a field clears ITS error. Found by walking the form: after fixing
   // the email, the red message stayed on screen until Send was pressed again,
@@ -107,8 +101,7 @@ export function JoinFormBody({ headingTag: Heading = "h2" }: { headingTag?: "h1"
     // crashes. That exact bug shipped on the other WEC site.
     const next = validateAnswers(v, emailRule);
     setErrors(next);
-    setConsentError(!agreed);
-    if (Object.keys(next).length || !agreed) {
+    if (Object.keys(next).length) {
       // ⛔ With the email box scrolled out of sight, pressing Join showed its
       // error off screen and looked like "nothing happens". So jump to the
       // first wrong box and put the cursor in it.
@@ -132,12 +125,11 @@ export function JoinFormBody({ headingTag: Heading = "h2" }: { headingTag?: "h1"
       const response = await fetch("/api/join", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...v, website, [PRIVACY_CONSENT]: agreed }),
+        body: JSON.stringify({ ...v, website }),
       });
       if (response.ok) { setStatus("joined"); return; }
       const data = await response.json().catch(() => ({}));
       if (data?.error === "invalid" && data.errors) { setErrors(data.errors); setStatus("idle"); return; }
-      if (data?.error === "consent_required") { setConsentError(true); setStatus("idle"); return; }
       setStatus("failed");
     } catch {
       setStatus("failed");
@@ -145,7 +137,7 @@ export function JoinFormBody({ headingTag: Heading = "h2" }: { headingTag?: "h1"
   }
 
   const firstName = v.name.trim().split(/\s+/)[0];
-  const errorCount = Object.values(errors).filter(Boolean).length + (consentError ? 1 : 0);
+  const errorCount = Object.values(errors).filter(Boolean).length;
 
   return (
     <>
@@ -222,21 +214,10 @@ export function JoinFormBody({ headingTag: Heading = "h2" }: { headingTag?: "h1"
                        onChange={e => setWebsite(e.target.value)}
                        tabIndex={-1} autoComplete="off" aria-hidden="true" />
 
-                <label className="consent">
-                  <input type="checkbox" checked={agreed} aria-invalid={consentError}
-                         onChange={e => { setAgreed(e.target.checked); if (e.target.checked) setConsentError(false); }} />
-                  <span>
-                    I have read the <Link className="privacy-link" href={PRIVACY_PATH}>privacy policy</Link> and
-                    agree to WEC collecting and using my answers as it describes.
-                  </span>
-                </label>
-                {consentError && <em className="field-error">{CONSENT_ERROR}</em>}
-
                 {errorCount > 0 && (
                   <p className="field-error join-failed" role="alert">
                     {errorCount === 1 ? "1 box needs fixing" : `${errorCount} boxes need fixing`}:{" "}
-                    {[...(Object.keys(errors) as Field[]).filter(k => errors[k]).map(k => FIELD_NAMES[k]),
-                      ...(consentError ? ["Privacy agreement"] : [])].join(", ")}.
+                    {(Object.keys(errors) as Field[]).filter(k => errors[k]).map(k => FIELD_NAMES[k]).join(", ")}.
                   </p>
                 )}
 
@@ -252,7 +233,7 @@ export function JoinFormBody({ headingTag: Heading = "h2" }: { headingTag?: "h1"
                 </button>
                 <p className="micro">
                   {viaGoogle
-                    ? "We only use this to add you to the member list and contact you about WEC. Only our exec team sees it."
+                    ? "We only use this to add you to the member list and contact you about WEC."
                     : "Opens your email app to send."}
                 </p>
               </form>

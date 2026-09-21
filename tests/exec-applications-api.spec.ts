@@ -35,7 +35,6 @@
  *  19  an over-long answer is refused with 400, never truncated
  *  20  an http:// Google Form link is refused
  *  21  the test host is ignored in production
- *  24  without privacy consent nothing is sent to Google, and consent must be the boolean true
  */
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -45,7 +44,6 @@ import { resetExecApplicationsState } from "@/lib/execApplicationsServer";
 import {
   ABOUT, GENERAL, HONEYPOT, MAX_CHARS, applicationsOpen, roleByKey, type Application,
 } from "@/lib/execApplications";
-import { PRIVACY_CONSENT } from "@/lib/privacy";
 import { ENTRY, prefilledUrl, questions, startFakeGoogle, type FakeGoogle } from "./support/fakeGoogle";
 
 test.describe.configure({ mode: "serial" });
@@ -89,16 +87,12 @@ function connect(url?: string) {
 // post dozens of applications are not stopped by the rate limit. Test 17 gives
 // one address on purpose.
 let nextIp = 1;
-// Every post agrees to the privacy policy unless the body says otherwise, the
-// way the page sends it. Test 24 posts without it on purpose.
 async function post(body: unknown, ip?: string) {
   const from = ip ?? `10.0.${Math.floor(nextIp / 250)}.${(nextIp++ % 250) + 1}`;
-  const withConsent = body && typeof body === "object" && !(PRIVACY_CONSENT in body)
-    ? { ...(body as Record<string, unknown>), [PRIVACY_CONSENT]: true } : body;
   const response = await POST(new Request(BASE, {
     method: "POST",
     headers: { "Content-Type": "application/json", "X-Forwarded-For": `${from}, 203.0.113.9` },
-    body: typeof withConsent === "string" ? withConsent : JSON.stringify(withConsent),
+    body: typeof body === "string" ? body : JSON.stringify(body),
   }));
   return { status: response.status, body: await response.json() };
 }
@@ -589,27 +583,4 @@ test("23  a Form that still demands an optional answer warns, and does NOT close
   const out2 = await post(application("vp-content"));
   expect(out2.body).toEqual({ ok: true });
   await new Promise<void>(resolve => server.close(() => resolve()));
-});
-
-test("24  without privacy consent nothing is sent to Google, and consent must be the boolean true", async () => {
-  connect();
-  const v = application("vp-content");
-  for (const consent of [false, "true", 1, null]) {
-    const out = await post({ ...v, [PRIVACY_CONSENT]: consent });
-    expect(out.status, `consent ${JSON.stringify(consent)} must be refused`).toBe(400);
-    expect(out.body).toEqual({ error: "consent_required" });
-  }
-  // Straight to the route, past the helper that would add consent.
-  const missing = await POST(new Request(BASE, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Forwarded-For": "10.9.9.9" },
-    body: JSON.stringify(v),
-  }));
-  expect(missing.status, "no consent field at all must be refused").toBe(400);
-  expect(google.received, "nothing may reach Google without consent").toHaveLength(0);
-
-  const ok = await post({ ...v, [PRIVACY_CONSENT]: true });
-  expect(ok.body).toEqual({ ok: true });
-  expect(google.received).toHaveLength(1);
-  expect(Object.values(google.received[0]), "the consent flag itself is never sent to Google").not.toContain("true");
 });

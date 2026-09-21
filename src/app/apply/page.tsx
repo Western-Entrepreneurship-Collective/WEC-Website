@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import Link from "next/link";
-import { PRIVACY_PATH } from "@/lib/privacy";
 import { Arrow, Logo } from "@/components/graphics/DraftGraphics";
 import { APPLY_PATH, EXEC_APPLICATIONS_PATH, MEMBER_APPLY_PATH } from "@/lib/execApplications";
 import { connectedForm } from "@/lib/execApplicationsServer";
@@ -98,7 +97,6 @@ export default async function ApplyPage() {
         <Link href="/" className="text-link">
           Explore the rest of the site<Arrow />
         </Link>
-        <Link href={PRIVACY_PATH} className="apply-privacy">Privacy policy</Link>
       </footer>
     </main>
   );

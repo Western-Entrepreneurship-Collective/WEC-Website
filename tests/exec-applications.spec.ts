@@ -51,11 +51,8 @@ test("a full application at desktop width: every stage, role switch, edit, submi
   test.skip(testInfo.project.name !== "chromium", "one desktop run is enough; each run is a real submission");
   const name = `Desktop Tester ${Date.now()}`;
   await openAndWait(page);
-  // No landing page, no hero: nothing between the header and the form. The
-  // only thing after it is the footer with the privacy policy link.
-  await expect(page.locator(".exec-page > *")).toHaveCount(3);
-  await expect(page.locator(".exec-page > :nth-child(2)")).toHaveClass(/exec-card/);
-  await expect(page.locator(".exec-page > footer.exec-foot a")).toHaveAttribute("href", "/privacy");
+  // No landing page, no hero: nothing between the header and the form.
+  await expect(page.locator(".exec-page > *")).toHaveCount(2);
 
   // Continue with nothing filled in: every required box says why, nothing moves.
   await page.getByRole("button", { name: "Continue" }).click();
@@ -127,14 +124,6 @@ test("a full application at desktop width: every stage, role switch, edit, submi
   await page.getByRole("button", { name: "Submit application" }).click();
   await expect(page.locator(".exec-card").getByRole("alert")).toContainText("Please tick the box");
   await page.getByLabel("I confirm that the information in this application is accurate.").check();
-
-  // And so is the privacy agreement: nothing is sent until it is ticked.
-  const before = (await received(page)).filter(r => r[ENTRY.name] === name).length;
-  await page.getByRole("button", { name: "Submit application" }).click();
-  await expect(page.locator(".exec-card").getByRole("alert")).toContainText("agree to the privacy policy");
-  expect((await received(page)).filter(r => r[ENTRY.name] === name).length, "nothing sent before consent").toBe(before);
-  await expect(page.getByRole("link", { name: "privacy policy", exact: true })).toHaveAttribute("href", "/privacy");
-  await page.getByLabel(/I have read the privacy policy/).check();
   await page.getByRole("button", { name: "Submit application" }).click();
 
   // "You're in" only after the stand-in for Google took it with a 200.
@@ -169,7 +158,6 @@ test("a full application at 375px wide", async ({ page }, testInfo) => {
   await page.getByRole("button", { name: "Review application" }).click();
   expect(await noSideScroll()).toBe(true);
   await page.getByLabel("I confirm that the information in this application is accurate.").check();
-  await page.getByLabel(/I have read the privacy policy/).check();
   await page.getByRole("button", { name: "Submit application" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("You’re in. 🚀");
 
