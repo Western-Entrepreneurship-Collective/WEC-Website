@@ -117,3 +117,39 @@ a.apply-choice:focus-visible { background: var(--white); border-color: var(--pur
    focusable or clickable. */
 .apply-choice.is-closed { opacity: .62; }
 .apply-choice.is-closed .apply-choice-title { color: var(--muted); }
+
+/* The privacy policy (/privacy) uses the same shell, with room to read. */
+.apply-card.privacy { width: min(720px, calc(100% - 32px)); }
+.privacy .privacy-meta { color: var(--muted); font-size: 13px; margin-top: 10px; line-height: 1.6; }
+.privacy h2 { font-size: 20px; letter-spacing: -.02em; margin-top: 32px; }
+.privacy h3 { font-size: 15px; margin-top: 18px; }
+.privacy p, .privacy li { font-size: 15px; line-height: 1.65; color: var(--purple); }
+.privacy p { margin-top: 10px; }
+.privacy ul { margin: 8px 0 0; padding-left: 20px; list-style: disc; }
+.privacy li + li { margin-top: 4px; }
+
+/* An ordinary underlined link inside a sentence. .text-link is a block-ish
+   call to action, which breaks a line of body text. */
+.privacy-link { color: inherit; text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
+.privacy-link:hover { color: var(--green); }
+
+/* The "I agree" box on both forms. */
+.consent { display: flex; gap: 10px; align-items: flex-start; margin-top: 18px; font-size: 14px; line-height: 1.5; cursor: pointer; }
+.consent input { width: 18px; height: 18px; flex: none; margin-top: 2px; accent-color: var(--purple); }
+/* The member form's labels are an uppercase grid with full-width inputs.
+   This one is a sentence with a tick box, so undo both. */
+.join-form label.consent { display: flex; gap: 12px; align-items: flex-start; }
+.join-form label.consent > span { font-family: var(--body); font-size: 14px; letter-spacing: 0; text-transform: none; line-height: 1.5; }
+.join-form .consent input { width: 22px; min-height: 0; height: 22px; padding: 0; flex: none; margin-top: 1px; }
+.join-form .consent input[aria-invalid="true"] { outline: 2px solid #c0182b; outline-offset: 2px; }
+
+/* Privacy links in the page footers. */
+.apply-foot { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.apply-privacy { font-size: 12px; color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
+.apply-privacy:hover { color: var(--purple); }
+.exec-foot { margin: 28px 0 8px; text-align: center; }
+
+/* The home page footer's privacy link, beside the location line. */
+.footer-privacy { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.footer-privacy:hover { color: var(--purple); }
+@media (max-width: 759px) { .footer-meta > .footer-privacy { grid-column: 1; grid-row: 3; } }
