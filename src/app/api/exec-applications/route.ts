@@ -25,6 +25,11 @@
  * NO DATABASE, NO ADMIN, NO LOGIN. The Sheet behind the Form is the only store.
  * ⛔ Answers are never stored here and never logged.
  *
+ * ⛔ NOTHING IS SENT WITHOUT CONSENT. An application without privacyAgreed set
+ * to true is refused before any answer is read, so nothing reaches Google
+ * unless the applicant ticked the box that links to /privacy
+ * (src/lib/privacy.ts).
+ *
  * Separate from /api/join on purpose: that route and its settings belong to
  * the member sign up, and nothing here reads or changes them.
  */
@@ -32,6 +37,7 @@ import { HONEYPOT, answersToSend, checkEverything, cleanSubmission } from "@/lib
 import {
   RATE_WINDOW_MS, cachedCheck, clientIp, connectedForm, detailAllowed, forgetCheck, freshCheck, overLimit,
 } from "@/lib/execApplicationsServer";
+import { hasConsent } from "@/lib/privacy";
 
 const LOG = "[exec-applications]";
 const MAX_BODY_CHARS = 200_000;
@@ -85,6 +91,8 @@ export async function POST(request: Request) {
     console.warn(`${LOG} honeypot filled in; told ok, nothing sent to Google.`);
     return send({ ok: true });
   }
+
+  if (!hasConsent(body)) return send({ error: "consent_required" }, 400);
 
   const answers = cleanSubmission(body);
   if (!answers) return send({ error: "bad_request" }, 400);
