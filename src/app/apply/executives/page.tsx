@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PRIVACY_PATH } from "@/lib/privacy";
 import { Logo } from "@/components/graphics/DraftGraphics";
 import { ExecApplicationsForm } from "@/components/sections/ExecApplicationsForm";
 import { EXEC_APPLICATIONS_PATH } from "@/lib/execApplications";
@@ -43,9 +42,6 @@ export default function ExecApplicationsPage() {
         <span className="micro">WEC Executive Applications 2026-27</span>
       </header>
       <ExecApplicationsForm />
-      <footer className="exec-foot">
-        <Link href={PRIVACY_PATH} className="apply-privacy">Privacy policy</Link>
-      </footer>
     </main>
   );
 }
