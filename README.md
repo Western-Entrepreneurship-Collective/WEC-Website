@@ -32,7 +32,7 @@ NEXT_PUBLIC_SITE_URL=
 
 The membership and event fields accept HTTPS URLs. Set `NEXT_PUBLIC_SITE_URL` to the public origin before deployment so canonical and social-image URLs use the correct host. Restart development or rebuild production after changing these build-time variables.
 
-Until official destinations are configured, the calls to action open accessible dialogs explaining that details are not yet available. They do not collect personal information or claim to submit an application or RSVP. No contact address, social account, event date, or partnership claim was taken from the speculative UI kit.
+The member sign up (`/apply/member`) and the executive application (`/apply/executives`) DO collect personal information, and send it to the club's Google Forms. What they collect, why, who sees it and how long it is kept is set out in the privacy policy at `/privacy` (`src/app/privacy/page.tsx`). Neither form sends anything until the visitor ticks the box agreeing to that policy, and both API routes refuse a submission without it (`src/lib/privacy.ts`). If a form gains or loses a field, update the policy in the same change. No contact address, social account, event date, or partnership claim was taken from the speculative UI kit.
 
 ## Edit the site
 
