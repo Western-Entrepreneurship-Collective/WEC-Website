@@ -153,3 +153,25 @@ a.apply-choice:focus-visible { background: var(--white); border-color: var(--pur
 .footer-privacy { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .footer-privacy:hover { color: var(--purple); }
 @media (max-width: 759px) { .footer-meta > .footer-privacy { grid-column: 1; grid-row: 3; } }
+
+/* The steps a new member sees straight after joining (the 22 Sept onboarding
+   flow). They sit inside .apply-card, so the card supplies the surface and
+   these only handle rhythm. The Slack step is absent, not disabled, when the
+   club's Slack link has not been set in the deploy settings. */
+.join-dues { color: var(--muted); margin-top: 12px; font-size: 14px; line-height: 1.6; }
+.join-next { margin-top: 26px; border-top: 1px solid rgba(255,255,255,.14); padding-top: 22px; }
+.join-next-title { font-family: var(--display); font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.join-next-steps { margin: 14px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 18px; font-size: 15px; line-height: 1.6; }
+.join-next-steps li { color: var(--muted); }
+.join-next-steps strong { color: var(--white); }
+.join-next-steps p { margin-top: 10px; }
+.join-next-btn { gap: 18px; padding: 16px 22px; font-size: 16px; }
+/* The ready made intro, shown as the thing it is: text to be copied. */
+.join-intro { color: var(--white); background: rgba(255,255,255,.06); border-left: 2px solid var(--green); padding: 12px 14px; font-size: 15px; line-height: 1.55; }
+.join-next-copy { background: transparent; color: var(--white); border: 1px solid rgba(255,255,255,.35); padding: 10px 16px; font-family: var(--display); font-size: 14px; cursor: pointer; transition: background 180ms, border-color 180ms; }
+.join-next-copy:hover { background: rgba(255,255,255,.08); border-color: var(--white); }
+.join-signed { color: var(--muted); margin-top: 20px; font-size: 14px; }
+
+@media (max-width: 480px) {
+  .join-next-btn { width: 100%; justify-content: center; gap: 10px; }
+}
