@@ -165,7 +165,17 @@ a.apply-choice:focus-visible { background: var(--white); border-color: var(--pur
 .join-next-steps li { color: var(--muted); }
 .join-next-steps strong { color: var(--purple); font-weight: 600; }
 .join-next-steps p { margin-top: 10px; }
-.join-next-btn { gap: 18px; padding: 16px 22px; font-size: 16px; }
+/* ⛔ 25 Sept, the SAME bug one element deeper. Bare .join-primary
+   (globals.css:184) is built for a DARK section: white fill, white border,
+   purple text. The submit button escapes it because .join-form overrides it
+   (globals.css:230). This link is NOT inside .join-form, so on the white
+   success card it rendered as a white button with a white border, and its
+   inherited :hover turned the label white on white, so the only call to
+   action on the page disappeared under the cursor.
+   Filled purple here, and the hover inverted the way the form's submit does. */
+.join-next-btn { gap: 18px; padding: 16px 22px; font-size: 16px;
+  background: var(--purple); color: var(--white); border-color: var(--purple); }
+.join-next-btn:hover { background: transparent; color: var(--purple); }
 /* ⛔ 25 Sept: this whole block was first written for a DARK card (var(--white)
    text, rgba(255,255,255,...) rules and fills). The success card renders on
    var(--white) with var(--purple) text, so every one of those was invisible:
