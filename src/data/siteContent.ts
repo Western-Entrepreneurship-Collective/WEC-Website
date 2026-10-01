@@ -41,6 +41,29 @@ export const googleForm = parseGoogleForm(process.env.NEXT_PUBLIC_WEC_GOOGLE_FOR
 // "western" (default): uwo.ca, *.uwo.ca, ivey.ca, *.ivey.ca. "any": any email.
 export const emailRule = parseEmailRule(process.env.NEXT_PUBLIC_WEC_EMAIL_RULE);
 
+// The club's Slack, shown on the screen a new member lands on after joining.
+//
+// Same rule as contactEmail above: there is no fallback value. Not set means
+// the Slack step simply is not shown, and the rest of the screen is unchanged.
+// A "Join the Slack" button that 404s on somebody's first thirty seconds with
+// the club is worse than no button, and this is the one moment where a new
+// member is actually paying attention.
+//
+// It must be an https link to a Slack address, so a typo or a pasted note
+// cannot turn into a link out to anywhere at all.
+export const slackUrl = ((): string | null => {
+  const value = process.env.NEXT_PUBLIC_WEC_SLACK_URL?.trim();
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "https:") return null;
+    const host = url.hostname.toLowerCase();
+    return host === "slack.com" || host.endsWith(".slack.com") ? value : null;
+  } catch {
+    return null;
+  }
+})();
+
 export const siteContent = {
   name: "Western Entrepreneurship Collective",
   positioning: "By Founders, for Founders.",

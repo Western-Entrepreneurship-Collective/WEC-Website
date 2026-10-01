@@ -8,3 +8,9 @@ test-results/
 playwright-report/
 artifacts/
 *.log
+
+# The local preview's stand-in for the Google responses Sheet. It holds real
+# names and emails typed into the form while testing, so it must never be
+# staged. Wildcard on purpose: the 25 Sept audit found a .gitignore rule that
+# missed a file because the pattern was one letter off.
+.local-signups*
