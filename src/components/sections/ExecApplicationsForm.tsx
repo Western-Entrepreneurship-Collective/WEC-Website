@@ -35,6 +35,7 @@ import {
   applicationsOpen, blank, checkAbout, checkEverything, checkGeneral, checkRoleAnswers, checkRoleChoice,
   roleByKey, words, type Application, type Errors, type FieldId, type Question, type Role,
 } from "@/lib/execApplications";
+import { CONSENT_ERROR, PRIVACY_CONSENT, PRIVACY_PATH } from "@/lib/privacy";
 
 const ABOUT_STAGE = 1, GENERAL_STAGE = 2, POSITION = 3, ROLEQ = 4, REVIEW = 5;
 type Stage = 1 | 2 | 3 | 4 | 5;
@@ -47,7 +48,7 @@ const STAGES: { at: Stage; t: string }[] = [
   { at: REVIEW, t: "Review" },
 ];
 
-type Status = "idle" | "sending" | "sent" | "unconfirmed" | "failed" | "limited" | "closed";
+type Status = "idle" | "sending" | "sent" | "unconfirmed" | "unconsented" | "failed" | "limited" | "closed";
 
 function titleFor(step: Stage, role: Role | null) {
   if (step === ABOUT_STAGE) return "Let's get to know you.";
@@ -119,6 +120,9 @@ export function ExecApplicationsForm() {
   const [v, setV] = useState<Application>(blank);
   const [err, setErr] = useState<Errors>({});
   const [confirmed, setConfirmed] = useState(false);
+  // ⛔ Unticked on purpose. Nothing is sent until it is ticked, and the server
+  // refuses an application without it. See src/lib/privacy.ts.
+  const [agreed, setAgreed] = useState(false);
   const [status, setStatus] = useState<Status>("idle");
   // The honeypot. No person ever sees it; a bot fills every box it finds.
   const [trap, setTrap] = useState("");
@@ -216,12 +220,13 @@ export function ExecApplicationsForm() {
     setErr(problems);
     if (Object.keys(problems).length) { setStatus("idle"); jumpToFirstProblem(); return; }
     if (!confirmed) { setStatus("unconfirmed"); return; }
+    if (!agreed) { setStatus("unconsented"); return; }
     setStatus("sending");
     try {
       const response = await fetch(EXEC_APPLICATIONS_API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...v, [HONEYPOT]: trap }),
+        body: JSON.stringify({ ...v, [HONEYPOT]: trap, [PRIVACY_CONSENT]: agreed }),
       });
       const data = await response.json().catch(() => ({}));
       // "You're in" is only ever said after the server said Google took it.
@@ -229,7 +234,8 @@ export function ExecApplicationsForm() {
       if (data?.error === "invalid" && data.errors) {
         setErr(data.errors); setStatus("idle"); jumpToFirstProblem(); return;
       }
-      setStatus(data?.error === "not_connected" ? "closed" : data?.error === "rate_limited" ? "limited" : "failed");
+      setStatus(data?.error === "not_connected" ? "closed" : data?.error === "rate_limited" ? "limited"
+        : data?.error === "consent_required" ? "unconsented" : "failed");
     } catch {
       setStatus("failed");
     }
@@ -501,6 +507,18 @@ export function ExecApplicationsForm() {
           <span>I confirm that the information in this application is accurate.</span>
         </label>
 
+        <label className="exec-confirm">
+          <input type="checkbox" checked={agreed}
+                 onChange={e => { setAgreed(e.target.checked); if (status === "unconsented") setStatus("idle"); }} />
+          <span>
+            I have read the <Link className="privacy-link" href={PRIVACY_PATH}>privacy policy</Link> and agree to WEC
+            collecting and using this application as it describes.
+          </span>
+        </label>
+
+        {status === "unconsented" ? (
+          <p className="exec-err-top" role="alert">{CONSENT_ERROR}</p>
+        ) : null}
         {status === "unconfirmed" ? (
           <p className="exec-err-top" role="alert">Please tick the box above to confirm your application is accurate.</p>
         ) : null}

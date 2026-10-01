@@ -8,6 +8,7 @@ import { JoinFragments } from "@/components/graphics/StoryLayers";
 import { Spark } from "@/components/graphics/StudioGraphics";
 import Link from "next/link";
 import { APPLY_PATH, EXEC_APPLICATIONS_PATH } from "@/lib/applyRoutes";
+import { PRIVACY_PATH } from "@/lib/privacy";
 
 function DestinationAction({ kind }: { kind: "join" | "events" }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
@@ -54,5 +55,5 @@ export function Join() {
 }
 
 export function Footer({ motionEnabled, toggleMotion }: { motionEnabled: boolean; toggleMotion: () => void }) {
-  return <footer className="site-footer"><div className="footer-main"><Logo lockup /><TextLink href="#hero">{c.footer.top}</TextLink></div><div className="footer-meta"><span>© {new Date().getFullYear()} WEC</span><span>{c.footer.location}</span><button className="motion-toggle" onClick={toggleMotion} aria-pressed={motionEnabled} aria-label={`Motion ${motionEnabled ? "on — turn off animations" : "off — turn on the full experience"}`}><span className={`motion-dot ${motionEnabled ? "is-on" : ""}`} />Motion {motionEnabled ? "on" : "off"}</button><span className="footer-positioning">{c.footer.note}</span></div></footer>;
+  return <footer className="site-footer"><div className="footer-main"><Logo lockup /><TextLink href="#hero">{c.footer.top}</TextLink></div><div className="footer-meta"><span>© {new Date().getFullYear()} WEC</span><span>{c.footer.location}</span><Link className="footer-privacy" href={PRIVACY_PATH}>Privacy</Link><button className="motion-toggle" onClick={toggleMotion} aria-pressed={motionEnabled} aria-label={`Motion ${motionEnabled ? "on — turn off animations" : "off — turn on the full experience"}`}><span className={`motion-dot ${motionEnabled ? "is-on" : ""}`} />Motion {motionEnabled ? "on" : "off"}</button><span className="footer-positioning">{c.footer.note}</span></div></footer>;
 }
