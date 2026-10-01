@@ -33,7 +33,7 @@
 import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Arrow } from "@/components/graphics/DraftGraphics";
-import { contactEmail, emailRule, googleForm } from "@/data/siteContent";
+import { contactEmail, emailRule, googleForm, slackUrl } from "@/data/siteContent";
 import { BLANK, YEARS, validateAnswers, type Answers, type Field } from "@/lib/googleForm";
 import { CONSENT_ERROR, PRIVACY_CONSENT, PRIVACY_PATH } from "@/lib/privacy";
 
@@ -76,6 +76,76 @@ function mailtoFor(v: Answers, EMAIL: string) {
  * The heading tag is a prop because the same markup is an h2 inside the dialog
  * (which already has its own heading structure) and the h1 of the /apply page.
  */
+/**
+ * WHAT HAPPENS IN THE THIRTY SECONDS AFTER SOMEBODY JOINS.
+ *
+ * Before this, the screen said "You're in" and stopped. Somebody signed up at a
+ * booth, got a full stop, and was never seen again. This is the flow Seb
+ * approved on 22 September: land in the Slack, say hi, and know that dues start
+ * in January.
+ *
+ * THE SLACK STEP DISAPPEARS WHEN NEXT_PUBLIC_WEC_SLACK_URL IS NOT SET.
+ * The club's Slack link is a deploy setting, so this has to be safe to merge
+ * before anybody has added it. No link means no step, never a dead button.
+ *
+ * THE INTRO IS BUILT FROM WHAT THEY ALREADY TYPED, never from a guess. If the
+ * "what are you building" box was left short, the sentence just ends earlier.
+ * Nothing is invented on their behalf and then posted under their name.
+ */
+function JoinedNextSteps({ answers }: { answers: Answers }) {
+  const [copied, setCopied] = useState(false);
+  const firstName = answers.name.trim().split(/\s+/)[0];
+  const building = answers.building.trim();
+  const year = answers.year.trim();
+
+  const intro = [
+    `Hi, I'm ${firstName || "new here"}${year ? `, ${year}` : ""}.`,
+    building ? `Right now I'm working on ${building}` : "",
+  ].filter(Boolean).join(" ");
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(intro);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 4000);
+    } catch {
+      // The clipboard refused, which happens on an insecure origin and in some
+      // locked down browsers. The text is on the screen and selectable, so
+      // there is still a way through. Saying nothing beats a false "Copied".
+      setCopied(false);
+    }
+  }
+
+  return (
+    <div className="join-next">
+      <p className="join-next-title">Two things left</p>
+      <ol className="join-next-steps">
+        {slackUrl && (
+          <li>
+            <strong>Join the WEC Slack.</strong> It is where announcements and
+            events go. Use your Western email and you are straight in.
+            <p>
+              <a className="join-primary join-next-btn" href={slackUrl} target="_blank" rel="noreferrer">
+                Join the WEC Slack
+              </a>
+            </p>
+          </li>
+        )}
+        <li>
+          <strong>Say hi in #introductions.</strong> Here is one ready to paste.
+          <p className="join-intro">{intro}</p>
+          <p>
+            <button type="button" className="join-next-copy" onClick={copy}>
+              {copied ? "Copied" : "Copy this"}
+            </button>
+          </p>
+        </li>
+      </ol>
+      <p className="join-signed">Your signature is recorded. Nothing else to do.</p>
+    </div>
+  );
+}
+
 export function JoinFormBody({ headingTag: Heading = "h2" }: { headingTag?: "h1" | "h2" }) {
   const EMAIL = contactEmail;
   const viaGoogle = googleForm.ok;
@@ -156,6 +226,11 @@ export function JoinFormBody({ headingTag: Heading = "h2" }: { headingTag?: "h1"
                 Welcome to WEC{firstName ? `, ${firstName}` : ""}. We&rsquo;ll be in touch
                 at <strong>{v.email.trim()}</strong>.
               </p>
+              <p className="join-dues">
+                Membership is free this term. Dues open in January, once WEC is
+                ratified through the USC.
+              </p>
+              <JoinedNextSteps answers={v} />
             </div>
           ) : status === "mail-opened" ? (
             <div role="status">

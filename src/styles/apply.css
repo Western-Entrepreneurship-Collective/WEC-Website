@@ -153,3 +153,40 @@ a.apply-choice:focus-visible { background: var(--white); border-color: var(--pur
 .footer-privacy { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 .footer-privacy:hover { color: var(--purple); }
 @media (max-width: 759px) { .footer-meta > .footer-privacy { grid-column: 1; grid-row: 3; } }
+
+/* The steps a new member sees straight after joining (the 22 Sept onboarding
+   flow). They sit inside .apply-card, so the card supplies the surface and
+   these only handle rhythm. The Slack step is absent, not disabled, when the
+   club's Slack link has not been set in the deploy settings. */
+.join-dues { color: var(--muted); margin-top: 12px; font-size: 14px; line-height: 1.6; }
+.join-next { margin-top: 26px; border-top: 1px solid rgba(88,44,131,.16); padding-top: 22px; }
+.join-next-title { font-family: var(--display); font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.join-next-steps { margin: 14px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 18px; font-size: 15px; line-height: 1.6; }
+.join-next-steps li { color: var(--muted); }
+.join-next-steps strong { color: var(--purple); font-weight: 600; }
+.join-next-steps p { margin-top: 10px; }
+/* ⛔ 25 Sept, the SAME bug one element deeper. Bare .join-primary
+   (globals.css:184) is built for a DARK section: white fill, white border,
+   purple text. The submit button escapes it because .join-form overrides it
+   (globals.css:230). This link is NOT inside .join-form, so on the white
+   success card it rendered as a white button with a white border, and its
+   inherited :hover turned the label white on white, so the only call to
+   action on the page disappeared under the cursor.
+   Filled purple here, and the hover inverted the way the form's submit does. */
+.join-next-btn { gap: 18px; padding: 16px 22px; font-size: 16px;
+  background: var(--purple); color: var(--white); border-color: var(--purple); }
+.join-next-btn:hover { background: transparent; color: var(--purple); }
+/* ⛔ 25 Sept: this whole block was first written for a DARK card (var(--white)
+   text, rgba(255,255,255,...) rules and fills). The success card renders on
+   var(--white) with var(--purple) text, so every one of those was invisible:
+   "Join the WEC Slack." was white-on-white and the intro box was empty.
+   Caught by looking at the rendered page, not the diff. */
+/* The ready made intro, shown as the thing it is: text to be copied. */
+.join-intro { color: var(--purple); background: rgba(88,44,131,.05); border-left: 2px solid var(--green); padding: 12px 14px; font-size: 15px; line-height: 1.55; }
+.join-next-copy { background: transparent; color: var(--purple); border: 1px solid rgba(88,44,131,.35); padding: 10px 16px; font-family: var(--display); font-size: 14px; cursor: pointer; transition: background 180ms, border-color 180ms; }
+.join-next-copy:hover { background: rgba(88,44,131,.07); border-color: var(--purple); }
+.join-signed { color: var(--muted); margin-top: 20px; font-size: 14px; }
+
+@media (max-width: 480px) {
+  .join-next-btn { width: 100%; justify-content: center; gap: 10px; }
+}
