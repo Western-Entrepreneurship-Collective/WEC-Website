@@ -190,3 +190,8 @@ a.apply-choice:focus-visible { background: var(--white); border-color: var(--pur
 @media (max-width: 480px) {
   .join-next-btn { width: 100%; justify-content: center; gap: 10px; }
 }
+
+/* The two steps on /slack. They reuse .join-next-steps from the sign up's
+   success card, which is already written for a white card; this only gives
+   the list room under the paragraph above it. */
+.slack-steps { margin-top: 24px; }
