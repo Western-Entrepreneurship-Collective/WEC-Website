@@ -59,7 +59,7 @@ body:has(.os-shell) { background: var(--paper); color: #231a2e; font-size: 14px;
 .os-overdue { color: #a3261c; font-weight: 500; }
 .os-note { background: var(--purple-tint); color: #2f1749; padding: 10px 14px; border-left: 3px solid var(--purple); }
 .os-empty { color: var(--muted); padding: 6px 0; }
-.os-notfound { max-width: 520px; padding-top: 10vh; gap: 12px; justify-items: start; }
+.os-notfound { max-width: 520px; padding: 10vh clamp(18px, 3vw, 36px) 0; gap: 12px; justify-items: start; }
 .os-notfound h1 { font-size: 30px; color: var(--purple); }
 .os-announcement { background: var(--white); border: 1px solid var(--line); border-left: 3px solid var(--green); padding: 12px 16px; }
 .os-announcement strong { font-family: var(--display); color: var(--green); }
@@ -224,6 +224,7 @@ a.os-stat:hover { border-color: var(--purple); }
   .os-main { padding: 16px; }
   .os-dl > div { grid-template-columns: 104px minmax(0, 1fr); }
   .os-btn { padding: 10px 14px; }
+  .os-wide-only { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

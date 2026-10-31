@@ -38,6 +38,16 @@ test("changing the ID in a URL shows nothing from another team", async ({ page }
   expect((await page.goto(`/os/tasks/${P.task}`))?.status()).toBe(200);
 });
 
+test("an unknown address is a 404 inside the workspace, and a sign-in page outside it", async ({ page }) => {
+  await page.context().clearCookies();
+  await page.goto("/os/no-such-page");
+  await expect(page).toHaveURL(/\/os\/login$/);
+  await signIn(page, PEOPLE.dirContent);
+  expect((await page.goto("/os/no-such-page"))?.status()).toBe(404);
+  await expect(page.getByRole("heading", { name: "Nothing here" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Dashboard", exact: true })).toBeVisible();
+});
+
 test("the API, called directly with a real login, gives the same answers", async () => {
   const api = await apiAs(PEOPLE.dirContent);
   const os = api.schema("os");

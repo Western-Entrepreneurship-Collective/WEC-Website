@@ -1,7 +1,7 @@
 -- Event → Projects → Tasks, atomic generation, duplicate prevention, dates, reminders.
 begin;
 \ir helpers.psql
-select plan(45);
+select plan(50);
 
 -- ─── Proposal authorization ────────────────────────────────────────────────
 select tests.login(:'vpco');
@@ -100,6 +100,26 @@ select is((select state from os.jobs where id = 'd0000000-0000-0000-0000-0000000
 insert into os.jobs (id, kind, depth) values ('d0000000-0000-0000-0000-000000000002', 'project.completed', 4);
 select private.process_jobs();
 select matches((select last_error from os.jobs where id = 'd0000000-0000-0000-0000-000000000002'), 'chain', 'an automation chain past the depth limit stops with a record');
+
+-- ─── Waiting for an earlier step is not an escalation ──────────────────────
+reset role;
+delete from os.notifications where kind = 'task.blocked_escalated';
+select private.rule_blocked('{"days":0,"president_days":0}');
+select is((select count(*)::int from os.notifications where kind = 'task.blocked_escalated' and entity_id in (select t.id from os.tasks t join os.projects p on p.id = t.project_id where p.event_id = current_setting('t.e')::uuid)), 0, 'a task waiting its turn pages nobody');
+select tests.login(:'pres');
+select is((select count(*)::int from api.escalations() e join os.tasks t on t.id = e.task_id where t.project_id in (select id from os.projects where event_id = current_setting('t.e')::uuid)), 0, 'and is not on the President''s list');
+reset role;
+-- 'graphics' has been moved in the test above; its dependency being late is what counts.
+update os.tasks set due_at = now() - interval '1 day', due_source = 'manual', status = 'todo' where template_task_key = 'requirements' and project_id in (select id from os.projects where event_id = current_setting('t.e')::uuid);
+select private.rule_blocked('{"days":0,"president_days":0}');
+select cmp_ok((select count(*)::int from os.notifications where kind = 'task.blocked_escalated'), '>', 0, 'once what it waits on is late, the head hears about it');
+select tests.login(:'pres');
+select cmp_ok((select count(*)::int from api.escalations() where status = 'blocked'), '>', 0, 'and so does the President');
+reset role;
+insert into os.projects (id, kind, owning_department_id, name) values ('b3000000-0000-0000-0000-000000000009', 'INTERNAL', tests.dept('content'), 'Stale') ;
+insert into os.tasks (id, project_id, title, assigned_by, assigned_to, requesting_department_id, responsible_department_id, status, due_at)
+values ('c3000000-0000-0000-0000-000000000009', 'b3000000-0000-0000-0000-000000000009', 'Stuck', :'vpco', :'vpco', tests.dept('content'), tests.dept('content'), 'blocked', now() + interval '30 days');
+select ok(private.needs_attention_blocked('c3000000-0000-0000-0000-000000000009'), 'a task someone marked blocked by hand always counts');
 
 -- ─── Follow-up tasks when a project completes ──────────────────────────────
 select tests.login(:'vpfi');

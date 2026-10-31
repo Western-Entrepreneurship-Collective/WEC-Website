@@ -6,6 +6,13 @@ export const formatDate = (v: string | null | undefined) =>
 export const formatDateTime = (v: string | null | undefined) =>
   v ? new Intl.DateTimeFormat("en-CA", { timeZone: TZ, month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(v)) : "No date";
 
+// For tables: the year only when it is not this one.
+export function formatDue(v: string) {
+  const d = new Date(v);
+  const sameYear = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric" }).format(d) === new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric" }).format(new Date());
+  return new Intl.DateTimeFormat("en-CA", { timeZone: TZ, month: "short", day: "numeric", ...(sameYear ? {} : { year: "numeric" }), hour: "numeric", minute: "2-digit" }).format(d);
+}
+
 // For <input type="datetime-local">: wall-clock Toronto time.
 export function toLocalInput(v: string | null | undefined) {
   if (!v) return "";
@@ -21,7 +28,7 @@ export const hoursSince = (v: string) => (new Date().getTime() - new Date(v).get
 
 const LABELS: Record<string, string> = {
   unassigned: "Unassigned", todo: "To do", in_progress: "In progress", blocked: "Blocked", submitted: "In review", revisions_requested: "Revisions", done: "Done", cancelled: "Cancelled",
-  pending: "Awaiting response", clarification_requested: "Clarification asked", accepted: "Accepted", declined: "Declined",
+  waiting: "Waiting", pending: "Awaiting response", clarification_requested: "Clarification asked", accepted: "Accepted", declined: "Declined",
   draft: "Draft", changes_requested: "Changes requested", rejected: "Rejected", approved: "Approved", completed: "Completed", archived: "Archived", planning: "Planning", active: "Active", on_hold: "On hold",
   not_required: "No approval needed", published: "Published", superseded: "Superseded", open: "Open", low: "Low", normal: "Normal", high: "High", urgent: "Urgent", running: "Running", succeeded: "Succeeded", failed: "Failed", dead: "Failed for good", skipped: "Skipped", invited: "Invited", deactivated: "Deactivated",
   EVENT: "Event project", GLOBAL: "Global project", INTERNAL: "Internal project",

@@ -55,7 +55,7 @@ Do these in order. Nothing here touches the public site until the Vercel step, a
 11. **Create the first administrator:** `node scripts/os-bootstrap-admin.mjs` (usage at the top of the file). It refuses to run a second time.
 12. **Function region.** Consider setting Vercel's function region to Montreal (`yul1`) to sit beside the database. It also moves the two public form routes, so it is a separate decision.
 
-Invite everyone else from `/os/admin/executives`. Have at least two administrators: one cannot change their own access, and a sole administrator has nobody to help if they lose theirs.
+Invite everyone else from `/os/admin/executives`. Have at least two administrators. With two or more, nobody can change their own access or reshape a seat, role or department they sit in, so each checks the other. A sole administrator is exempt from those limits because nobody else could act, which also means that person could give themselves any access, with only the audit log to show it.
 
 ## Backups
 

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { logout } from "@/lib/os/actions/auth";
 import { Shell, type NavItem } from "@/components/os/Shell";
@@ -30,10 +31,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       nav={nav}
       footer={(
         <>
-          <a className="os-me" href="/os/profile">
+          <Link className="os-me" href="/os/profile">
             <strong>{displayName(me)}</strong>
             <span>{me.positions.map(p => p.title).join(", ") || (me.is_admin ? "System Administrator" : "No position")}</span>
-          </a>
+          </Link>
           <form action={logout}><button type="submit" className="os-signout">Sign out</button></form>
         </>
       )}

@@ -10,6 +10,10 @@ begin
   if private.in_department(p_department) is not true and private.is_president() is not true then
     raise exception 'You can only create SOPs for your own department' using errcode = 'P0403';
   end if;
+  -- Naming an approver decides who may publish, so it takes someone who already can.
+  if p_approver_position is not null and private.has_perm('sop.publish') is not true then
+    raise exception 'Only someone who can publish SOPs names the approver' using errcode = 'P0403';
+  end if;
   insert into os.sops (title, department_id, description, visibility, review_on, responsible_executive_id, approver_position_id, created_by)
   values (trim(p_title), p_department, coalesce(p_description, ''), coalesce(p_visibility, 'all_execs'), p_review_on,
     coalesce(p_responsible, auth.uid()), p_approver_position, auth.uid())
@@ -33,6 +37,9 @@ begin
   end if;
   if s.archived_at is not null then raise exception 'That SOP is archived' using errcode = 'P0409'; end if;
   perform private.check_version(p_expected, s.updated_at);
+  if p_approver_position is distinct from s.approver_position_id and private.can_publish_sop(p_sop) is not true then
+    raise exception 'Only someone who can publish this SOP changes its approver' using errcode = 'P0403';
+  end if;
   update os.sops set title = trim(p_title), description = coalesce(p_description, ''), visibility = coalesce(p_visibility, visibility),
     review_on = p_review_on, responsible_executive_id = p_responsible, approver_position_id = p_approver_position
   where id = p_sop;
@@ -92,6 +99,9 @@ begin
   end if;
   if v.status <> 'draft' then
     raise exception 'Only an unpublished draft can be edited' using errcode = 'P0409';
+  end if;
+  if exists (select 1 from os.sops where id = v.sop_id and archived_at is not null) then
+    raise exception 'That SOP is archived' using errcode = 'P0409';
   end if;
   perform private.check_version(p_expected, v.updated_at);
   update os.sop_versions set content = coalesce(p_content, ''), change_note = coalesce(p_change_note, '') where id = p_version;
@@ -446,12 +456,10 @@ language sql security definer set search_path = '' as $$
 $$;
 grant execute on function api.service_forget_upload(uuid) to service_role;
 
--- Storage's own policies ask the same question the tables do. The path's second
--- segment is the entity, and all writes go through signed URLs from the server.
-create policy os_attachment_read on storage.objects for select to authenticated using (
-  bucket_id = 'os-attachments'
-  and private.can_read_attachment_entity((storage.foldername(name))[1], ((storage.foldername(name))[2])::uuid)
-);
+-- No policy on storage.objects, on purpose. With no policy nobody can reach this
+-- bucket with their own token, which also means nobody can mint a long-lived signed
+-- link: a bearer link would outlive a deactivation. Every read and write goes through
+-- a one-minute or one-path URL the server signs after the checks above.
 
 -- ─── Calendar ──────────────────────────────────────────────────────────────
 -- One model, many views, no table of its own: every item is read from its source

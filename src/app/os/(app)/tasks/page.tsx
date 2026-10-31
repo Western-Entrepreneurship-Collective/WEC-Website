@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Kanban } from "@/components/os/Kanban";
 import { Page, Panel, Tabs, TaskTable } from "@/components/os/ui";
-import { getDirectory, nameLookup, requireMe } from "@/lib/os/dal";
+import { getDepartments, getDirectory, nameLookup, requireMe } from "@/lib/os/dal";
 import { formatDate } from "@/lib/os/format";
 import { createClient } from "@/lib/os/supabase";
 
@@ -12,6 +12,8 @@ export default async function MyTasksPage({ searchParams }: { searchParams: Prom
   const { view, show } = await searchParams;
   const supabase = await createClient();
   const nameOf = nameLookup(await getDirectory());
+  const allDepartments = await getDepartments();
+  const teamOf = (id: string) => allDepartments.find(d => d.id === id)?.name;
   const closed = show === "closed";
   const query = supabase.from("tasks").select("*");
   const { data } = await (closed ? query.in("status", ["done", "cancelled"]) : query.not("status", "in", "(done,cancelled)"))
@@ -28,7 +30,7 @@ export default async function MyTasksPage({ searchParams }: { searchParams: Prom
       {view === "board" ? (
         <Kanban cards={tasks.map(t => ({ id: t.id, title: t.title, status: t.status, priority: t.priority, due: t.due_at ? formatDate(t.due_at) : undefined, is_cross_team: t.is_cross_team, requires_review: t.requires_review, updated_at: t.updated_at }))} />
       ) : (
-        <Panel><TaskTable tasks={tasks} empty={closed ? "Nothing finished yet." : "Nothing assigned to you right now."} /></Panel>
+        <Panel><TaskTable tasks={tasks} teamOf={teamOf} empty={closed ? "Nothing finished yet." : "Nothing assigned to you right now."} /></Panel>
       )}
       {!closed ? <Panel title="Tasks I assigned"><TaskTable tasks={assigned ?? []} nameOf={nameOf} empty="You have not assigned anything open." /></Panel> : null}
     </Page>

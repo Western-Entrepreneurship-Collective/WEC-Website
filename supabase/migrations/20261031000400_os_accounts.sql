@@ -315,11 +315,36 @@ end $$;
 grant execute on function api.set_system_admin(uuid, boolean) to authenticated;
 
 -- ─── Structure, without code changes ───────────────────────────────────────
+-- Standing comes from what a position is, not only from who holds it, so the same
+-- rule covers the structure: nobody reshapes a seat, role or department they sit in
+-- to gain access. As with positions, a sole administrator is exempt, because nobody
+-- else could do it, and the audit log shows it either way.
+create function private.other_admin_exists() returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (
+    select 1 from os.system_admins s join os.executives e on e.id = s.executive_id
+    where s.executive_id <> auth.uid() and e.status = 'active'
+  )
+$$;
+
+create function private.forbid_own_structure(p_org_role text, p_position uuid, p_department uuid) returns void
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  if private.other_admin_exists() and exists (
+    select 1 from private.exec_positions(auth.uid()) mine
+    where mine.org_role = p_org_role or mine.position_id = p_position or mine.department_id = p_department
+  ) then
+    raise exception 'Another administrator has to change access that includes you' using errcode = 'P0403';
+  end if;
+end $$;
+
 create function api.upsert_department(p_id uuid, p_name text, p_slug text, p_description text, p_head_position uuid) returns uuid
 language plpgsql security definer set search_path = '' as $$
 declare d uuid := p_id;
 begin
   perform private.require_admin();
+  -- Heading a department is what opens its requests and restricted tasks.
+  perform private.forbid_own_structure(null, p_head_position, null);
   if d is null then
     insert into os.departments (name, slug, description, head_position_id)
     values (trim(p_name), p_slug, coalesce(p_description, ''), p_head_position) returning id into d;
@@ -338,6 +363,10 @@ language plpgsql security definer set search_path = '' as $$
 declare i uuid := p_id;
 begin
   perform private.require_admin();
+  -- The reporting line matters too: a vacant head seat passes up it. Making a seat
+  -- president is checked against the caller's own seat through p_id.
+  perform private.forbid_own_structure(null, p_id, null);
+  perform private.forbid_own_structure(null, p_reports_to, null);
   if i is null then
     insert into os.positions (department_id, title, org_role, reports_to_position_id, seat_count)
     values (p_department, trim(p_title), p_org_role, p_reports_to, coalesce(p_seats, 1)) returning id into i;
@@ -378,6 +407,7 @@ language plpgsql security definer set search_path = '' as $$
 begin
   perform private.require_admin();
   perform private.forbid_self_change(p_executive);
+  perform private.forbid_own_structure(p_org_role, p_position, p_department);
   if num_nonnulls(p_org_role, p_position, p_department, p_executive) <> 1 then
     raise exception 'Choose exactly one recipient' using errcode = 'P0422';
   end if;

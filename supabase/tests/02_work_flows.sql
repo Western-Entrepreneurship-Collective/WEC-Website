@@ -1,7 +1,7 @@
 -- Project relationships, task rules, and the cross-team workflow end to end.
 begin;
 \ir helpers.psql
-select plan(54);
+select plan(62);
 
 -- ─── Constraints from the brief ────────────────────────────────────────────
 select throws_ok($$insert into os.projects (kind, owning_department_id, name) values ('EVENT', tests.dept('content'), 'No event')$$, '23514', null, 'an EVENT project requires an event');
@@ -103,6 +103,7 @@ select tests.login(:'dirfi');
 select api.review_deliverable(current_setting('t.r')::uuid, true);
 select tests.login(:'vpco');
 select is((select status from os.tasks where id = current_setting('t.r')::uuid), 'done', '7. accepted: both teams see done');
+select throws_ok($$select api.set_task_status(current_setting('t.r')::uuid, 'todo')$$, 'P0409', null, 'accepted work cannot be quietly reopened');
 select is((select count(*)::int from os.tasks where id = current_setting('t.r')::uuid and project_id = 'b1000000-0000-0000-0000-000000000002'), 1, 'still linked to its originating project');
 select is((select count(*)::int from os.task_review_events where task_id = current_setting('t.r')::uuid), 9, 'with its whole review history');
 
@@ -129,6 +130,39 @@ select is((select title from api.task_dependencies(current_setting('t.r2')::uuid
 select tests.login(:'dirco');
 select api.add_task_dependency('c1000000-0000-0000-0000-000000000002', (select id from os.tasks where title = 'Self'));
 select throws_ok($$select api.add_task_dependency((select id from os.tasks where title = 'Self'), 'c1000000-0000-0000-0000-000000000002')$$, 'P0409', null, 'a circular dependency is refused');
+
+-- ─── Nobody signs off their own work ───────────────────────────────────────
+select tests.login(:'vpco');
+select set_config('t.rv', api.create_task('b1000000-0000-0000-0000-000000000001', jsonb_build_object('title','Reviewed','assigned_to',:'dirco'::text,'requires_review',true))::text, true);
+select tests.login(:'dirco');
+select api.assign_task(current_setting('t.rv')::uuid, :'dirco');
+select is((select assigned_by from os.tasks where id = current_setting('t.rv')::uuid), :'vpco'::uuid, 'taking your own task does not make you its assigner');
+select api.submit_deliverable(current_setting('t.rv')::uuid);
+select throws_ok($$select api.review_deliverable(current_setting('t.rv')::uuid, true)$$, 'P0403', null, 'so the assignee still cannot accept their own work');
+select tests.login(:'vpco');
+select lives_ok($$select api.review_deliverable(current_setting('t.rv')::uuid, true)$$, 'and the original assigner can');
+
+-- ─── A date is agreed by the other side, not the proposer's teammate ───────
+reset role;
+insert into os.position_assignments (executive_id, position_id, seat_no, academic_year_id, during)
+select :'cdou', p.id, 2, (select id from os.academic_years where is_current), daterange('2026-05-01', null) from os.positions p where p.title = 'Director of Finance';
+select tests.login(:'dirfi');
+select set_config('t.r3', api.create_cross_team_request('b1000000-0000-0000-0000-000000000002', tests.dept('content'), '{"title":"Third","due_at":"2027-02-10T12:00:00Z"}'::jsonb)::text, true);
+select tests.login(:'vpco');
+select api.respond_to_request(current_setting('t.r3')::uuid, 'accept', '', :'dirco');
+select tests.login(:'dirfi');
+select set_config('t.dp3', api.propose_deadline(current_setting('t.r3')::uuid, '2027-01-02T12:00:00Z')::text, true);
+select tests.login(:'cdou');
+select throws_ok($$select api.decide_deadline(current_setting('t.dp3')::uuid, true)$$, 'P0403', null, 'the proposer''s teammate cannot accept the date');
+select tests.login(:'dirco');
+select lives_ok($$select api.decide_deadline(current_setting('t.dp3')::uuid, true)$$, 'the other team can');
+
+-- ─── An administrator cannot reshape a seat they hold ──────────────────────
+reset role;
+insert into os.system_admins (executive_id) values (:'vpfi');
+select tests.login(:'vpfi');
+select throws_ok($$select api.upsert_position((select id from os.positions where title = 'VP Finance'), tests.dept('finance'), 'VP Finance', 'president', null, 1)$$, 'P0403', null, 'an admin cannot make their own seat President');
+select throws_ok($$select api.set_permission_grant('event.approve', 'vp', null, null, null, true)$$, 'P0403', null, 'nor grant a permission to their own role');
 
 -- ─── Nobody lands work on another team's board without a request ───────────
 reset role;

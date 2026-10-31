@@ -1,7 +1,7 @@
 -- SOPs, meetings, calendars, search, deactivation, the year transition, archives.
 begin;
 \ir helpers.psql
-select plan(51);
+select plan(56);
 
 -- ─── SOP versions ──────────────────────────────────────────────────────────
 select tests.login(:'dirco');
@@ -49,6 +49,23 @@ reset role;
 select is((select count(*)::int from os.notifications where kind = 'sop.review_due' and entity_id = current_setting('t.s')::uuid), 0, 'no review reminder until the rule runs');
 select private.rule_sop_review('{"days":14}');
 select is((select count(*)::int from os.notifications where kind = 'sop.review_due' and entity_id = current_setting('t.s')::uuid), 1, 'and one when it does');
+
+-- ─── Naming an approver takes someone who can already publish ──────────────
+select tests.login(:'dirco');
+select throws_ok($$select api.update_sop(current_setting('t.s')::uuid, 'Posting guide', '', 'all_execs', null, null, (select id from os.positions where title = 'Director of Content'))$$, 'P0403', null, 'a Director cannot name themselves approver');
+select throws_ok($$select api.create_sop('Mine', tests.dept('content'), '', 'all_execs', null, null, (select id from os.positions where title = 'Director of Content'), 'x')$$, 'P0403', null, 'not on a new SOP either');
+select lives_ok($$select api.update_sop(current_setting('t.s')::uuid, 'Posting guide', 'Edited', 'all_execs', current_date + 10, 'a0000000-0000-0000-0000-000000000004', null)$$, 'the other fields stay editable');
+
+-- ─── No direct route to the bucket ─────────────────────────────────────────
+select is((select count(*)::int from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname like 'os_%'), 0, 'nobody can read or sign bucket objects with their own token');
+
+-- ─── An archived SOP's draft stays put ─────────────────────────────────────
+reset role;
+update os.sops set archived_at = now() where id = current_setting('t.s')::uuid;
+select tests.login(:'vpco');
+select throws_ok($$select api.save_sop_draft(current_setting('t.v3')::uuid, 'Late', '')$$, 'P0409', null, 'a draft under an archived SOP cannot be edited');
+reset role;
+update os.sops set archived_at = null where id = current_setting('t.s')::uuid;
 
 -- ─── Meetings ──────────────────────────────────────────────────────────────
 select tests.login(:'dirco');

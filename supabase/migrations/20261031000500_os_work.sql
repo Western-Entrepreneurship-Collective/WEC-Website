@@ -661,7 +661,10 @@ begin
     raise exception 'You do not have permission for that' using errcode = 'P0403';
   end if;
   perform private.check_assignee(p_assignee, t.responsible_department_id);
-  update os.tasks set assigned_to = p_assignee, assigned_by = auth.uid(),
+  -- Taking a task yourself does not make you the person who gave it to you: the
+  -- assigner is who reviews it, and nobody reviews their own work.
+  update os.tasks set assigned_to = p_assignee,
+    assigned_by = case when p_assignee = auth.uid() then assigned_by else auth.uid() end,
     status = case when p_assignee is null then 'unassigned' when status = 'unassigned' then 'todo' else status end
   where id = p_task;
   perform private.record_assignment(p_task, p_assignee, 'Assigned');
@@ -724,6 +727,10 @@ begin
   if t.is_cross_team and p_status <> 'cancelled' and t.assigned_to is distinct from auth.uid()
      and private.is_department_head(t.responsible_department_id) is not true and private.is_president() is not true then
     raise exception 'The team doing the work updates its progress' using errcode = 'P0403';
+  end if;
+  -- Accepted work stays accepted. The review record is what both teams rely on.
+  if t.status = 'done' and t.reviewed_at is not null then
+    raise exception 'That deliverable was accepted, so it stays done' using errcode = 'P0409';
   end if;
   if t.status = 'unassigned' and p_status not in ('cancelled') then
     raise exception 'Assign this task before starting it' using errcode = 'P0409';
@@ -922,7 +929,8 @@ begin
   if t.is_cross_team then
     allowed := t.created_by = auth.uid() or private.is_department_head(t.requesting_department_id) or private.is_president();
   else
-    allowed := t.assigned_by = auth.uid() or private.is_department_head(t.responsible_department_id) or private.is_president();
+    allowed := (t.assigned_by = auth.uid() and t.assigned_to is distinct from auth.uid())
+      or private.is_department_head(t.responsible_department_id) or private.is_president();
   end if;
   if allowed is not true then
     raise exception 'You do not have permission for that' using errcode = 'P0403';
@@ -1108,11 +1116,20 @@ begin
   select * into d from os.deadline_proposals where id = p_proposal and state = 'open' for update;
   if not found or private.can_read_task(d.task_id) is not true then perform private.not_found(); end if;
   select * into t from os.tasks where id = d.task_id for update;
-  if d.proposed_by = auth.uid() and private.is_president() is not true then
-    raise exception 'The other team decides on your proposal' using errcode = 'P0403';
-  end if;
-  if not (private.in_department(t.requesting_department_id) or private.in_department(t.responsible_department_id) or private.is_president()) then
-    raise exception 'You do not have permission for that' using errcode = 'P0403';
+  if private.is_president() is not true then
+    if d.proposed_by = auth.uid() then
+      raise exception 'The other team decides on your proposal' using errcode = 'P0403';
+    end if;
+    if t.is_cross_team then
+      -- The opposite side from whoever proposed it, not just someone else on theirs.
+      if (private.exec_in_department(d.proposed_by, t.requesting_department_id) and private.in_department(t.responsible_department_id) is not true)
+         or (private.exec_in_department(d.proposed_by, t.responsible_department_id) and private.in_department(t.requesting_department_id) is not true)
+         or not (private.in_department(t.requesting_department_id) or private.in_department(t.responsible_department_id)) then
+        raise exception 'The other team decides on this proposal' using errcode = 'P0403';
+      end if;
+    elsif t.assigned_by is distinct from auth.uid() and private.is_department_head(t.responsible_department_id) is not true then
+      raise exception 'The assigner or the team lead decides on this proposal' using errcode = 'P0403';
+    end if;
   end if;
   update os.deadline_proposals set state = case when p_accept then 'accepted' else 'rejected' end, decided_by = auth.uid(), decided_at = now()
   where id = p_proposal;
@@ -1192,7 +1209,7 @@ begin
     join os.departments d on d.id = t.responsible_department_id
     where p.archived_at is null and private.can_read_task(t.id)
       and t.status not in ('done', 'cancelled')
-      and (t.status = 'blocked' or t.due_at < now())
+      and (private.needs_attention_blocked(t.id) or t.due_at < now())
     order by t.due_at nulls last
     limit 200;
 end $$;
@@ -1225,7 +1242,7 @@ begin
       count(t.id) filter (where t.status not in ('done', 'cancelled')),
       count(t.id) filter (where t.status = 'done'),
       count(t.id) filter (where t.status not in ('done', 'cancelled') and t.due_at < now()),
-      count(t.id) filter (where t.status = 'blocked')
+      count(t.id) filter (where private.needs_attention_blocked(t.id))
     from os.departments d
     left join (os.tasks t join os.projects p on p.id = t.project_id and p.archived_at is null) on t.responsible_department_id = d.id
     where d.archived_at is null

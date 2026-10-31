@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-// The same page for "does not exist" and "not yours to see".
+// The same page for "does not exist" and "not yours to see", inside the workspace.
 export default function NotFound() {
   return (
     <div className="os-page os-notfound">

@@ -287,6 +287,21 @@ language sql stable security definer set search_path = '' as $$
   from os.projects where event_id = p_event and kind = 'EVENT' and status <> 'cancelled'
 $$;
 
+-- Waiting for an earlier step is the plan working, not a problem. A task needs
+-- attention if someone marked it blocked by hand, or if what it waits on is late.
+create function private.needs_attention_blocked(p_task uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select t.status = 'blocked' and (
+    not t.blocked_auto
+    or coalesce(t.due_at < now(), false)
+    or exists (
+      select 1 from os.task_dependencies d join os.tasks b on b.id = d.depends_on_task_id
+      where d.task_id = t.id and b.status not in ('done', 'cancelled') and b.due_at < now()
+    )
+  )
+  from os.tasks t where t.id = p_task
+$$;
+
 -- ─── Small functions every write goes through ──────────────────────────────
 create function private.require_active() returns void
 language plpgsql stable security definer set search_path = '' as $$

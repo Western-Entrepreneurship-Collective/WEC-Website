@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatDateTime, label } from "@/lib/os/format";
+import { formatDue, label } from "@/lib/os/format";
 import type { Task } from "@/lib/os/types";
 
 export function Page({ title, eyebrow, actions, children }: { title: string; eyebrow?: string; actions?: React.ReactNode; children: React.ReactNode }) {
@@ -56,23 +56,23 @@ export const Tabs = ({ items, current }: { items: { href: string; label: string;
 export function DueDate({ value, status }: { value: string | null; status?: string }) {
   if (!value) return <span className="os-muted">No date</span>;
   const overdue = new Date(value) < new Date() && status !== "done" && status !== "cancelled";
-  return <span className={overdue ? "os-overdue" : undefined}>{formatDateTime(value)}{overdue ? " · overdue" : ""}</span>;
+  return <span className={overdue ? "os-overdue" : undefined}>{formatDue(value)}{overdue ? " · overdue" : ""}</span>;
 }
 
-type TaskRow = Pick<Task, "id" | "title" | "status" | "priority" | "due_at" | "assigned_to" | "is_cross_team" | "request_state">;
+type TaskRow = Pick<Task, "id" | "title" | "status" | "priority" | "due_at" | "assigned_to" | "is_cross_team" | "request_state" | "responsible_department_id"> & { blocked_auto?: boolean };
 
-export function TaskTable({ tasks, nameOf, empty = "Nothing here." }: { tasks: TaskRow[]; nameOf?: (id: string | null) => string; empty?: string }) {
+export function TaskTable({ tasks, nameOf, teamOf, empty = "Nothing here." }: { tasks: TaskRow[]; nameOf?: (id: string | null) => string; teamOf?: (id: string) => string | undefined; empty?: string }) {
   if (!tasks.length) return <Empty>{empty}</Empty>;
   return (
     <div className="os-table-wrap" tabIndex={0} role="group" aria-label="Tasks">
       <table className="os-table">
-        <thead><tr><th scope="col">Task</th><th scope="col">Status</th><th scope="col">Priority</th>{nameOf ? <th scope="col">Assigned to</th> : null}<th scope="col">Due</th></tr></thead>
+        <thead><tr><th scope="col">Task</th><th scope="col">Status</th><th scope="col" className="os-wide-only">Priority</th>{nameOf ? <th scope="col">Assigned to</th> : null}<th scope="col">Due</th></tr></thead>
         <tbody>
           {tasks.map(t => (
             <tr key={t.id}>
-              <td><Link href={`/os/tasks/${t.id}`}>{t.title}</Link>{t.is_cross_team ? <span className="os-tag">Cross-team</span> : null}</td>
-              <td><Pill value={t.request_state && t.request_state !== "accepted" ? t.request_state : t.status} /></td>
-              <td><Pill value={t.priority} /></td>
+              <td><Link href={`/os/tasks/${t.id}`}>{t.title}</Link>{t.is_cross_team ? <span className="os-tag">Cross-team</span> : null}{teamOf ? <small className="os-muted os-block">{teamOf(t.responsible_department_id)}</small> : null}</td>
+              <td><Pill value={t.request_state && t.request_state !== "accepted" ? t.request_state : t.status === "blocked" && t.blocked_auto ? "waiting" : t.status} /></td>
+              <td className="os-wide-only"><Pill value={t.priority} /></td>
               {nameOf ? <td>{nameOf(t.assigned_to)}</td> : null}
               <td><DueDate value={t.due_at} status={t.status} /></td>
             </tr>

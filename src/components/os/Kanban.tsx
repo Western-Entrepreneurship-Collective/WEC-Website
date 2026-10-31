@@ -59,9 +59,9 @@ export function Kanban({ cards }: { cards: Card[] }) {
                 {card.is_cross_team ? <span className="os-tag">Cross-team</span> : null}
                 <label className="os-card-move">
                   <span className="sr-only">Move {card.title} to</span>
-                  <select value={card.status} onChange={e => move(card, e.target.value)} disabled={pending}>
+                  <select value={card.status} onChange={e => move(card, e.target.value)} disabled={pending || (card.status === "done" && card.requires_review)}>
                     {!MOVABLE.has(card.status) ? <option value={card.status}>{label(card.status)}</option> : null}
-                    {[...MOVABLE].filter(s => !(s === "done" && card.requires_review)).map(s => <option key={s} value={s}>{label(s)}</option>)}
+                    {[...MOVABLE].filter(s => s === card.status || !(s === "done" && card.requires_review)).map(s => <option key={s} value={s}>{label(s)}</option>)}
                   </select>
                 </label>
               </article>

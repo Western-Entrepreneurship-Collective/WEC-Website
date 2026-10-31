@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Empty, Page, Panel, Pill, Progress, Stat, TaskTable } from "@/components/os/ui";
-import { displayName, getDirectory, nameLookup, requireMe } from "@/lib/os/dal";
+import { displayName, getDepartments, getDirectory, nameLookup, requireMe } from "@/lib/os/dal";
 import { entityHref, formatDate, formatDateTime, notificationText, torontoDateKey } from "@/lib/os/format";
 import { createClient, rpc } from "@/lib/os/supabase";
 import type { CalendarItem, NotificationRow, ProjectSummary } from "@/lib/os/types";
@@ -14,6 +14,8 @@ export default async function DashboardPage() {
   const me = await requireMe();
   const supabase = await createClient();
   const nameOf = nameLookup(await getDirectory());
+  const allDepartments = await getDepartments();
+  const teamOf = (id: string) => allDepartments.find(d => d.id === id)?.name;
   const now = new Date();
   const inTwoWeeks = new Date(now.getTime() + 14 * 86_400_000);
   const departments = me.positions.map(p => p.department_id);
@@ -53,7 +55,7 @@ export default async function DashboardPage() {
       ))}
       <div className="os-grid">
         <Panel title="My tasks" action={<Link className="os-link" href="/os/tasks">All</Link>}>
-          <TaskTable tasks={myTasks} empty="Nothing assigned to you right now." />
+          <TaskTable tasks={myTasks} teamOf={teamOf} empty="Nothing assigned to you right now." />
         </Panel>
         <Panel title="Upcoming" action={<Link className="os-link" href="/os/calendar">Calendar</Link>}>
           {agenda.length === 0 ? <Empty>Nothing in the next two weeks.</Empty> : (

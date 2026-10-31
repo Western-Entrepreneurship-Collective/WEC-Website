@@ -600,8 +600,8 @@ begin
   for r in
     select t.id, t.updated_at, t.responsible_department_id as dept
     from os.tasks t join os.projects p on p.id = t.project_id
-    where p.archived_at is null and t.status = 'blocked'
-      and t.updated_at < now() - make_interval(days => coalesce((cfg->>'days')::int, 3))
+    where p.archived_at is null and private.needs_attention_blocked(t.id)
+      and (t.blocked_auto or t.updated_at < now() - make_interval(days => coalesce((cfg->>'days')::int, 3)))
   loop
     perform private.notify_heads(r.dept, 'task.blocked_escalated', 'task', r.id, 'blocked-head:' || r.id || ':' || week_);
     if r.updated_at < now() - make_interval(days => coalesce((cfg->>'president_days')::int, 7)) then
