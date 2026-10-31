@@ -1,0 +1,19 @@
+# Once a day: is the WEC OS automation alive? A failed run emails the repository's
+# watchers. The request also counts as activity, so a quiet summer does not pause a
+# free-tier database. It does nothing until the variable and secret below are set.
+name: WEC OS health
+on:
+  schedule:
+    - cron: "17 11 * * *"
+  workflow_dispatch:
+permissions: {}
+jobs:
+  ping:
+    if: ${{ vars.WEC_OS_URL != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the sweep heartbeat
+        env:
+          URL: ${{ vars.WEC_OS_URL }}
+          SECRET: ${{ secrets.WEC_OS_JOBS_SECRET }}
+        run: curl --fail-with-body --silent --show-error --max-time 30 -H "Authorization: Bearer $SECRET" "$URL/api/os/health"

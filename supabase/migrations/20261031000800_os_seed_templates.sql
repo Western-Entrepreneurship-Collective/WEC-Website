@@ -157,7 +157,8 @@ begin
   perform private.seed_template('global-sponsorship-campaign', 'global', 'Major Sponsorship Campaign', null, 'VP Sponsorship', null,
     private.seed_project_tasks(array['Set the target', 'Build the prospect list', 'Prepare the package', 'Run outreach', 'Close commitments', 'Report results']));
   perform private.seed_template('global-exec-transition', 'global', 'Executive Transition', null, 'President', null,
-    private.seed_project_tasks(array['Confirm incoming team', 'Schedule handover meetings', 'Review open work', 'Transfer accounts and access', 'Close the year']));
+    private.seed_project_tasks(array['Confirm incoming team', 'Schedule handover meetings', 'Review open work', 'Transfer accounts and access', 'Close the year']),
+    '', '[{"key":"retro","title":"Hold a transition retrospective and record what to change next year","due_days":14}]');
 
   -- Internal Team Projects
   perform private.seed_template('internal-content-planning', 'internal', 'Monthly Content Planning', 'content', 'VP Content', null,
@@ -169,7 +170,8 @@ begin
   perform private.seed_template('internal-community-engagement', 'internal', 'Community Engagement Initiative', 'community', 'VP Community', null,
     private.seed_project_tasks(array['Choose the initiative', 'Plan activities', 'Run it', 'Review participation']));
   perform private.seed_template('internal-financial-reporting', 'internal', 'Financial Reporting', 'finance', 'VP Finance', null,
-    private.seed_project_tasks(array['Collect receipts', 'Reconcile accounts', 'Draft the report', 'Present to the President'], 5));
+    private.seed_project_tasks(array['Collect receipts', 'Reconcile accounts', 'Draft the report', 'Present to the President'], 5),
+    '', '[{"key":"file","title":"File the report with the organizational records","due_days":3}]');
   perform private.seed_template('internal-sop-review', 'internal', 'Department SOP Review', 'operations', 'VP Operations', null,
     private.seed_project_tasks(array['List current SOPs', 'Mark what is out of date', 'Draft revisions', 'Submit for approval']));
   perform private.seed_template('internal-department-handover', 'internal', 'Department Handover', 'presidents-office', null, null,

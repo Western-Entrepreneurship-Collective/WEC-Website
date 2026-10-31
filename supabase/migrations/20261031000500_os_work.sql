@@ -124,6 +124,9 @@ begin
   perform private.require_active();
   select * into e from os.events where id = p_event for update;
   if not found or private.can_read_event(p_event) is not true then perform private.not_found(); end if;
+  if e.archived_at is not null then
+    raise exception 'That event is archived and read-only' using errcode = 'P0409';
+  end if;
   if private.has_perm('event.edit') is not true and private.has_perm('event.submit') is not true
      and not exists (select 1 from os.event_leads where event_id = p_event and executive_id = auth.uid()) then
     raise exception 'You do not have permission for that' using errcode = 'P0403';
@@ -580,6 +583,11 @@ begin
   dept := coalesce(dept, p.owning_department_id,
     (select department_id from private.exec_positions(auth.uid()) limit 1));
   if dept is null then raise exception 'Choose a responsible team' using errcode = 'P0422'; end if;
+  -- Handing work to a team you are not on is a request, not a task. This is what
+  -- keeps a project lead from landing work on another team's board unasked.
+  if dept is distinct from p.owning_department_id and private.in_department(dept) is not true and private.is_president() is not true then
+    raise exception 'To give work to another department, send a cross-team request' using errcode = 'P0422';
+  end if;
   if private.can_add_task_to_project(p_project, dept) is not true then
     raise exception 'You do not have permission for that' using errcode = 'P0403';
   end if;
@@ -711,6 +719,12 @@ begin
     raise exception 'You do not have permission for that' using errcode = 'P0403';
   end if;
   perform private.check_version(p_expected, t.updated_at);
+  -- The requester reviews the work and may withdraw the request. How far along it
+  -- is belongs to the team doing it.
+  if t.is_cross_team and p_status <> 'cancelled' and t.assigned_to is distinct from auth.uid()
+     and private.is_department_head(t.responsible_department_id) is not true and private.is_president() is not true then
+    raise exception 'The team doing the work updates its progress' using errcode = 'P0403';
+  end if;
   if t.status = 'unassigned' and p_status not in ('cancelled') then
     raise exception 'Assign this task before starting it' using errcode = 'P0409';
   end if;

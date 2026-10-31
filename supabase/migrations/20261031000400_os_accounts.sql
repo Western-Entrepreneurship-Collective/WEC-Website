@@ -184,6 +184,23 @@ begin
   return moved;
 end $$;
 
+-- An assignment made today and ended today never really happened: remove it, or the
+-- seat stays taken until midnight. Anything older keeps its dates as history.
+create function private.end_assignments(p_executive uuid, p_assignment uuid, p_year uuid) returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  delete from os.position_assignments
+  where upper_inf(during) and lower(during) >= private.today()
+    and (p_executive is null or executive_id = p_executive)
+    and (p_assignment is null or id = p_assignment)
+    and (p_year is null or academic_year_id = p_year);
+  update os.position_assignments set during = daterange(lower(during), private.today())
+  where upper_inf(during) and lower(during) < private.today()
+    and (p_executive is null or executive_id = p_executive)
+    and (p_assignment is null or id = p_assignment)
+    and (p_year is null or academic_year_id = p_year);
+end $$;
+
 -- Status first: from this commit on, every policy refuses them. The server bans
 -- the auth user afterwards, which only stops token refresh.
 create function api.deactivate_executive(p_executive uuid, p_reassign_to uuid default null) returns int
@@ -205,8 +222,7 @@ begin
     raise exception 'The person taking over must have an active account' using errcode = 'P0422';
   end if;
   moved := private.reassign_open_work(p_executive, p_reassign_to, 'Reassigned on deactivation');
-  update os.position_assignments set during = daterange(lower(during), greatest(private.today(), lower(during) + 1))
-  where executive_id = p_executive and upper_inf(during);
+  perform private.end_assignments(p_executive, null, null);
   update os.executives set status = 'deactivated', deactivated_at = now() where id = p_executive;
   perform private.audit('account.deactivated', 'executive', p_executive, jsonb_build_object('tasks_reassigned', moved));
   return moved;
@@ -232,6 +248,20 @@ begin
   end if;
 end $$;
 
+-- Positions are the one exception, and only for a sole administrator. Someone who
+-- is both President and the only admin would otherwise be locked out of their own
+-- seat by the first year transition. The audit log shows it either way.
+create function private.check_position_change(p_executive uuid) returns void
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  if p_executive = auth.uid() and exists (
+    select 1 from os.system_admins s join os.executives e on e.id = s.executive_id
+    where s.executive_id <> auth.uid() and e.status = 'active'
+  ) then
+    raise exception 'Another administrator has to change your own access' using errcode = 'P0403';
+  end if;
+end $$;
+
 create function api.assign_position(p_executive uuid, p_position uuid, p_seat int, p_is_acting boolean default false) returns uuid
 language plpgsql security definer set search_path = '' as $$
 declare
@@ -239,7 +269,7 @@ declare
   id_ uuid;
 begin
   perform private.require_admin();
-  perform private.forbid_self_change(p_executive);
+  perform private.check_position_change(p_executive);
   select id into yr from os.academic_years where is_current;
   if yr is null then raise exception 'No academic year is marked current' using errcode = 'P0409'; end if;
   begin
@@ -261,10 +291,8 @@ begin
   perform private.require_admin();
   select * into a from os.position_assignments where id = p_assignment for update;
   if not found then raise exception 'Not found' using errcode = 'P0404'; end if;
-  perform private.forbid_self_change(a.executive_id);
-  update os.position_assignments
-  set during = daterange(lower(during), greatest(private.today(), lower(during) + 1))
-  where id = p_assignment;
+  perform private.check_position_change(a.executive_id);
+  perform private.end_assignments(null, p_assignment, null);
   perform private.audit('position.ended', 'executive', a.executive_id, jsonb_build_object('position_id', a.position_id));
 end $$;
 grant execute on function api.end_assignment(uuid) to authenticated;

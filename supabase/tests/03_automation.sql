@@ -1,7 +1,7 @@
 -- Event → Projects → Tasks, atomic generation, duplicate prevention, dates, reminders.
 begin;
 \ir helpers.psql
-select plan(38);
+select plan(45);
 
 -- ─── Proposal authorization ────────────────────────────────────────────────
 select tests.login(:'vpco');
@@ -100,6 +100,33 @@ select is((select state from os.jobs where id = 'd0000000-0000-0000-0000-0000000
 insert into os.jobs (id, kind, depth) values ('d0000000-0000-0000-0000-000000000002', 'project.completed', 4);
 select private.process_jobs();
 select matches((select last_error from os.jobs where id = 'd0000000-0000-0000-0000-000000000002'), 'chain', 'an automation chain past the depth limit stops with a record');
+
+-- ─── Follow-up tasks when a project completes ──────────────────────────────
+select tests.login(:'vpfi');
+select set_config('t.fp', api.create_project(jsonb_build_object('kind','INTERNAL','name','Report','owning_department_id',tests.dept('finance'),'starts_on','2027-01-01'), '{}', (select id from os.templates where key = 'internal-financial-reporting'))::text, true);
+select is((select count(*)::int from os.tasks where project_id = current_setting('t.fp')::uuid), 4, 'a project from a template gets its tasks');
+select isnt((select template_version_id from os.projects where id = current_setting('t.fp')::uuid), null, 'and records its version');
+select api.set_project_status(current_setting('t.fp')::uuid, 'completed');
+reset role;
+select private.process_jobs();
+select private.process_jobs();
+select is((select count(*)::int from os.tasks where project_id = current_setting('t.fp')::uuid and template_task_key = 'followup.file'), 1, 'completing it generates the follow-up task');
+select private.handle_job((select j from os.jobs j where entity_id = current_setting('t.fp')::uuid limit 1));
+select is((select count(*)::int from os.tasks where project_id = current_setting('t.fp')::uuid and template_task_key = 'followup.file'), 1, 'and only once, however often the job runs');
+
+-- ─── Email: a count and an address, never content ──────────────────────────
+delete from os.jobs where kind = 'email.digest';
+update os.notifications set emailed_at = null;
+select private.enqueue_digests();
+set local role service_role;
+select bag_eq(
+  $$select parameter_name::text from information_schema.parameters where specific_schema = 'api' and specific_name like 'service_claim_emails%' and parameter_mode = 'OUT'$$,
+  array['job_id', 'email', 'preferred_name', 'unread'], 'what the email route receives has no titles in it'
+);
+select set_config('t.claimed', (select count(*)::text from api.service_claim_emails(50)), true);
+select cmp_ok(current_setting('t.claimed')::int, '>', 0, 'digests can be claimed');
+select is((select count(*)::int from api.service_claim_emails(50)), 0, 'and only once, so a crash cannot double-send');
+reset role;
 
 -- ─── Template validation and versions ──────────────────────────────────────
 select tests.login(:'adm');

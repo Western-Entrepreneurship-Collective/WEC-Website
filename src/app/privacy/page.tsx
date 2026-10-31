@@ -4,17 +4,19 @@ import { Arrow, Logo } from "@/components/graphics/DraftGraphics";
 import { PRIVACY_EMAIL, PRIVACY_PATH } from "@/lib/privacy";
 
 /**
- * The privacy policy, word for word as the club approved it on 21 Sept 2026.
+ * The privacy policy, word for word as the club approved it on 21 Sept 2026,
+ * plus the executive accounts lines added 31 Oct 2026 for WEC OS.
  *
  * ⛔ Change the wording only with the club's say-so, and update LAST_UPDATED
  * whenever it changes: the policy itself promises that date moves.
  *
  * ⛔ Keep it true. Every line here is checked against what the site does:
  * the fields listed are the fields both forms send, "no cookies" and "no
- * analytics" hold because the site loads neither, and both forms refuse to
+ * analytics" hold because the public site loads neither (the session cookie
+ * under /os is scoped to that path and is the one the policy names), and both forms refuse to
  * send anything until the visitor ticks the box that links here.
  */
-const LAST_UPDATED = "21 September 2026";
+const LAST_UPDATED = "31 October 2026";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — WEC",
@@ -62,9 +64,16 @@ export default function PrivacyPage() {
           <li>Your introduction and answers</li>
           <li>Links you choose to share: LinkedIn, portfolio, resume</li>
         </ul>
+        <h3>If you are a WEC executive with a WEC OS account</h3>
+        <ul>
+          <li>Your name, email and position</li>
+          <li>The work and records you add to WEC OS, such as tasks, comments, meeting notes and files</li>
+          <li>A record of important changes you make</li>
+          <li>A sign-in cookie, used only inside WEC OS, to keep you signed in</li>
+        </ul>
         <h3>When you visit the site</h3>
         <ul>
-          <li>We do not use cookies.</li>
+          <li>We do not use cookies on the public site.</li>
           <li>We do not use analytics or tracking.</li>
           <li>Our web host (Vercel) keeps standard server logs, which include your IP address, to keep the site running and secure.</li>
         </ul>
@@ -73,12 +82,13 @@ export default function PrivacyPage() {
         <ul>
           <li>To add you as a member and contact you about WEC.</li>
           <li>To review your executive application and contact you about it.</li>
+          <li>To run the club&apos;s executive work in WEC OS, if you have an account.</li>
           <li>Nothing else.</li>
         </ul>
 
         <h2>Who can see it</h2>
         <ul>
-          <li>Only the WEC executive team.</li>
+          <li>Only the WEC executive team. In WEC OS, each executive sees only what their role and team allow.</li>
           <li>We never sell your information.</li>
           <li>We never share it with sponsors or anyone outside the executive team.</li>
         </ul>
@@ -87,12 +97,15 @@ export default function PrivacyPage() {
         <ul>
           <li>Your answers are sent to Google Forms and stored in Google Sheets.</li>
           <li>Google may store this information outside Canada.</li>
+          <li>WEC OS data is stored with Supabase, in Canada.</li>
+          <li>WEC OS notification emails are sent through Resend, which may process your email address outside Canada.</li>
         </ul>
 
         <h2>How long we keep it</h2>
         <ul>
           <li><strong>Executive applications:</strong> deleted when that hiring round is finished.</li>
           <li><strong>Members:</strong> kept for the school year. At the end of each year we email you to renew. If you renew, you stay a member. If you do not, we delete your information.</li>
+          <li><strong>WEC OS:</strong> your account is closed when you leave your position. Your name stays on the work you did, because those records carry the club from one year to the next. Ask us if you want something removed.</li>
         </ul>
 
         <h2>Your choices</h2>
@@ -105,7 +118,7 @@ export default function PrivacyPage() {
         <p>Email <Email />. We will reply within 30 days.</p>
 
         <h2>Emails from us</h2>
-        <p>We only email you about your membership or your application. If we ever start a newsletter, we will ask you first.</p>
+        <p>We only email you about your membership, your application, or your WEC OS account. If we ever start a newsletter, we will ask you first.</p>
 
         <h2>Changes</h2>
         <p>If we change this policy, we will update the date at the top of this page.</p>

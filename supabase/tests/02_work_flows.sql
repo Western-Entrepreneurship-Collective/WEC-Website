@@ -1,7 +1,7 @@
 -- Project relationships, task rules, and the cross-team workflow end to end.
 begin;
 \ir helpers.psql
-select plan(48);
+select plan(54);
 
 -- ─── Constraints from the brief ────────────────────────────────────────────
 select throws_ok($$insert into os.projects (kind, owning_department_id, name) values ('EVENT', tests.dept('content'), 'No event')$$, '23514', null, 'an EVENT project requires an event');
@@ -94,6 +94,7 @@ select throws_ok($$select api.set_task_status(current_setting('t.r')::uuid, 'don
 select api.submit_deliverable(current_setting('t.r')::uuid, 'Here it is');
 select throws_ok($$select api.review_deliverable(current_setting('t.r')::uuid, true)$$, 'P0403', null, 'the assignee cannot accept their own work');
 select tests.login(:'dirfi');
+select throws_ok($$select api.set_task_status(current_setting('t.r')::uuid, 'in_progress')$$, 'P0403', null, 'the requester does not set the other team''s progress');
 select api.review_deliverable(current_setting('t.r')::uuid, false, 'Bigger logo');
 select tests.login(:'dirco');
 select is((select status from os.tasks where id = current_setting('t.r')::uuid), 'revisions_requested', '8. revisions show on the same record');
@@ -128,6 +129,27 @@ select is((select title from api.task_dependencies(current_setting('t.r2')::uuid
 select tests.login(:'dirco');
 select api.add_task_dependency('c1000000-0000-0000-0000-000000000002', (select id from os.tasks where title = 'Self'));
 select throws_ok($$select api.add_task_dependency((select id from os.tasks where title = 'Self'), 'c1000000-0000-0000-0000-000000000002')$$, 'P0409', null, 'a circular dependency is refused');
+
+-- ─── Nobody lands work on another team's board without a request ───────────
+reset role;
+update os.projects set lead_executive_id = :'vpco' where id = 'b1000000-0000-0000-0000-000000000001';
+select tests.login(:'vpco');
+select throws_ok($$select api.create_task('b1000000-0000-0000-0000-000000000001', jsonb_build_object('title','Dumped','responsible_department_id',tests.dept('finance')))$$, 'P0422', null, 'a project lead cannot assign a task to another department''s board');
+
+-- ─── Vacant seats route upward, and no further than they should ────────────
+select tests.login(:'dirfi');
+select set_config('t.vac', api.create_cross_team_request('b1000000-0000-0000-0000-000000000002', tests.dept('community'), '{"title":"To a team with no VP"}'::jsonb)::text, true);
+select tests.login(:'pres');
+select is((select count(*)::int from api.my_notifications() where entity_id = current_setting('t.vac')::uuid), 1, 'a request to a vacant department reaches the President');
+select lives_ok($$select api.respond_to_request(current_setting('t.vac')::uuid, 'clarify', 'Who owns this?')$$, 'who can respond to it');
+reset role;
+update os.position_assignments set during = daterange('2026-05-01', '2026-06-01') where executive_id = :'pres';
+select tests.login(:'adm');
+select is((select count(*)::int from api.unrouted_requests() where task_id = current_setting('t.vac')::uuid), 0, 'answered requests are not in the unrouted queue');
+reset role;
+update os.tasks set request_state = 'pending' where id = current_setting('t.vac')::uuid;
+select tests.login(:'adm');
+select is((select count(*)::int from api.unrouted_requests() where task_id = current_setting('t.vac')::uuid), 1, 'with the President''s seat empty too, it waits where an administrator can see it');
 
 select * from finish();
 rollback;

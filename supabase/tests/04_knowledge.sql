@@ -1,7 +1,7 @@
 -- SOPs, meetings, calendars, search, deactivation, the year transition, archives.
 begin;
 \ir helpers.psql
-select plan(46);
+select plan(51);
 
 -- ─── SOP versions ──────────────────────────────────────────────────────────
 select tests.login(:'dirco');
@@ -105,6 +105,31 @@ select throws_ok($$select api.restore_archived('project', 'b4000000-0000-0000-00
 select tests.login(:'adm');
 select throws_ok($$select api.restore_archived('project', 'b4000000-0000-0000-0000-000000000001', '')$$, 'P0422', null, 'restoring requires a reason');
 select lives_ok($$select api.restore_archived('project', 'b4000000-0000-0000-0000-000000000001', 'Mistake')$$, 'an administrator can restore with one');
+
+select tests.login(:'vpco');
+select set_config('t.arch', api.create_project(jsonb_build_object('kind','INTERNAL','name','To archive','owning_department_id',tests.dept('content')))::text, true);
+select set_config('t.archt', api.create_task(current_setting('t.arch')::uuid, jsonb_build_object('title','File here','assigned_to',:'vpco'::text))::text, true);
+select api.set_project_status(current_setting('t.arch')::uuid, 'completed');
+select api.archive_project(current_setting('t.arch')::uuid);
+select throws_ok($$select * from api.prepare_attachment('task', current_setting('t.archt')::uuid, 'a.txt', 'text/plain', 10)$$, 'P0409', null, 'an archived project takes no new files');
+select api.save_meeting(null, jsonb_build_object('title','Old','starts_at','2026-09-01T18:00:00Z','department_id',tests.dept('content')), '{}', '{}', '{}');
+select set_config('t.mo', (select id::text from os.meetings where title = 'Old'), true);
+select api.archive_meeting(current_setting('t.mo')::uuid);
+select throws_ok($$select api.save_action_item(null, current_setting('t.mo')::uuid, 'Late action', null, null)$$, 'P0409', null, 'nor does an archived meeting take new action items');
+
+-- ─── Ending an assignment ──────────────────────────────────────────────────
+select tests.login(:'adm');
+select set_config('t.pa', api.assign_position(:'vpfi', (select id from os.positions where title = 'VP Community'), 1, true)::text, true);
+select api.end_assignment(current_setting('t.pa')::uuid);
+select lives_ok($$select api.assign_position('a0000000-0000-0000-0000-000000000008', (select id from os.positions where title = 'VP Community'), 1, true)$$, 'a seat filled and vacated today can be filled again today');
+reset role;
+insert into os.system_admins (executive_id) values (:'vpfi');
+select tests.login(:'adm');
+select throws_ok($$select api.assign_position('a0000000-0000-0000-0000-000000000009', (select id from os.positions where title = 'VP Sponsorship'), 1)$$, 'P0403', null, 'still refused with two administrators');
+reset role;
+delete from os.system_admins where executive_id = :'vpfi';
+select tests.login(:'adm');
+select lives_ok($$select api.assign_position('a0000000-0000-0000-0000-000000000009', (select id from os.positions where title = 'VP Sponsorship'), 1)$$, 'a sole administrator can, so a year transition cannot lock them out');
 
 -- ─── Academic-year transition ──────────────────────────────────────────────
 select set_config('t.tr', api.start_year_transition('2027-28', '2027-05-01', '2028-04-30')::text, true);

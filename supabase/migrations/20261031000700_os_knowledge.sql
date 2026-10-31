@@ -112,6 +112,9 @@ begin
     raise exception 'You do not have permission for that' using errcode = 'P0403';
   end if;
   if v.status <> 'draft' then raise exception 'That is not a draft' using errcode = 'P0409'; end if;
+  if exists (select 1 from os.sops where id = v.sop_id and archived_at is not null) then
+    raise exception 'That SOP is archived' using errcode = 'P0409';
+  end if;
   update os.sop_versions set status = 'submitted' where id = p_version;
   insert into os.sop_approvals (sop_version_id, decision, actor_id) values (p_version, 'submitted', auth.uid());
   select * into s from os.sops where id = v.sop_id;
@@ -164,6 +167,7 @@ begin
     raise exception 'Submit the revision before publishing it' using errcode = 'P0409';
   end if;
   select * into s from os.sops where id = v.sop_id for update;
+  if s.archived_at is not null then raise exception 'That SOP is archived' using errcode = 'P0409'; end if;
   update os.sop_versions set status = 'superseded' where id = s.current_version_id;
   update os.sop_versions set status = 'published', published_at = now(), published_by = auth.uid() where id = p_version;
   update os.sops set current_version_id = p_version where id = v.sop_id;
@@ -214,6 +218,25 @@ end $$;
 grant execute on function api.link_project_sop(uuid, uuid, boolean) to authenticated;
 
 -- ─── Meetings ──────────────────────────────────────────────────────────────
+-- An archived meeting's attendees, links and action items are read-only with it.
+create function private.guard_archived_meeting_child() returns trigger
+language plpgsql set search_path = '' as $$
+declare r record;
+begin
+  r := case when tg_op = 'DELETE' then old else new end;
+  if exists (select 1 from os.meetings where id = r.meeting_id and archived_at is not null) then
+    raise exception 'This meeting is archived and read-only' using errcode = 'P0409';
+  end if;
+  return r;
+end $$;
+do $$
+declare t text;
+begin
+  foreach t in array array['meeting_departments', 'meeting_attendees', 'meeting_action_items', 'meeting_project_links'] loop
+    execute format('create trigger %I before insert or update or delete on os.%I for each row execute function private.guard_archived_meeting_child()', t || '_archived_guard', t);
+  end loop;
+end $$;
+
 create function private.can_manage_meeting(p_meeting uuid) returns boolean
 language plpgsql stable security definer set search_path = '' as $$
 declare m record;
@@ -354,14 +377,17 @@ declare
 begin
   perform private.require_active();
   if private.can_read_attachment_entity(p_type, p_entity) is not true then perform private.not_found(); end if;
-  if p_type = 'task' and private.can_edit_task(p_entity) is not true then
+  if (p_type = 'task' and private.can_edit_task(p_entity) is not true)
+     or (p_type = 'meeting' and private.can_manage_meeting(p_entity) is not true)
+     or (p_type = 'sop' and private.can_manage_sop(p_entity) is not true) then
     raise exception 'You do not have permission for that' using errcode = 'P0403';
   end if;
-  if p_type = 'meeting' and private.can_manage_meeting(p_entity) is not true then
-    raise exception 'You do not have permission for that' using errcode = 'P0403';
-  end if;
-  if p_type = 'sop' and private.can_manage_sop(p_entity) is not true then
-    raise exception 'You do not have permission for that' using errcode = 'P0403';
+  -- An archive takes no new files, whichever kind of record it is.
+  if p_type = 'task' then
+    perform private.assert_project_writable((select project_id from os.tasks where id = p_entity));
+  elsif (p_type = 'meeting' and exists (select 1 from os.meetings where id = p_entity and archived_at is not null))
+     or (p_type = 'sop' and exists (select 1 from os.sops where id = p_entity and archived_at is not null)) then
+    raise exception 'That record is archived and read-only' using errcode = 'P0409';
   end if;
   if p_size <= 0 or p_size > limit_mb * 1024 * 1024 then
     raise exception 'Files can be up to % MB', limit_mb using errcode = 'P0422';
@@ -671,9 +697,7 @@ begin
   if not found then perform private.not_found(); end if;
   update os.academic_years set is_current = false where is_current;
   update os.academic_years set is_current = true where id = tr.to_year_id;
-  update os.position_assignments
-  set during = daterange(lower(during), greatest(private.today(), lower(during) + 1))
-  where upper_inf(during) and academic_year_id = tr.from_year_id;
+  perform private.end_assignments(null, null, tr.from_year_id);
   update os.year_transitions set status = 'completed', completed_at = now() where id = p_transition;
   perform private.audit('year.transition_finished', 'academic_year', tr.to_year_id);
 end $$;
