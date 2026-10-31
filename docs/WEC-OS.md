@@ -86,6 +86,12 @@ jobs:
 
 Test a restore once, into a local stack, before trusting it.
 
+## How the screens are organized
+
+The sidebar has three parts: **My work** (Home, Tasks, Projects, Calendar, Inbox), **My team**, and **Organization** (Events, Global Projects, All Teams, SOP Library). President and Administration appear under **Oversight** only for those roles. Meetings live inside each team.
+
+A new executive lands on a welcome guide once, then Home shows a getting-started checklist that ticks itself off and can be hidden. If a team has a handover project from the last transition, Home points new people to it.
+
 ## Who can see what
 
 Every rule below lives in the database, and `supabase/tests/01_access_matrix.sql` proves it.

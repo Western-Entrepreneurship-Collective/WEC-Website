@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { MarkOnboarding } from "@/components/os/MarkOnboarding";
 import { Panel, TaskTable } from "@/components/os/ui";
 import { can } from "@/lib/os/dal";
 import { createClient } from "@/lib/os/supabase";
@@ -18,10 +19,11 @@ export default async function TeamRequests({ params }: { params: Promise<{ slug:
   ]);
   return (
     <>
+      {!me.onboarding?.requests_seen && me.positions.some(p => p.is_head && p.department_id === department.id) ? <MarkOnboarding step="requests_seen" /> : null}
       {can(me, "request.create") ? <p><Link className="os-btn os-btn-primary" href="/os/requests/new">New cross-team request</Link></p> : null}
-      <Panel title="Incoming: waiting for an answer"><TaskTable tasks={queue.data ?? []} empty="Nothing waiting. Only the team's lead sees requests before they are accepted." /></Panel>
-      <Panel title="Incoming: accepted"><TaskTable tasks={active.data ?? []} empty="Nothing in progress." /></Panel>
-      <Panel title="Outgoing"><TaskTable tasks={outgoing.data ?? []} empty="No open requests." /></Panel>
+      <Panel title="Waiting on us"><TaskTable tasks={queue.data ?? []} empty="Nothing waiting. Only the team's lead sees requests before they are accepted." /></Panel>
+      <Panel title="Accepted, in progress"><TaskTable tasks={active.data ?? []} empty="Nothing in progress." /></Panel>
+      <Panel title="Waiting on other teams"><TaskTable tasks={outgoing.data ?? []} empty="No open requests." /></Panel>
       <Panel title="Closed"><TaskTable tasks={closed.data ?? []} empty="Nothing closed yet." /></Panel>
     </>
   );

@@ -8,13 +8,13 @@ import { entityHref, formatDateTime, notificationText } from "@/lib/os/format";
 import { rpc } from "@/lib/os/supabase";
 import type { NotificationRow } from "@/lib/os/types";
 
-export const metadata: Metadata = { title: "Notifications" };
+export const metadata: Metadata = { title: "Inbox" };
 
 export default async function NotificationsPage() {
   await requireMe();
   const rows = await rpc<NotificationRow[]>("my_notifications", { p_limit: 100 });
   return (
-    <Page title="Notifications" actions={rows.some(r => !r.read_at) ? <ActionForm action={markAllRead}><SubmitButton variant="ghost">Mark all read</SubmitButton></ActionForm> : null}>
+    <Page title="Inbox" actions={rows.some(r => !r.read_at) ? <ActionForm action={markAllRead}><SubmitButton variant="ghost">Mark all read</SubmitButton></ActionForm> : null}>
       <Panel>
         {rows.length === 0 ? <Empty>Nothing yet.</Empty> : (
           <ul className="os-list">

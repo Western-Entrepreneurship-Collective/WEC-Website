@@ -59,3 +59,6 @@ insert into os.system_admins (executive_id) select id from os.executives where e
 update os.position_assignments set during = daterange('2026-05-01', '2026-06-01')
 where executive_id = (select id from os.executives where email = 'former@wec.test');
 update os.executives set status = 'deactivated', deactivated_at = now() where email = 'former@wec.test';
+
+-- Past the welcome screen, so tests and local browsing start on Home.
+update os.executives set onboarding = '{"welcomed":"2026-10-01T12:00:00Z"}' where email like '%@wec.test';

@@ -151,6 +151,15 @@ export const markAllRead = async () => run(() => rpc("mark_notifications_read", 
 export const updateProfile = async (_: ActionResult, fd: FormData) => run(() => rpc("update_profile", { p_full_name: text(fd, "full_name", { max: 120, label: "Name" }), p_preferred_name: optional(fd, "preferred_name", 80) }), "Saved.");
 export const updatePreferences = async (_: ActionResult, fd: FormData) => run(() => rpc("set_notification_preferences", { p_email_digest: bool(fd, "email_digest"), p_muted_kinds: fd.getAll("muted").map(String) }), "Saved.");
 
+export async function markOnboarding(step: string) {
+  await rpc("mark_onboarding", { p_step: step });
+}
+export const dismissChecklist = async () => run(() => rpc("mark_onboarding", { p_step: "dismissed" }));
+export async function finishWelcome() {
+  await rpc("mark_onboarding", { p_step: "welcomed" });
+  redirect("/os");
+}
+
 // ─── Files ─────────────────────────────────────────────────────────────────
 // The RPC decides whether this person may attach here, and only then does the
 // service key sign an upload URL for that one path.

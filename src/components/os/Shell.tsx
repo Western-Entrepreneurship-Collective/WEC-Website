@@ -5,14 +5,20 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/graphics/DraftGraphics";
 
-export type NavItem = { href: string; label: string; badge?: number; exact?: boolean };
+export type NavItem = { href: string; label: string; icon: string; badge?: number; exact?: boolean };
+export type NavGroup = { label: string; items: NavItem[] };
 
-export function Shell({ nav, footer, children }: { nav: NavItem[]; footer: React.ReactNode; children: React.ReactNode }) {
+const matches = (item: NavItem, pathname: string) => (item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`));
+
+export function Shell({ nav, footer, children }: { nav: NavGroup[]; footer: React.ReactNode; children: React.ReactNode }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect -- closing the drawer follows navigation
   useEffect(() => setOpen(false), [pathname]);
+
+  // The longest match wins, so a Global Project's list lights up Global Projects and not Projects.
+  const current = nav.flatMap(g => g.items).filter(i => matches(i, pathname)).sort((a, b) => b.href.length - a.href.length)[0]?.href;
 
   return (
     <div className="os-shell">
@@ -28,23 +34,26 @@ export function Shell({ nav, footer, children }: { nav: NavItem[]; footer: React
         </Link>
         <form className="os-search" action="/os/search" role="search">
           <label className="sr-only" htmlFor="os-search-input">Search</label>
-          <input id="os-search-input" name="q" type="search" placeholder="Search" />
+          <input id="os-search-input" name="q" type="search" placeholder="Search everything" />
         </form>
-        <nav aria-label="WEC OS">
-          <ul>
-            {nav.map(item => {
-              const active = item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
-              return (
-                <li key={item.href}>
-                  <Link href={item.href} aria-current={active ? "page" : undefined}>
-                    {item.label}
-                    {item.badge ? <span className="os-badge">{item.badge}<span className="sr-only"> unread</span></span> : null}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+        <div className="os-nav-groups">
+          {nav.map(group => (
+            <nav key={group.label} aria-label={group.label}>
+              <p className="os-nav-label">{group.label}</p>
+              <ul>
+                {group.items.map(item => (
+                  <li key={item.href}>
+                    <Link href={item.href} aria-current={item.href === current ? "page" : undefined}>
+                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={item.icon} /></svg>
+                      <span className="os-nav-text">{item.label}</span>
+                      {item.badge ? <span className="os-badge">{item.badge}<span className="sr-only"> waiting</span></span> : null}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ))}
+        </div>
         <div className="os-sidebar-foot">{footer}</div>
       </aside>
       <main id="os-main" className="os-main" tabIndex={-1}>{children}</main>

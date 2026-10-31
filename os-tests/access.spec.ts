@@ -45,7 +45,7 @@ test("an unknown address is a 404 inside the workspace, and a sign-in page outsi
   await signIn(page, PEOPLE.dirContent);
   expect((await page.goto("/os/no-such-page"))?.status()).toBe(404);
   await expect(page.getByRole("heading", { name: "Nothing here" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Dashboard", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Home", exact: true })).toBeVisible();
 });
 
 test("the API, called directly with a real login, gives the same answers", async () => {

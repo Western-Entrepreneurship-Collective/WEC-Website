@@ -8,10 +8,10 @@ import { createClient } from "@/lib/os/supabase";
 
 export const metadata: Metadata = { title: "New cross-team request" };
 
-export default async function NewRequestPage({ searchParams }: { searchParams: Promise<{ project?: string }> }) {
+export default async function NewRequestPage({ searchParams }: { searchParams: Promise<{ project?: string; to?: string }> }) {
   const me = await requireMe();
   if (!can(me, "request.create")) notFound();
-  const { project } = await searchParams;
+  const { project, to } = await searchParams;
   const supabase = await createClient();
   const [departments, { data: projects }] = await Promise.all([
     getDepartments(),
@@ -34,7 +34,7 @@ export default async function NewRequestPage({ searchParams }: { searchParams: P
             <select name="requesting" required>{mine.map(p => <option key={p.position_id} value={p.department_id}>{p.department_name}</option>)}</select>
           </Field>
           <Field label="Send to">
-            <select name="receiving" required defaultValue="">
+            <select name="receiving" required defaultValue={to ?? ""}>
               <option value="" disabled>Choose a team</option>
               {departments.filter(d => !mine.some(p => p.department_id === d.id)).map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
             </select>

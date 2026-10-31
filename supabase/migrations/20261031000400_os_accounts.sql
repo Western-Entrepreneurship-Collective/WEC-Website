@@ -40,6 +40,7 @@ begin
   if not found then return null; end if;
   return jsonb_build_object(
     'id', e.id, 'email', e.email, 'full_name', e.full_name, 'preferred_name', e.preferred_name, 'status', e.status,
+    'onboarding', e.onboarding,
     'is_admin', private.is_admin(),
     'is_president', private.is_president(),
     'positions', coalesce((
@@ -79,6 +80,18 @@ begin
   perform private.audit('profile.updated', 'executive', auth.uid());
 end $$;
 grant execute on function api.update_profile(text, text) to authenticated;
+
+create function api.mark_onboarding(p_step text) returns void
+language plpgsql security definer set search_path = '' as $$
+begin
+  perform private.require_active();
+  if p_step not in ('welcomed', 'task_opened', 'handover_read', 'requests_seen', 'admin_seen', 'dismissed') then
+    raise exception 'Unknown step' using errcode = 'P0422';
+  end if;
+  update os.executives set onboarding = onboarding || jsonb_build_object(p_step, now())
+  where id = auth.uid() and not onboarding ? p_step;
+end $$;
+grant execute on function api.mark_onboarding(text) to authenticated;
 
 create function api.set_notification_preferences(p_email_digest boolean, p_muted_kinds text[]) returns void
 language plpgsql security definer set search_path = '' as $$

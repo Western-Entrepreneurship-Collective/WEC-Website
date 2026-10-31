@@ -91,6 +91,9 @@ create table os.executives (
   status text not null default 'invited' check (status in ('invited', 'active', 'deactivated')),
   activated_at timestamptz,
   deactivated_at timestamptz,
+  -- Which first-day steps this person has done, with when: only their own, and
+  -- nothing depends on it except what Home shows them.
+  onboarding jsonb not null default '{}',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   check ((status = 'deactivated') = (deactivated_at is not null))

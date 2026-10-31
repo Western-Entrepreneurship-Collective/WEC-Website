@@ -122,6 +122,11 @@ export type Database = {
 "event_readiness":
 { Args: { "p_event": string }; Returns: number
                            },
+"event_team_progress":
+{ Args: { "p_event": string }; Returns: {
+              "can_open": boolean,"department_name": string,"lead_name": string,"next_due": string,"next_title": string,"overdue_tasks": number,"progress": number,"project_id": string
+            }[]
+                           },
 "finish_year_transition":
 { Args: { "p_transition": string }; Returns: undefined
                            },
@@ -133,6 +138,9 @@ export type Database = {
                            },
 "mark_notifications_read":
 { Args: { "p_ids"?: (string)[] }; Returns: undefined
+                           },
+"mark_onboarding":
+{ Args: { "p_step": string }; Returns: undefined
                            },
 "me":
 { Args: Record<PropertyKey, never>; Returns: Json
@@ -149,7 +157,7 @@ export type Database = {
                            },
 "project_summaries":
 { Args: { "p_department"?: string,"p_event"?: string,"p_include_archived"?: boolean,"p_kind"?: string }; Returns: {
-              "approval_status": string,"archived_at": string,"can_open": boolean,"department_name": string,"due_on": string,"event_id": string,"event_name": string,"id": string,"kind": string,"lead_name": string,"name": string,"progress": number,"starts_on": string,"status": string
+              "approval_status": string,"archived_at": string,"can_open": boolean,"department_name": string,"due_on": string,"event_id": string,"event_name": string,"id": string,"kind": string,"lead_name": string,"name": string,"next_due": string,"overdue_tasks": number,"progress": number,"starts_on": string,"status": string
             }[]
                            },
 "propose_deadline":
@@ -633,14 +641,14 @@ isOneToOne: false
                   ]
                 },"executives": {
                   Row: {
-                    "activated_at": string | null,"created_at": string,"deactivated_at": string | null,"email": string,"full_name": string,"id": string,"preferred_name": string | null,"status": string,"updated_at": string
+                    "activated_at": string | null,"created_at": string,"deactivated_at": string | null,"email": string,"full_name": string,"id": string,"onboarding": NonNullable<Json>,"preferred_name": string | null,"status": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "activated_at"?: string | null,"created_at"?: string,"deactivated_at"?: string | null,"email": string,"full_name": string,"id": string,"preferred_name"?: string | null,"status"?: string,"updated_at"?: string
+                    "activated_at"?: string | null,"created_at"?: string,"deactivated_at"?: string | null,"email": string,"full_name": string,"id": string,"onboarding"?: NonNullable<Json>,"preferred_name"?: string | null,"status"?: string,"updated_at"?: string
                   }
                   Update: {
-                    "activated_at"?: string | null,"created_at"?: string,"deactivated_at"?: string | null,"email"?: string,"full_name"?: string,"id"?: string,"preferred_name"?: string | null,"status"?: string,"updated_at"?: string
+                    "activated_at"?: string | null,"created_at"?: string,"deactivated_at"?: string | null,"email"?: string,"full_name"?: string,"id"?: string,"onboarding"?: NonNullable<Json>,"preferred_name"?: string | null,"status"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     

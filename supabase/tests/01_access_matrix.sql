@@ -2,7 +2,7 @@
 -- looks at the same data, including by asking for specific IDs.
 begin;
 \ir helpers.psql
-select plan(54);
+select plan(58);
 
 insert into os.events (id, name, tier, starts_at, status, submitted_by) values
   ('e0000000-0000-0000-0000-000000000001', 'Approved Lab', 'B', now() + interval '30 days', 'approved', :'vpev'),
@@ -96,6 +96,17 @@ select is((select count(*)::int from os.tasks where id = 'c0000000-0000-0000-000
 select is((select count(*)::int from api.project_summaries() where id = 'b0000000-0000-0000-0000-000000000003'), 0, 'an unshared linked internal project is not visible to the event lead at all');
 select tests.login(:'cdou');
 select is((select count(*)::int from api.project_summaries() where id = 'b0000000-0000-0000-0000-000000000006'), 0, 'nobody else sees that shared summary');
+
+-- ─── The event's team-by-team view follows the same rules ──────────────────
+reset role;
+insert into os.tasks (id, project_id, title, assigned_by, assigned_to, requesting_department_id, responsible_department_id, visibility, due_at) values
+  ('c0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-000000000001', 'Secret next step', :'vpco', :'vpco', tests.dept('content'), tests.dept('content'), 'restricted', now() + interval '1 day');
+select tests.login(:'vpev');
+select is((select count(*)::int from api.event_team_progress('e0000000-0000-0000-0000-000000000001')), 1, 'the event lead sees each team''s row');
+select is((select next_title from api.event_team_progress('e0000000-0000-0000-0000-000000000001') limit 1), null, 'but not the title of a task they cannot read');
+select tests.login(:'dirfi');
+select is((select count(*)::int from api.event_team_progress('e0000000-0000-0000-0000-000000000001')), 0, 'someone outside the project sees no row');
+select throws_ok($$select api.mark_onboarding('anything')$$, 'P0422', null, 'onboarding steps are a fixed list');
 
 -- ─── System Administrator alone: schedule, not content ─────────────────────
 select tests.login(:'adm');

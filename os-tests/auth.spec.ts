@@ -6,7 +6,7 @@ test("signing in and out works, and pages need a session", async ({ page }) => {
   await page.goto("/os");
   await expect(page).toHaveURL(/\/os\/login$/);
   await signIn(page, PEOPLE.vpContent);
-  await expect(page.getByRole("heading", { name: /Hello, Connie/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /, Connie\./ })).toBeVisible();
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/os\/login$/);
   await page.goto("/os/tasks");
@@ -68,8 +68,15 @@ test("invitation, activation and password recovery, end to end", async ({ page }
   await page.getByLabel("New password").fill("a-new-long-password");
   await page.getByLabel("Repeat it").fill("a-new-long-password");
   await page.getByRole("button", { name: "Activate my account" }).click();
-  await expect(page.getByRole("heading", { name: /Hello, Nia/ })).toBeVisible();
-  await expect(page.getByText("Director of Engagement")).toBeVisible();
+  // A first sign-in lands on the welcome guide, once.
+  await expect(page).toHaveURL(/\/os\/welcome$/);
+  await expect(page.getByRole("heading", { name: "Welcome to WEC OS, Nia." })).toBeVisible();
+  await expect(page.getByText("Director of Engagement").first()).toBeVisible();
+  await page.getByRole("button", { name: "Take me to my Home" }).click();
+  await expect(page.getByRole("heading", { name: /, Nia\./ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Getting started" })).toBeVisible();
+  await page.goto("/os");
+  await expect(page).toHaveURL(/\/os$/);
 
   // Recovery
   await page.getByRole("button", { name: "Sign out" }).click();
@@ -82,7 +89,7 @@ test("invitation, activation and password recovery, end to end", async ({ page }
   await page.getByLabel("New password").fill("another-long-password");
   await page.getByLabel("Repeat it").fill("another-long-password");
   await page.getByRole("button", { name: "Save new password" }).click();
-  await expect(page.getByRole("heading", { name: /Hello, Nia/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /, Nia\./ })).toBeVisible();
 
   // The password reset page says nothing different about an unknown address.
   await page.context().clearCookies();

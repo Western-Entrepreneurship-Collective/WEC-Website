@@ -1165,13 +1165,16 @@ grant execute on function api.task_context(uuid) to authenticated;
 
 create function api.project_summaries(p_kind text default null, p_department uuid default null, p_event uuid default null, p_include_archived boolean default false)
 returns table (id uuid, kind text, name text, status text, approval_status text, starts_on date, due_on date, progress int,
-  department_name text, event_id uuid, event_name text, archived_at timestamptz, can_open boolean, lead_name text)
+  department_name text, event_id uuid, event_name text, archived_at timestamptz, can_open boolean, lead_name text,
+  next_due timestamptz, overdue_tasks int)
 language plpgsql stable security definer set search_path = '' as $$
 begin
   if private.is_active_exec() is not true then return; end if;
   return query
     select p.id, p.kind, p.name, p.status, p.approval_status, p.starts_on, p.due_on, private.project_progress(p.id),
-      d.name, e.id, e.name, p.archived_at, private.can_read_project(p.id), coalesce(x.preferred_name, x.full_name)
+      d.name, e.id, e.name, p.archived_at, private.can_read_project(p.id), coalesce(x.preferred_name, x.full_name),
+      (select min(t.due_at) from os.tasks t where t.project_id = p.id and t.status not in ('done', 'cancelled') and t.due_at >= now()),
+      (select count(*)::int from os.tasks t where t.project_id = p.id and t.status not in ('done', 'cancelled') and t.due_at < now())
     from os.projects p
     left join os.departments d on d.id = p.owning_department_id
     left join os.events e on e.id = p.event_id
@@ -1184,6 +1187,31 @@ begin
     order by p.due_on nulls last, p.name;
 end $$;
 grant execute on function api.project_summaries(text, uuid, uuid, boolean) to authenticated;
+
+-- The team-by-team view of an event. A row only for a project this person may see
+-- at summary level, and its next step's title only if they may read that task.
+create function api.event_team_progress(p_event uuid)
+returns table (project_id uuid, department_name text, lead_name text, progress int, can_open boolean,
+  next_title text, next_due timestamptz, overdue_tasks int)
+language plpgsql stable security definer set search_path = '' as $$
+begin
+  if private.can_read_event(p_event) is not true then return; end if;
+  return query
+    select p.id, d.name, coalesce(x.preferred_name, x.full_name), private.project_progress(p.id), private.can_read_project(p.id),
+      case when private.can_read_task(nx.id) then nx.title end, nx.due_at,
+      (select count(*)::int from os.tasks t where t.project_id = p.id and t.status not in ('done', 'cancelled') and t.due_at < now())
+    from os.projects p
+    join os.departments d on d.id = p.owning_department_id
+    left join os.executives x on x.id = p.lead_executive_id
+    left join lateral (
+      select t.id, t.title, t.due_at from os.tasks t
+      where t.project_id = p.id and t.status not in ('done', 'cancelled') and t.parent_task_id is null
+      order by t.due_at nulls last limit 1
+    ) nx on true
+    where p.event_id = p_event and p.kind = 'EVENT' and private.can_read_project_summary(p.id)
+    order by d.sort_order;
+end $$;
+grant execute on function api.event_team_progress(uuid) to authenticated;
 
 -- Readiness for the event lead's and President's view.
 create function api.event_readiness(p_event uuid) returns int

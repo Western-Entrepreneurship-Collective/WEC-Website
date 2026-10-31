@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { ActionForm, SubmitButton } from "@/components/os/ActionForm";
 import { Check, Field, Page, Panel } from "@/components/os/ui";
 import { changePassword } from "@/lib/os/actions/auth";
@@ -22,6 +23,7 @@ export default async function ProfilePage() {
             <Field label="Email" hint="The address you sign in with."><input value={me.email} readOnly /></Field>
             <div><SubmitButton variant="ghost">Save</SubmitButton></div>
           </ActionForm>
+          <p><Link className="os-link" href="/os/welcome">See the welcome guide again</Link></p>
           <h3>Positions</h3>
           {me.positions.length ? <ul className="os-list">{me.positions.map(p => <li key={p.position_id}>{p.title}<span className="os-muted">{p.department_name}{p.is_acting ? " · acting" : ""}</span></li>)}</ul> : <p className="os-muted">None.</p>}
         </Panel>

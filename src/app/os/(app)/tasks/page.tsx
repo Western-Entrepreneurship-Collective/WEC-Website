@@ -5,7 +5,7 @@ import { getDepartments, getDirectory, nameLookup, requireMe } from "@/lib/os/da
 import { formatDate } from "@/lib/os/format";
 import { createClient } from "@/lib/os/supabase";
 
-export const metadata: Metadata = { title: "My Tasks" };
+export const metadata: Metadata = { title: "Tasks" };
 
 export default async function MyTasksPage({ searchParams }: { searchParams: Promise<{ view?: string; show?: string }> }) {
   const me = await requireMe();
@@ -21,7 +21,7 @@ export default async function MyTasksPage({ searchParams }: { searchParams: Prom
   const { data: assigned } = await supabase.from("tasks").select("*").eq("assigned_by", me.id).neq("assigned_to", me.id).not("status", "in", "(done,cancelled)").order("due_at", { nullsFirst: false }).limit(100);
   const tasks = data ?? [];
   return (
-    <Page title="My Tasks">
+    <Page title="Tasks">
       <Tabs current={view === "board" ? "board" : closed ? "closed" : "list"} items={[
         { key: "list", href: "/os/tasks", label: "List" },
         { key: "board", href: "/os/tasks?view=board", label: "Board" },

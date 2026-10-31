@@ -1,100 +1,150 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Empty, Page, Panel, Pill, Progress, Stat, TaskTable } from "@/components/os/ui";
-import { displayName, getDepartments, getDirectory, nameLookup, requireMe } from "@/lib/os/dal";
-import { entityHref, formatDate, formatDateTime, notificationText, torontoDateKey } from "@/lib/os/format";
+import { redirect } from "next/navigation";
+import { ActionForm } from "@/components/os/ActionForm";
+import { Avatar, Due, Section } from "@/components/os/ui";
+import { dismissChecklist } from "@/lib/os/actions/work";
+import { displayName, requireMe } from "@/lib/os/dal";
+import { entityHref, formatDateTime } from "@/lib/os/format";
+import { getNeeds } from "@/lib/os/needs";
+import { getSeats } from "@/lib/os/org";
 import { createClient, rpc } from "@/lib/os/supabase";
-import type { CalendarItem, NotificationRow, ProjectSummary } from "@/lib/os/types";
+import type { CalendarItem } from "@/lib/os/types";
 
-export const metadata: Metadata = { title: "Dashboard" };
+export const metadata: Metadata = { title: "Home" };
 
-const OPEN = ["unassigned", "todo", "in_progress", "blocked", "submitted", "revisions_requested"];
+function greeting() {
+  const hour = Number(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", hourCycle: "h23", hour: "numeric" }).format(new Date()));
+  return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+}
 
-export default async function DashboardPage() {
+export default async function HomePage() {
   const me = await requireMe();
-  const supabase = await createClient();
-  const nameOf = nameLookup(await getDirectory());
-  const allDepartments = await getDepartments();
-  const teamOf = (id: string) => allDepartments.find(d => d.id === id)?.name;
-  const now = new Date();
-  const inTwoWeeks = new Date(now.getTime() + 14 * 86_400_000);
-  const departments = me.positions.map(p => p.department_id);
+  if (!me.onboarding?.welcomed) redirect("/os/welcome");
 
-  const [mine, assigned, reviews, requests, participating, announcements, sops, summaries, calendar, notifications] = await Promise.all([
-    supabase.from("tasks").select("*").eq("assigned_to", me.id).in("status", OPEN).order("due_at", { nullsFirst: false }).limit(12),
-    supabase.from("tasks").select("*").eq("assigned_by", me.id).neq("assigned_to", me.id).in("status", OPEN).order("due_at", { nullsFirst: false }).limit(8),
-    supabase.from("tasks").select("*").eq("status", "submitted").neq("assigned_to", me.id).order("submitted_at").limit(8),
-    supabase.from("tasks").select("*").in("request_state", ["pending", "clarification_requested"]).order("created_at").limit(8),
-    supabase.from("project_participants").select("project_id").eq("executive_id", me.id),
-    supabase.from("announcements").select("*").is("archived_at", null).order("published_at", { ascending: false }).limit(3),
-    departments.length ? supabase.from("sops").select("id, title, review_on").in("department_id", departments).is("archived_at", null).not("current_version_id", "is", null).order("title").limit(6) : Promise.resolve({ data: [] }),
-    rpc<ProjectSummary[]>("project_summaries"),
-    rpc<CalendarItem[]>("calendar_items", { p_from: now.toISOString(), p_to: inTwoWeeks.toISOString(), p_scope: "personal" }),
-    rpc<NotificationRow[]>("my_notifications", { p_limit: 6, p_unread_only: true }),
+  const supabase = await createClient();
+  const now = new Date();
+  const first = displayName(me).split(" ")[0];
+  const position = me.positions[0];
+  const [{ items, later }, seats, announcements, handover, upcoming] = await Promise.all([
+    getNeeds(me),
+    getSeats(),
+    supabase.from("announcements").select("*").is("archived_at", null).order("published_at", { ascending: false }).limit(2),
+    position
+      ? supabase.from("projects").select("id, name").eq("owning_department_id", position.department_id).like("system_key", "handover:%").is("archived_at", null).order("created_at", { ascending: false }).limit(1).maybeSingle()
+      : Promise.resolve({ data: null }),
+    rpc<CalendarItem[]>("calendar_items", { p_from: now.toISOString(), p_to: new Date(now.getTime() + 60 * 86_400_000).toISOString(), p_scope: "core" }),
   ]);
 
-  const myTasks = mine.data ?? [];
-  const participatingIds = new Set((participating.data ?? []).map(p => p.project_id));
-  const projects = summaries.filter(p => p.can_open && (p.lead_name === displayName(me) || participatingIds.has(p.id) || departments.length > 0) && p.status !== "completed").slice(0, 8);
-  const overdue = myTasks.filter(t => t.due_at && new Date(t.due_at) < now).length;
-  const dueThisWeek = myTasks.filter(t => t.due_at && new Date(t.due_at) >= now && new Date(t.due_at) < new Date(now.getTime() + 7 * 86_400_000)).length;
-  const reviewRows = (reviews.data ?? []).filter(t => t.assigned_by === me.id || t.created_by === me.id || me.is_president || me.positions.some(p => p.is_head && (p.department_id === t.requesting_department_id || p.department_id === t.responsible_department_id)));
-  const agenda = calendar.sort((a, b) => a.starts_at.localeCompare(b.starts_at)).slice(0, 8);
+  const done = me.onboarding;
+  const head = me.positions.find(p => p.is_head);
+  const steps = [
+    { label: "Set your password and name", done: true },
+    { label: "Meet your team and see how WEC OS works", done: Boolean(done.welcomed), href: "/os/welcome", action: "Open it" },
+    ...(head ? [{ label: "Check your team's requests", done: Boolean(done.requests_seen), href: `/os/teams/${head.department_slug}/requests`, action: "Check them" }] : []),
+    ...(position ? [{ label: "Open your first task", done: Boolean(done.task_opened), href: "/os/tasks", action: "See your tasks" }] : []),
+    ...(handover.data ? [{ label: "Read your team's handover", done: Boolean(done.handover_read), href: `/os/projects/${handover.data.id}`, action: "Read it" }] : []),
+    ...(me.is_admin ? [{ label: "Look over the administration pages", done: Boolean(done.admin_seen), href: "/os/admin", action: "Open them" }] : []),
+  ];
+  const doneCount = steps.filter(s => s.done).length;
+  const showChecklist = !done.dismissed && doneCount < steps.length;
+  const team = position ? seats.filter(s => s.departmentId === position.department_id) : [];
+  const coming = upcoming.sort((a, b) => a.starts_at.localeCompare(b.starts_at)).slice(0, 4);
+
+  const intro = items.length === 0
+    ? later.length ? "Nothing urgent. Your next things are below." : "Nothing is waiting on you right now."
+    : `${items.length === 1 ? "One thing needs" : `${items.length} things need`} you. Everything else can wait.`;
 
   return (
-    <Page eyebrow={new Intl.DateTimeFormat("en-CA", { weekday: "long", month: "long", day: "numeric", timeZone: "America/Toronto" }).format(now)} title={`Hello, ${displayName(me).split(" ")[0]}.`}>
-      {me.positions.length === 0 && !me.is_admin ? <p className="os-note">You do not hold a position yet, so there is not much to show. An administrator can assign you one.</p> : null}
-      <div className="os-stats">
-        <Stat label="Assigned to me" value={myTasks.length} href="/os/tasks" />
-        <Stat label="Overdue" value={overdue} href="/os/tasks" />
-        <Stat label="Due this week" value={dueThisWeek} href="/os/calendar" />
-        <Stat label="Waiting on my review" value={reviewRows.length} />
+    <div className="os-page">
+      <header className="os-page-head">
+        <div>
+          <p className="os-eyebrow">{new Intl.DateTimeFormat("en-CA", { weekday: "long", month: "long", day: "numeric", timeZone: "America/Toronto" }).format(now)}</p>
+          <h1>{greeting()}, {first}.</h1>
+          <p className="os-page-sub">{intro}</p>
+        </div>
+      </header>
+      {me.positions.length === 0 && !me.is_admin ? <p className="os-note">You don&apos;t hold a position yet, so there isn&apos;t much to show. An administrator can assign you one.</p> : null}
+      {(announcements.data ?? []).map(a => <div key={a.id} className="os-announcement"><strong>{a.title}</strong><p>{a.body}</p></div>)}
+
+      <div className="os-split">
+        <div className="os-stack-lg">
+          {showChecklist ? (
+            <section className="os-panel" aria-labelledby="start">
+              <header className="os-panel-head">
+                <h2 id="start">Getting started</h2>
+                <span className="os-row">
+                  <span className="os-muted">{doneCount} of {steps.length} done</span>
+                  <ActionForm action={dismissChecklist}><button type="submit" className="os-link-btn">Hide</button></ActionForm>
+                </span>
+              </header>
+              <div className="os-progress" aria-hidden="true"><span style={{ width: `${(doneCount / steps.length) * 100}%` }} /></div>
+              <ul className="os-steps-list">
+                {steps.map(s => (
+                  <li key={s.label} className={s.done ? "is-done" : undefined}>
+                    <span className="os-step-mark" aria-hidden="true">{s.done ? "✓" : ""}</span>
+                    <span className="os-step-label">{s.label}<span className="sr-only">{s.done ? " (done)" : ""}</span></span>
+                    {!s.done && s.href ? <Link className="os-link" href={s.href}>{s.action}</Link> : null}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+
+          <Section title="Needs you">
+            {items.length === 0 ? <p className="os-empty">You&apos;re all caught up. When someone gives you work or asks your team for something, it lands here.</p> : (
+              <ul className="os-needs">
+                {items.map(n => (
+                  <li key={n.key} className="os-need">
+                    <div>
+                      <Link className="os-need-title" href={n.href}>{n.title}</Link>
+                      <small>{n.why}</small>
+                    </div>
+                    {n.due && n.due !== "No date" ? <span className={`os-due os-due-${n.tone}`}>{n.due}</span> : null}
+                    <Link className="os-btn os-btn-primary" href={n.href} aria-label={`${n.cta}: ${n.title}`}>{n.cta}</Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Section>
+
+          {later.length ? (
+            <Section title="Coming up for you" action={<Link className="os-link" href="/os/tasks">All tasks</Link>}>
+              <ul className="os-rows">
+                {later.slice(0, 6).map(t => <li key={t.id}><Link href={`/os/tasks/${t.id}`}>{t.title}</Link><Due value={t.due_at} /></li>)}
+              </ul>
+            </Section>
+          ) : null}
+        </div>
+
+        <aside className="os-stack-lg">
+          {handover.data && !done.handover_read ? (
+            <section className="os-feature">
+              <p className="os-hand">From last year&apos;s team</p>
+              <h2>Start with {position?.department_name}&apos;s handover</h2>
+              <p>What&apos;s still open, how the team works, and where everything lives.</p>
+              <Link className="os-btn os-btn-invert" href={`/os/projects/${handover.data.id}`}>Read the handover</Link>
+            </section>
+          ) : null}
+          {team.length ? (
+            <Section title="Your team" action={position ? <Link className="os-link" href={`/os/teams/${position.department_slug}`}>Open {position.department_name}</Link> : null}>
+              <ul className="os-people-list">
+                {team.map(s => <li key={s.key}><Avatar name={s.name} lead={s.isHead} /><span><strong>{s.name ?? "Open seat"}{s.execId === me.id ? " (you)" : ""}</strong><small>{s.title}</small></span></li>)}
+              </ul>
+            </Section>
+          ) : null}
+          <Section title="Coming up at WEC" action={<Link className="os-link" href="/os/calendar/core">Calendar</Link>}>
+            {coming.length === 0 ? <p className="os-empty">Nothing on the Core Calendar yet. Approved events show up here.</p> : (
+              <ul className="os-rows">
+                {coming.map(c => {
+                  const href = c.can_open && c.item_type !== "milestone" ? entityHref(c.item_type, c.item_id) : null;
+                  return <li key={c.item_type + c.item_id}>{href ? <Link href={href}>{c.title}</Link> : <span>{c.title}</span>}<small className="os-muted">{formatDateTime(c.starts_at)}</small></li>;
+                })}
+              </ul>
+            )}
+          </Section>
+        </aside>
       </div>
-      {(announcements.data ?? []).map(a => (
-        <div key={a.id} className="os-announcement"><strong>{a.title}</strong><p>{a.body}</p></div>
-      ))}
-      <div className="os-grid">
-        <Panel title="My tasks" action={<Link className="os-link" href="/os/tasks">All</Link>}>
-          <TaskTable tasks={myTasks} teamOf={teamOf} empty="Nothing assigned to you right now." />
-        </Panel>
-        <Panel title="Upcoming" action={<Link className="os-link" href="/os/calendar">Calendar</Link>}>
-          {agenda.length === 0 ? <Empty>Nothing in the next two weeks.</Empty> : (
-            <ul className="os-list">
-              {agenda.map(i => {
-                const href = entityHref(i.item_type, i.item_id);
-                return <li key={`${i.item_type}${i.item_id}`}>{href && i.item_type !== "milestone" ? <Link href={href}>{i.title}</Link> : i.title}<span className="os-muted">{formatDateTime(i.starts_at)}</span></li>;
-              })}
-            </ul>
-          )}
-        </Panel>
-        {reviewRows.length ? <Panel title="Pending reviews"><TaskTable tasks={reviewRows} nameOf={nameOf} /></Panel> : null}
-        {(requests.data ?? []).length ? <Panel title="Requests waiting for an answer"><TaskTable tasks={requests.data ?? []} /></Panel> : null}
-        <Panel title="Tasks I assigned"><TaskTable tasks={assigned.data ?? []} nameOf={nameOf} empty="You have not assigned anything open." /></Panel>
-        <Panel title="Projects">
-          {projects.length === 0 ? <Empty>No active projects yet.</Empty> : (
-            <ul className="os-list">
-              {projects.map(p => <li key={p.id}><Link href={`/os/projects/${p.id}`}>{p.name}</Link><span className="os-list-side"><Progress value={p.progress} /><span className="os-muted">{p.progress}%</span></span></li>)}
-            </ul>
-          )}
-        </Panel>
-        <Panel title="Notifications" action={<Link className="os-link" href="/os/notifications">All</Link>}>
-          {notifications.length === 0 ? <Empty>You are all caught up.</Empty> : (
-            <ul className="os-list">
-              {notifications.map(n => {
-                const href = entityHref(n.entity_type, n.entity_id);
-                return <li key={n.id}><span>{notificationText(n.kind)}: {href ? <Link href={href}>{n.title}</Link> : n.title}</span><span className="os-muted">{formatDate(n.created_at)}</span></li>;
-              })}
-            </ul>
-          )}
-        </Panel>
-        <Panel title="Relevant SOPs" action={<Link className="os-link" href="/os/sops">Library</Link>}>
-          {(sops.data ?? []).length === 0 ? <Empty>Your department has no published SOPs yet.</Empty> : (
-            <ul className="os-list">
-              {(sops.data ?? []).map(s => <li key={s.id}><Link href={`/os/sops/${s.id}`}>{s.title}</Link>{s.review_on && s.review_on <= torontoDateKey(now) ? <Pill value="changes_requested" /> : null}</li>)}
-            </ul>
-          )}
-        </Panel>
-      </div>
-    </Page>
+    </div>
   );
 }

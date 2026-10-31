@@ -19,6 +19,7 @@ export type Me = {
   full_name: string;
   preferred_name: string | null;
   status: "invited" | "active" | "deactivated";
+  onboarding: Record<string, string>;
   is_admin: boolean;
   is_president: boolean;
   positions: {
@@ -37,7 +38,7 @@ export type Me = {
 export type ProjectSummary = {
   id: string; kind: string; name: string; status: string; approval_status: string; starts_on: string | null; due_on: string | null;
   progress: number; department_name: string | null; event_id: string | null; event_name: string | null; archived_at: string | null;
-  can_open: boolean; lead_name: string | null;
+  can_open: boolean; lead_name: string | null; next_due: string | null; overdue_tasks: number;
 };
 
 export type CalendarItem = {

@@ -34,9 +34,10 @@ test("event: proposal, approval, generated projects and tasks", async ({ page })
   await page.getByRole("link", { name: EVENT }).click();
   await page.getByRole("button", { name: "Approve" }).click();
   await expect(page.locator(".os-page-head").getByText("Approved")).toBeVisible();
-  await expect(page.getByRole("link", { name: `${EVENT} — Content` })).toBeVisible();
-  await expect(page.getByRole("link", { name: `${EVENT} — Outreach` })).toBeVisible();
-  await expect(page.getByRole("link", { name: `${EVENT} — Sponsorship` })).toHaveCount(0);
+  const byTeam = page.getByRole("group", { name: "Team progress" });
+  await expect(byTeam.getByRole("link", { name: "Content", exact: true })).toBeVisible();
+  await expect(byTeam.getByRole("link", { name: "Outreach", exact: true })).toBeVisible();
+  await expect(byTeam.getByRole("link", { name: "Sponsorship", exact: true })).toHaveCount(0);
 
   await signIn(page, PEOPLE.vpContent);
   await page.goto("/os/notifications");
@@ -56,6 +57,7 @@ test("task: assign, complete, and readiness moves", async ({ page }) => {
   await page.getByRole("link", { name: `${EVENT} — Content` }).click();
   await page.getByRole("link", { name: "Collect promotional requirements" }).click();
   await page.waitForLoadState("networkidle");
+  await page.locator("summary", { hasText: "Change who has this" }).click();
   await page.getByLabel("Assign to").selectOption({ label: "Dana Director" });
   await page.getByRole("button", { name: "Assign", exact: true }).click();
   await expect(page.getByText("Assigned.", { exact: true })).toBeVisible();
@@ -68,6 +70,37 @@ test("task: assign, complete, and readiness moves", async ({ page }) => {
 
   await page.goto("/os/events");
   await expect(page.locator(".os-list li", { hasText: EVENT })).not.toContainText("0% ready");
+});
+
+test("projects: one list with views, grouped tasks, and settings kept apart", async ({ page }) => {
+  await signIn(page, PEOPLE.vpContent);
+  await page.getByRole("link", { name: "Projects", exact: true }).click();
+  await expect(page.getByRole("link", { name: `${EVENT} — Content` })).toBeVisible();
+  await page.getByRole("link", { name: /^Events/ }).last().click();
+  await expect(page).toHaveURL(/show=event/);
+  await page.getByRole("link", { name: `${EVENT} — Content` }).click();
+  await expect(page.getByRole("region", { name: "Ready now" }).getByRole("link", { name: "Prepare graphics" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Waiting on an earlier step" }).getByRole("link", { name: "Publish event announcement" })).toBeVisible();
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Save people" })).toBeVisible();
+
+  // A Director has no settings tab, and the address doesn't open one.
+  const url = page.url();
+  await signIn(page, PEOPLE.dirContent);
+  await page.goto(url);
+  await expect(page.getByRole("button", { name: "Save people" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Settings", exact: true })).toHaveCount(0);
+});
+
+test("another team's page shows who to ask, not their work", async ({ page }) => {
+  await signIn(page, PEOPLE.dirContent);
+  await page.getByRole("link", { name: "All Teams" }).click();
+  await expect(page.getByRole("link", { name: /Open your team/ })).toBeVisible();
+  await page.getByRole("link", { name: /Finance/ }).first().click();
+  await expect(page.getByText(/private to the team and the President/)).toBeVisible();
+  await page.getByRole("link", { name: "Ask Finance for something" }).click();
+  await expect(page.getByLabel("Send to")).toHaveValue(/.+/);
+  await expect(page.getByLabel("Send to").locator("option:checked")).toHaveText("Finance");
 });
 
 test("kanban: a card moves with the keyboard-reachable control", async ({ page }) => {
@@ -178,7 +211,7 @@ test("global project: a VP proposes, the President publishes", async ({ page }) 
   await signIn(page, PEOPLE.president);
   await page.goto(url);
   await page.getByRole("button", { name: "Approve and publish" }).click();
-  await expect(page.locator(".os-page-head").getByText("Approved")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Approve and publish" })).toHaveCount(0);
 
   await signIn(page, PEOPLE.vpFinance);
   await page.goto("/os/projects/global");

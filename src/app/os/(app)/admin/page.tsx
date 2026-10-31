@@ -1,5 +1,6 @@
 import { ActionForm, SubmitButton } from "@/components/os/ActionForm";
 import { Calendar } from "@/components/os/Calendar";
+import { MarkOnboarding } from "@/components/os/MarkOnboarding";
 import { Empty, Panel, Stat } from "@/components/os/ui";
 import { runSweepNow } from "@/lib/os/actions/admin";
 import { requireAdmin } from "@/lib/os/dal";
@@ -7,7 +8,7 @@ import { formatDateTime, hoursSince } from "@/lib/os/format";
 import { createClient, rpc } from "@/lib/os/supabase";
 
 export default async function AdminOverview({ searchParams }: { searchParams: Promise<{ view?: string; date?: string; show?: string | string[] }> }) {
-  await requireAdmin();
+  const me = await requireAdmin();
   const supabase = await createClient();
   const [active, invited, dead, failedRuns, heartbeat, unrouted] = await Promise.all([
     supabase.from("executives").select("id", { count: "exact", head: true }).eq("status", "active"),
@@ -21,6 +22,7 @@ export default async function AdminOverview({ searchParams }: { searchParams: Pr
   const stale = !beat || hoursSince(beat) > 2;
   return (
     <>
+      {me.onboarding?.admin_seen ? null : <MarkOnboarding step="admin_seen" />}
       <div className="os-stats">
         <Stat label="Active executives" value={active.count ?? 0} href="/os/admin/executives" />
         <Stat label="Open invitations" value={invited.count ?? 0} href="/os/admin/executives" />
