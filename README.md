@@ -75,6 +75,10 @@ Community pairs the conversation photo with the supplied portrait of a presenter
 
 Experience and foundation sequences release scrolling at their boundaries, on Escape, on outside focus, or through links. Reversing near an exit re-enters at the correct end; reversing out of the pillars leaves the building empty. Consumed gestures do not also move the page. Navigation can be interrupted by wheel, touch, or keyboard input, and the mobile menu pauses background scrolling. They run on screens at least 640px tall, or desktop layouts at least 960px wide and 500px tall. Shorter screens keep all programs and pillar descriptions in document flow while retaining decorative motion. Rotating a phone releases the lock and restores the appropriate layout. Mobile also uses larger tap targets, tighter section spacing, clearer Experience copy, a compact photo collage, and anchor offsets measured from the header. Narrow screens bring the active Field cell into view horizontally. The hero uses a ScrollTrigger pin on screens at least 600px tall or at least 960px wide and 500px tall. The ecosystem journey also pins on screens at least 640px tall. Both pins use their existing scene height without adding spacer padding. Shorter screens use normal flow. The footer's motion toggle restores a static door, exposes all Field and pillar descriptions, removes locks and pins, and saves the preference. All meaningful content is server rendered. The Morrissette ecosystem remains before Who WEC is for.
 
+## WEC OS
+
+The private executive workspace under `/os`. Its setup, operations and year-end steps are in `docs/WEC-OS.md`. The public site does not depend on it: with no Supabase settings the site builds and runs as usual, and `/os` says it is not set up.
+
 ## Verification
 
 ```sh

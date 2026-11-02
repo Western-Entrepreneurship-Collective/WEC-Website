@@ -75,4 +75,4 @@ The doorway collage uses all six originals from the repository's `WEC Collage Ph
 
 ## Before public deployment
 
-Supply the real membership and event URLs, set the public origin, and rebuild. The website does not require a database. A Next.js-compatible host can run the production build. No public deployment was performed as part of the local implementation.
+Supply the real membership and event URLs, set the public origin, and rebuild. The public website does not require a database: it builds and runs with no Supabase settings at all. WEC OS, the private workspace under `/os`, is the only part that uses one; see `docs/WEC-OS.md`. A Next.js-compatible host can run the production build. No public deployment was performed as part of the local implementation.
