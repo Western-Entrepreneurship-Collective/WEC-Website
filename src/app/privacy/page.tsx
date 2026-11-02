@@ -5,7 +5,7 @@ import { PRIVACY_EMAIL, PRIVACY_PATH } from "@/lib/privacy";
 
 /**
  * The privacy policy, word for word as the club approved it on 21 Sept 2026,
- * plus the executive accounts lines added 31 Oct 2026 for WEC OS.
+ * plus the executive accounts lines for WEC OS, confirmed 2 Nov 2026.
  *
  * ⛔ Change the wording only with the club's say-so, and update LAST_UPDATED
  * whenever it changes: the policy itself promises that date moves.
@@ -16,7 +16,7 @@ import { PRIVACY_EMAIL, PRIVACY_PATH } from "@/lib/privacy";
  * under /os is scoped to that path and is the one the policy names), and both forms refuse to
  * send anything until the visitor ticks the box that links here.
  */
-const LAST_UPDATED = "31 October 2026";
+const LAST_UPDATED = "2 November 2026";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — WEC",
@@ -97,8 +97,8 @@ export default function PrivacyPage() {
         <ul>
           <li>Your answers are sent to Google Forms and stored in Google Sheets.</li>
           <li>Google may store this information outside Canada.</li>
-          <li>WEC OS data is stored with Supabase, in Canada.</li>
-          <li>WEC OS notification emails are sent through Resend, which may process your email address outside Canada.</li>
+          <li>WEC OS data is stored with Supabase, in the United States.</li>
+          <li>WEC OS notification and account emails, such as password resets, are sent through Resend, which may process your email address outside Canada.</li>
         </ul>
 
         <h2>How long we keep it</h2>

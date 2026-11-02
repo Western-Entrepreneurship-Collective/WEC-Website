@@ -9,7 +9,7 @@ import {
   addComment, addDependency, assignTask, decideDeadline, delegateRequest, deleteChecklistItem, proposeDeadline, removeDependency,
   saveChecklistItem, setTaskStatus, updateTask,
 } from "@/lib/os/actions/work";
-import { displayName, getDirectory, inDepartment, nameLookup, requireMe } from "@/lib/os/dal";
+import { can, displayName, getDirectory, inDepartment, nameLookup, requireMe } from "@/lib/os/dal";
 import { formatDate, formatDateTime, label, torontoDateKey } from "@/lib/os/format";
 import { createClient, rpc } from "@/lib/os/supabase";
 
@@ -175,7 +175,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
             ) : !task.is_cross_team && open && !archived && (canEdit || (task.assigned_to === null && inResponsible)) ? (
               <ActionForm action={assignTask} className="os-stack">
                 <Hidden name="id" value={id} />
-                <Field label="Who"><select name="assignee" defaultValue={task.assigned_to ?? ""}><option value="">Nobody yet</option>{directory.filter(p => p.status === "active" && (teamIds.has(p.id) || p.id === me.id || p.id === task.assigned_to)).map(p => <option key={p.id} value={p.id}>{displayName(p)}</option>)}</select></Field>
+                <Field label="Who"><select name="assignee" defaultValue={task.assigned_to ?? ""}><option value="">Nobody yet</option>{directory.filter(p => p.status === "active" && ((can(me, "task.assign") && teamIds.has(p.id)) || p.id === me.id || p.id === task.assigned_to)).map(p => <option key={p.id} value={p.id}>{displayName(p)}</option>)}</select></Field>
                 <div><SubmitButton variant="ghost">Change</SubmitButton></div>
               </ActionForm>
             ) : (

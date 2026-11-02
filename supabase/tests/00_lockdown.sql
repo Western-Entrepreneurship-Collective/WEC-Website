@@ -1,6 +1,6 @@
 begin;
 \ir helpers.psql
-select plan(9);
+select plan(11);
 
 select is((select count(*)::int from pg_tables t join pg_class c on c.relname = t.tablename and c.relnamespace = 'os'::regnamespace
   where t.schemaname = 'os' and not c.relrowsecurity), 0, 'every table in os has RLS enabled');
@@ -30,6 +30,12 @@ select ok(not has_function_privilege('authenticated', 'api.bootstrap_first_admin
 
 select is((select count(*)::int from os.permissions k
   where not exists (select 1 from os.permission_grants g where g.permission_key = k.key)), 0, 'every permission has a default grant');
+
+select is((select count(*)::int from os.permissions k where k.key <> 'sop.archive' and (
+  select count(*) from os.permission_grants g where g.permission_key = k.key and g.org_role in ('vp', 'director', 'coordinator')
+) not in (0, 3)), 0, 'VPs, Directors and Coordinators hold the same permissions, apart from archiving SOPs');
+
+select is((select sum(seat_count)::int from os.positions where archived_at is null), 22, 'the 2026-27 structure has 22 seats');
 
 select * from finish();
 rollback;

@@ -6,7 +6,7 @@ import { Upload } from "@/components/os/Upload";
 import { Field, Hidden, Page, Panel, PeopleSelect, Pill } from "@/components/os/ui";
 import { publishSopVersion, returnSopVersion, saveSopDraft, setSopArchived, startSopDraft, submitSopVersion, updateSop } from "@/lib/os/actions/knowledge";
 import { can, getDirectory, inDepartment, nameLookup, requireMe } from "@/lib/os/dal";
-import { formatDate, formatDateTime, label } from "@/lib/os/format";
+import { editsSops, formatDate, formatDateTime, label } from "@/lib/os/format";
 import { createClient } from "@/lib/os/supabase";
 
 export const metadata: Metadata = { title: "SOP" };
@@ -18,11 +18,10 @@ export default async function SopPage({ params }: { params: Promise<{ id: string
   const supabase = await createClient();
   const { data: sop } = await supabase.from("sops").select("*").eq("id", id).maybeSingle();
   if (!sop) notFound();
-  const [directory, versions, approvals, positions, projects, files] = await Promise.all([
+  const [directory, versions, approvals, projects, files] = await Promise.all([
     getDirectory(),
     supabase.from("sop_versions").select("*").eq("sop_id", id).order("major", { ascending: false }).order("minor", { ascending: false }),
     supabase.from("sop_approvals").select("*, sop_versions!inner(sop_id, major, minor)").eq("sop_versions.sop_id", id).order("created_at"),
-    supabase.from("positions").select("id, title").eq("department_id", sop.department_id).is("archived_at", null),
     supabase.from("project_sop_refs").select("project_id, sop_version_id, projects(name), sop_versions!inner(sop_id, major, minor)").eq("sop_versions.sop_id", id),
     supabase.from("attachments").select("*").eq("entity_type", "sop").eq("entity_id", id),
   ]);
@@ -31,8 +30,9 @@ export default async function SopPage({ params }: { params: Promise<{ id: string
   const list = versions.data ?? [];
   const current = list.find(v => v.id === sop.current_version_id);
   const draft = list.find(v => ["draft", "submitted", "approved"].includes(v.status));
-  const manages = !sop.archived_at && (me.is_president || me.is_admin || inDepartment(me, sop.department_id) || sop.responsible_executive_id === me.id);
-  const publishes = me.is_admin || (sop.approver_position_id ? me.positions.some(p => p.position_id === sop.approver_position_id) : (can(me, "sop.publish") && (inDepartment(me, sop.department_id) || me.is_president)));
+  const edits = !sop.archived_at && editsSops(me, sop.department_id);
+  const approves = !sop.archived_at && me.is_president;
+  const archives = !sop.archived_at && (me.is_admin || (can(me, "sop.archive") && (me.is_president || inDepartment(me, sop.department_id))));
 
   return (
     <Page eyebrow="SOP" title={sop.title} actions={<>{sop.archived_at ? <Pill value="archived" /> : null}{current ? <span className="os-tag">v{current.major}.{current.minor}</span> : <Pill value="draft" />}</>}>
@@ -44,9 +44,9 @@ export default async function SopPage({ params }: { params: Promise<{ id: string
               <div className="os-doc">{current.content || <span className="os-muted">This version is empty.</span>}</div>
             </Panel>
           ) : null}
-          {draft && manages ? (
+          {draft ? (
             <Panel title={`Draft: ${draft.major}.${draft.minor}`} action={<Pill value={draft.status} />}>
-              {draft.status === "draft" ? (
+              {draft.status === "draft" && edits ? (
                 <ActionForm action={saveSopDraft} className="os-stack">
                   <Hidden name="version" value={draft.id} /><Hidden name="expected" value={draft.updated_at} />
                   <Field label="Procedure"><textarea name="content" rows={14} defaultValue={draft.content} /></Field>
@@ -54,16 +54,18 @@ export default async function SopPage({ params }: { params: Promise<{ id: string
                   <div><SubmitButton variant="ghost">Save draft</SubmitButton></div>
                 </ActionForm>
               ) : <div className="os-doc">{draft.content}</div>}
-              {draft.status === "draft" ? <ActionForm action={submitSopVersion}><Hidden name="version" value={draft.id} /><SubmitButton>Submit for approval</SubmitButton></ActionForm> : null}
-              {draft.status !== "draft" && publishes ? (
+              {draft.status === "draft" && edits && !approves ? <ActionForm action={submitSopVersion} className="os-stack"><Hidden name="version" value={draft.id} /><p className="os-muted">The President approves it before it&apos;s published.</p><div><SubmitButton>Send to the President</SubmitButton></div></ActionForm> : null}
+              {draft.status !== "draft" && !approves ? <p className="os-muted">Waiting for the President to approve it.</p> : null}
+              {draft.status === "draft" && approves && draft.author_id !== me.id ? <p className="os-muted">Waiting for the person who wrote it to send it for approval.</p> : null}
+              {(draft.status !== "draft" || draft.author_id === me.id) && approves ? (
                 <div className="os-stack">
-                  <ActionForm action={publishSopVersion} confirm={`Publish version ${draft.major}.${draft.minor}? The current version is kept in the history, and this one cannot be changed afterwards.`}><Hidden name="version" value={draft.id} /><SubmitButton>Publish</SubmitButton></ActionForm>
-                  <ActionForm action={returnSopVersion} className="os-inline-form"><Hidden name="version" value={draft.id} /><Field label="Send back with a note"><input name="note" required /></Field><SubmitButton variant="ghost">Send back</SubmitButton></ActionForm>
+                  <ActionForm action={publishSopVersion} confirm={`Publish version ${draft.major}.${draft.minor}? The current version is kept in the history, and this one cannot be changed afterwards.`}><Hidden name="version" value={draft.id} /><SubmitButton>Approve and publish</SubmitButton></ActionForm>
+                  {draft.status === "draft" ? null : <ActionForm action={returnSopVersion} className="os-inline-form"><Hidden name="version" value={draft.id} /><Field label="Send back with a note"><input name="note" required /></Field><SubmitButton variant="ghost">Send back</SubmitButton></ActionForm>}
                 </div>
               ) : null}
             </Panel>
           ) : null}
-          {!draft && manages && current ? (
+          {!draft && edits && current ? (
             <Panel title="Revise">
               <div className="os-row os-wrap">
                 <ActionForm action={startSopDraft}><Hidden name="id" value={id} /><SubmitButton variant="ghost">Start minor revision</SubmitButton></ActionForm>
@@ -106,9 +108,9 @@ export default async function SopPage({ params }: { params: Promise<{ id: string
           </Panel>
           <Panel title="Files">
             <ul className="os-list">{(files.data ?? []).map(a => <li key={a.id}><a className="os-link" href={`/os/attachments/${a.id}`}>{a.file_name}</a></li>)}</ul>
-            {manages ? <Upload type="sop" entity={id} /> : null}
+            {edits ? <Upload type="sop" entity={id} /> : null}
           </Panel>
-          {manages ? (
+          {edits ? (
             <Panel title="Manage">
               <ActionForm action={updateSop} className="os-stack">
                 <Hidden name="id" value={id} /><Hidden name="expected" value={sop.updated_at} />
@@ -117,14 +119,11 @@ export default async function SopPage({ params }: { params: Promise<{ id: string
                 <Field label="Readable by"><select name="visibility" defaultValue={sop.visibility}><option value="all_execs">Every executive</option><option value="department">The department</option><option value="restricted">Restricted</option></select></Field>
                 <Field label="Review by"><input name="review_on" type="date" defaultValue={sop.review_on ?? ""} /></Field>
                 <PeopleSelect name="responsible" people={directory} label="Responsible" value={sop.responsible_executive_id} />
-                <Field label="Approver" hint="Blank means anyone in the department who can publish.">
-                  <select name="approver" defaultValue={sop.approver_position_id ?? ""}><option value="">Department default</option>{(positions.data ?? []).map(p => <option key={p.id} value={p.id}>{p.title}</option>)}</select>
-                </Field>
                 <div><SubmitButton variant="ghost">Save</SubmitButton></div>
               </ActionForm>
-              {(can(me, "sop.archive") || me.is_admin) ? <ActionForm action={setSopArchived} confirm="Archive this SOP? Published versions stay on record."><Hidden name="id" value={id} /><Hidden name="archived" value="true" /><SubmitButton variant="ghost">Archive</SubmitButton></ActionForm> : null}
             </Panel>
           ) : null}
+          {archives ? <ActionForm action={setSopArchived} confirm="Archive this SOP? Published versions stay on record."><Hidden name="id" value={id} /><Hidden name="archived" value="true" /><SubmitButton variant="ghost">Archive</SubmitButton></ActionForm> : null}
         </div>
       </div>
     </Page>

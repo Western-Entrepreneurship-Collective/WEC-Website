@@ -11,7 +11,7 @@ export async function createSop(_: ActionResult, fd: FormData): Promise<ActionRe
     id = await rpc<string>("create_sop", {
       p_title: text(fd, "title", { max: 160, label: "Title" }), p_department: uuid(fd, "department"), p_description: optional(fd, "description") ?? "",
       p_visibility: text(fd, "visibility", { max: 20 }), p_review_on: date(fd, "review_on", "Review date"), p_responsible: optionalUuid(fd, "responsible"),
-      p_approver_position: optionalUuid(fd, "approver"), p_content: optional(fd, "content", 200000) ?? "",
+      p_content: optional(fd, "content", 200000) ?? "",
     });
   });
   if (!r.ok) return r;
@@ -20,11 +20,11 @@ export async function createSop(_: ActionResult, fd: FormData): Promise<ActionRe
 
 export const updateSop = async (_: ActionResult, fd: FormData) => run(() => rpc("update_sop", {
   p_sop: uuid(fd, "id"), p_title: text(fd, "title", { max: 160, label: "Title" }), p_description: optional(fd, "description") ?? "", p_visibility: text(fd, "visibility", { max: 20 }),
-  p_review_on: date(fd, "review_on", "Review date"), p_responsible: optionalUuid(fd, "responsible"), p_approver_position: optionalUuid(fd, "approver"), p_expected: optional(fd, "expected"),
+  p_review_on: date(fd, "review_on", "Review date"), p_responsible: optionalUuid(fd, "responsible"), p_expected: optional(fd, "expected"),
 }), "Saved.");
 export const startSopDraft = async (_: ActionResult, fd: FormData) => run(() => rpc("start_sop_draft", { p_sop: uuid(fd, "id"), p_major: fd.get("major") === "true", p_from_version: optionalUuid(fd, "from") }), "Draft started.");
 export const saveSopDraft = async (_: ActionResult, fd: FormData) => run(() => rpc("save_sop_draft", { p_version: uuid(fd, "version"), p_content: optional(fd, "content", 200000) ?? "", p_change_note: optional(fd, "change_note", 500) ?? "", p_expected: optional(fd, "expected") }), "Draft saved.");
-export const submitSopVersion = async (_: ActionResult, fd: FormData) => run(() => rpc("submit_sop_version", { p_version: uuid(fd, "version") }), "Submitted for approval.");
+export const submitSopVersion = async (_: ActionResult, fd: FormData) => run(() => rpc("submit_sop_version", { p_version: uuid(fd, "version") }), "Sent to the President.");
 export const returnSopVersion = async (_: ActionResult, fd: FormData) => run(() => rpc("return_sop_version", { p_version: uuid(fd, "version"), p_note: text(fd, "note", { label: "Note" }) }));
 export const publishSopVersion = async (_: ActionResult, fd: FormData) => run(() => rpc("publish_sop_version", { p_version: uuid(fd, "version"), p_note: optional(fd, "note") ?? "" }), "Published.");
 export const setSopArchived = async (_: ActionResult, fd: FormData) => run(() => rpc("set_sop_archived", { p_sop: uuid(fd, "id"), p_archived: fd.get("archived") === "true" }));

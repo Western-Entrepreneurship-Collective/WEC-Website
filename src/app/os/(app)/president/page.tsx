@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ActionForm, SubmitButton } from "@/components/os/ActionForm";
 import { RequestCard } from "@/components/os/RequestCard";
 import { Empty, Field, Hidden, Meter, TaskRow, TeamTile } from "@/components/os/ui";
+import { publishSopVersion, returnSopVersion } from "@/lib/os/actions/knowledge";
 import { archiveAnnouncement, decideEvent, publishAnnouncement } from "@/lib/os/actions/work";
 import { displayName, getDepartments, getDirectory, requirePresident } from "@/lib/os/dal";
 import { daysUntil, formatDate } from "@/lib/os/format";
@@ -29,6 +30,8 @@ export default async function PresidentPage() {
     getDirectory(),
     supabase.from("tasks").select("*").in("request_state", ["pending", "clarification_requested"]).order("created_at").limit(50),
   ]);
+  const { data: sopVersions } = await supabase.from("sop_versions").select("id, major, minor, author_id, sops!sop_versions_sop_id_fkey(id, title, department_id)").eq("status", "submitted").order("updated_at");
+  const sopsWaiting = sopVersions ?? [];
   const hasLead = (departmentId: string) => seats.some(s => s.departmentId === departmentId && s.isHead && s.name);
   const nameOfTeam = (id: string) => departments.find(d => d.id === id)?.name ?? "A team";
   // Requests reach the President only for a team with nobody in its lead seat.
@@ -50,7 +53,7 @@ export default async function PresidentPage() {
       <div className="os-split">
         <div className="os-stack-lg">
           <section className="os-requests" aria-labelledby="decide">
-            <header><h2 id="decide">Waiting on you</h2>{(pendingEvents.data ?? []).length + routed.length === 0 ? <p>Nothing right now.</p> : null}</header>
+            <header><h2 id="decide">Waiting on you</h2>{(pendingEvents.data ?? []).length + routed.length + sopsWaiting.length === 0 ? <p>Nothing right now.</p> : null}</header>
             {(pendingEvents.data ?? []).map(e => (
               <article key={e.id} className="os-request">
                 <div className="os-request-head">
@@ -69,6 +72,27 @@ export default async function PresidentPage() {
                     <SubmitButton name="decision" value="rejected" variant="danger">Reject</SubmitButton>
                   </div>
                 </ActionForm>
+              </article>
+            ))}
+            {sopsWaiting.map(v => (
+              <article key={v.id} className="os-request">
+                <div className="os-request-head">
+                  <div>
+                    <Link href={`/os/sops/${v.sops?.id}`}>{v.sops?.title}</Link>
+                    <small>SOP version {v.major}.{v.minor} from {nameOf(v.author_id ?? "")}, {nameOfTeam(v.sops?.department_id ?? "")}</small>
+                  </div>
+                </div>
+                <div className="os-request-actions">
+                  <ActionForm action={publishSopVersion}><Hidden name="version" value={v.id} /><SubmitButton>Approve and publish</SubmitButton></ActionForm>
+                  <details className="os-more os-request-decline">
+                    <summary>Send back</summary>
+                    <ActionForm action={returnSopVersion} className="os-inline-form">
+                      <Hidden name="version" value={v.id} />
+                      <Field label="What needs to change?"><input name="note" required maxLength={500} /></Field>
+                      <SubmitButton variant="ghost">Send back</SubmitButton>
+                    </ActionForm>
+                  </details>
+                </div>
               </article>
             ))}
             {routed.map(t => (

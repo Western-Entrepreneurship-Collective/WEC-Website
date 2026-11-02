@@ -3,15 +3,16 @@ import { notFound } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/os/ActionForm";
 import { Field, Page } from "@/components/os/ui";
 import { createSop } from "@/lib/os/actions/knowledge";
-import { can, getDepartments, requireMe } from "@/lib/os/dal";
+import { getDepartments, requireMe } from "@/lib/os/dal";
+import { editsSops } from "@/lib/os/format";
 
 export const metadata: Metadata = { title: "New SOP" };
 
 export default async function NewSopPage() {
   const me = await requireMe();
-  if (!can(me, "sop.create")) notFound();
+  if (!editsSops(me)) notFound();
   const departments = await getDepartments();
-  const choices = me.is_president ? departments : departments.filter(d => me.positions.some(p => p.department_id === d.id));
+  const choices = departments.filter(d => editsSops(me, d.id));
   return (
     <Page title="New SOP">
       <ActionForm action={createSop} className="os-stack os-panel">
@@ -24,7 +25,7 @@ export default async function NewSopPage() {
           <Field label="Review by"><input name="review_on" type="date" /></Field>
         </div>
         <Field label="Description"><textarea name="description" rows={2} /></Field>
-        <Field label="Procedure" hint="This is the first draft, version 1.0. Nothing is visible outside your department until it is published."><textarea name="content" rows={14} /></Field>
+        <Field label="Procedure" hint="This is the first draft, version 1.0. Nothing is visible outside the team until the President approves it."><textarea name="content" rows={14} /></Field>
         <div><SubmitButton>Create draft</SubmitButton></div>
       </ActionForm>
     </Page>

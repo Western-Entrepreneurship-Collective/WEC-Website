@@ -78,7 +78,7 @@ export type Database = {
 { Args: { "p_departments"?: (string)[],"p_fields": Json,"p_template"?: string }; Returns: string
                            },
 "create_sop":
-{ Args: { "p_approver_position": string,"p_content": string,"p_department": string,"p_description": string,"p_responsible": string,"p_review_on": string,"p_title": string,"p_visibility": string }; Returns: string
+{ Args: { "p_content": string,"p_department": string,"p_description": string,"p_responsible": string,"p_review_on": string,"p_title": string,"p_visibility": string }; Returns: string
                            },
 "create_task":
 { Args: { "p_fields": Json,"p_project": string }; Returns: string
@@ -342,7 +342,7 @@ export type Database = {
 { Args: { "p_expected"?: string,"p_fields": Json,"p_project": string }; Returns: number
                            },
 "update_sop":
-{ Args: { "p_approver_position": string,"p_description": string,"p_expected"?: string,"p_responsible": string,"p_review_on": string,"p_sop": string,"p_title": string,"p_visibility": string }; Returns: undefined
+{ Args: { "p_description": string,"p_expected"?: string,"p_responsible": string,"p_review_on": string,"p_sop": string,"p_title": string,"p_visibility": string }; Returns: undefined
                            },
 "update_task":
 { Args: { "p_expected"?: string,"p_fields": Json,"p_task": string }; Returns: undefined

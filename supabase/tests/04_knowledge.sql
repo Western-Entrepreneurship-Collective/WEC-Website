@@ -1,20 +1,42 @@
 -- SOPs, meetings, calendars, search, deactivation, the year transition, archives.
 begin;
 \ir helpers.psql
-select plan(56);
+select plan(68);
 
 -- ─── SOP versions ──────────────────────────────────────────────────────────
 select tests.login(:'dirco');
-select set_config('t.s', api.create_sop('Posting guide', tests.dept('content'), 'How we post', 'all_execs', current_date + 10, null, null, 'First words')::text, true);
+select throws_ok($$select api.create_sop('Nope', tests.dept('content'), '', 'all_execs', null, null, 'x')$$, 'P0403', null, 'a Director cannot create an SOP');
+select tests.login(:'pres');
+select set_config('t.ps', api.create_sop('Finance close', tests.dept('finance'), '', 'all_execs', null, null, 'Steps')::text, true);
+select is((select department_id from os.sops where id = current_setting('t.ps')::uuid), tests.dept('finance'), 'the President can create one for any team');
+select lives_ok($$select api.create_sop('How I run things', tests.dept('presidents-office'), '', 'all_execs', null, null, 'Steps')$$, 'and for the President''s Office');
+select lives_ok($$select api.publish_sop_version((select id from os.sop_versions where sop_id = current_setting('t.ps')::uuid))$$, 'and can publish their own draft directly');
+select tests.login(:'vpfi');
+select throws_ok($$select api.create_sop('Nope', tests.dept('content'), '', 'all_execs', null, null, 'x')$$, 'P0403', null, 'nor another team''s VP');
+select tests.login(:'vpco');
+select set_config('t.s', api.create_sop('Posting guide', tests.dept('content'), 'How we post', 'all_execs', current_date + 10, null, 'First words')::text, true);
 select set_config('t.v1', (select id::text from os.sop_versions where sop_id = current_setting('t.s')::uuid), true);
 select is((select major || '.' || minor from os.sop_versions where id = current_setting('t.v1')::uuid), '1.0', 'a new SOP starts at 1.0');
+select tests.login(:'dirco');
+select is((select count(*)::int from os.sop_versions where id = current_setting('t.v1')::uuid), 1, 'the team can read the draft');
+select throws_ok($$select api.save_sop_draft(current_setting('t.v1')::uuid, 'Mine', '')$$, 'P0403', null, 'but a Director cannot edit it');
+select throws_ok($$select api.submit_sop_version(current_setting('t.v1')::uuid)$$, 'P0403', null, 'or send it for approval');
+select throws_ok($$select api.update_sop(current_setting('t.s')::uuid, 'Mine', '', 'all_execs', null, null)$$, 'P0403', null, 'or change its details');
+select tests.login(:'pres');
+select lives_ok($$select api.save_sop_draft(current_setting('t.v1')::uuid, 'Edited by the President', '')$$, 'the President can edit any team''s draft');
+select throws_ok($$select api.publish_sop_version(current_setting('t.v1')::uuid)$$, 'P0409', null, 'but cannot publish a VP''s draft until it is sent');
+select tests.login(:'vpco');
 select api.save_sop_draft(current_setting('t.v1')::uuid, 'Better words', 'typo');
 select api.submit_sop_version(current_setting('t.v1')::uuid);
 select throws_ok($$select api.save_sop_draft(current_setting('t.v1')::uuid, 'Again', '')$$, 'P0409', null, 'a submitted draft cannot be edited');
-select throws_ok($$select api.publish_sop_version(current_setting('t.v1')::uuid)$$, 'P0403', null, 'a Director cannot publish');
+select throws_ok($$select api.publish_sop_version(current_setting('t.v1')::uuid)$$, 'P0403', null, 'its VP cannot publish it');
+select tests.login(:'adm');
+select throws_ok($$select api.publish_sop_version(current_setting('t.v1')::uuid)$$, 'P0403', null, 'nor can an administrator');
 select tests.login(:'dirfi');
+select throws_ok($$select api.publish_sop_version(current_setting('t.v1')::uuid)$$, 'P0404', null, 'nobody on another team can publish it');
 select is((select count(*)::int from os.sops where id = current_setting('t.s')::uuid), 0, 'an unpublished SOP is not visible outside the department');
-select tests.login(:'vpco');
+select tests.login(:'pres');
+select is((select count(*)::int from os.notifications where kind = 'sop.submitted' and entity_id = current_setting('t.s')::uuid), 1, 'the President is told it is waiting');
 select api.publish_sop_version(current_setting('t.v1')::uuid, 'Good');
 select tests.login(:'dirfi');
 select is((select count(*)::int from os.sop_versions where id = current_setting('t.v1')::uuid), 1, 'published is visible to every executive');
@@ -36,7 +58,9 @@ reset role;
 insert into os.projects (id, kind, owning_department_id, name, lead_executive_id) values ('b4000000-0000-0000-0000-000000000001', 'INTERNAL', tests.dept('content'), 'Uses SOP', :'vpco');
 select tests.login(:'vpco');
 select api.link_project_sop('b4000000-0000-0000-0000-000000000001', current_setting('t.v1')::uuid);
+select tests.login(:'pres');
 select api.publish_sop_version(current_setting('t.v2')::uuid);
+select tests.login(:'vpco');
 select is((select content from os.sop_versions where id = current_setting('t.v1')::uuid), 'Better words', 'publishing 1.1 leaves 1.0 untouched');
 select is((select status from os.sop_versions where id = current_setting('t.v1')::uuid), 'superseded', 'and marks it superseded');
 select is((select sop_version_id from os.project_sop_refs where project_id = 'b4000000-0000-0000-0000-000000000001')::text, current_setting('t.v1'), 'the historical project keeps its version');
@@ -50,11 +74,9 @@ select is((select count(*)::int from os.notifications where kind = 'sop.review_d
 select private.rule_sop_review('{"days":14}');
 select is((select count(*)::int from os.notifications where kind = 'sop.review_due' and entity_id = current_setting('t.s')::uuid), 1, 'and one when it does');
 
--- ─── Naming an approver takes someone who can already publish ──────────────
-select tests.login(:'dirco');
-select throws_ok($$select api.update_sop(current_setting('t.s')::uuid, 'Posting guide', '', 'all_execs', null, null, (select id from os.positions where title = 'Director of Content'))$$, 'P0403', null, 'a Director cannot name themselves approver');
-select throws_ok($$select api.create_sop('Mine', tests.dept('content'), '', 'all_execs', null, null, (select id from os.positions where title = 'Director of Content'), 'x')$$, 'P0403', null, 'not on a new SOP either');
-select lives_ok($$select api.update_sop(current_setting('t.s')::uuid, 'Posting guide', 'Edited', 'all_execs', current_date + 10, 'a0000000-0000-0000-0000-000000000004', null)$$, 'the other fields stay editable');
+-- ─── Details stay with the VP ──────────────────────────────────────────────
+select tests.login(:'vpco');
+select lives_ok($$select api.update_sop(current_setting('t.s')::uuid, 'Posting guide', 'Edited', 'all_execs', current_date + 10, 'a0000000-0000-0000-0000-000000000004')$$, 'a VP can edit the details');
 
 -- ─── No direct route to the bucket ─────────────────────────────────────────
 select is((select count(*)::int from pg_policies where schemaname = 'storage' and tablename = 'objects' and policyname like 'os_%'), 0, 'nobody can read or sign bucket objects with their own token');

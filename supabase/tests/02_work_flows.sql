@@ -29,7 +29,7 @@ select throws_ok($$delete from os.audit_log$$, '42501', null, 'no direct DELETE 
 select tests.login(:'dirfi');
 select lives_ok($$select api.create_project('{"kind":"GLOBAL","name":"Director project"}'::jsonb)$$, 'a Director can start one');
 select tests.login(:'cdou');
-select throws_ok($$select api.create_project('{"kind":"GLOBAL","name":"Nope"}'::jsonb)$$, 'P0403', null, 'a Coordinator cannot');
+select lives_ok($$select api.create_project('{"kind":"GLOBAL","name":"Coordinator project"}'::jsonb)$$, 'a Coordinator can too');
 
 select tests.login(:'vpou');
 select lives_ok($$select set_config('t.g', api.create_project('{"kind":"GLOBAL","name":"VP Global","due_on":"2027-02-01"}'::jsonb)::text, true)$$, 'a VP can start one');
@@ -86,7 +86,7 @@ select tests.login(:'dirco');
 select throws_ok($$select api.create_project(jsonb_build_object('kind','INTERNAL','name','X','owning_department_id',tests.dept('finance')))$$, 'P0403', null, 'a Director cannot create a project in another department');
 select lives_ok($$select api.create_project(jsonb_build_object('kind','INTERNAL','name','Mine','owning_department_id',tests.dept('content')))$$, 'a Director can in their own, with the default grant');
 select tests.login(:'cdou');
-select throws_ok($$select api.create_project(jsonb_build_object('kind','INTERNAL','name','X','owning_department_id',tests.dept('outreach')))$$, 'P0403', null, 'a Coordinator cannot by default');
+select lives_ok($$select api.create_project(jsonb_build_object('kind','INTERNAL','name','X','owning_department_id',tests.dept('outreach')))$$, 'and so can a Coordinator');
 
 -- ─── Assignment ────────────────────────────────────────────────────────────
 select tests.login(:'vpco');
@@ -178,7 +178,7 @@ select lives_ok($$select api.review_deliverable(current_setting('t.rv')::uuid, t
 -- ─── A date is agreed by the other side, not the proposer's teammate ───────
 reset role;
 insert into os.position_assignments (executive_id, position_id, seat_no, academic_year_id, during)
-select :'cdou', p.id, 2, (select id from os.academic_years where is_current), daterange('2026-05-01', null) from os.positions p where p.title = 'Director of Finance';
+select :'cdou', p.id, 2, (select id from os.academic_years where is_current), daterange('2026-05-01', null) from os.positions p where p.title = 'Director of Financial Operations';
 select tests.login(:'dirfi');
 select set_config('t.r3', api.create_cross_team_request('b1000000-0000-0000-0000-000000000002', tests.dept('content'), '{"title":"Third","due_at":"2027-02-10T12:00:00Z"}'::jsonb)::text, true);
 select tests.login(:'vpco');

@@ -9,10 +9,10 @@ import { getSeats } from "@/lib/os/org";
 export const metadata: Metadata = { title: "Welcome" };
 
 const ROLE_TEXT: Record<string, string> = {
-  president: "You see all of WEC's work, and you approve events.",
+  president: "You see all of WEC's work, and you approve events and SOPs.",
   vp: "You run your team's work, assign it, and answer requests from other teams.",
-  director: "You'll see your team's shared work and anything assigned to you.",
-  coordinator: "You'll see your team's shared work and anything assigned to you.",
+  director: "You work on your team's projects, start new ones, and give tasks to your teammates.",
+  coordinator: "You work on your team's projects, start new ones, and give tasks to your teammates.",
 };
 
 export default async function WelcomePage() {

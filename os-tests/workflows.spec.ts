@@ -124,8 +124,19 @@ test("a project for one team, then shared with another", async ({ page }) => {
 });
 
 test("several teams at once, with no approval, and outsiders see progress only", async ({ page }) => {
+  // Deactivating this person in auth.spec ended their position, so they get it back first.
+  await dbQuery(`insert into os.position_assignments (executive_id, position_id, seat_no, academic_year_id, during)
+    select e.id, p.id, 1, y.id, daterange(current_date, null) from os.executives e, os.positions p, os.academic_years y
+    where e.email = '${PEOPLE.coordOutreach}' and p.title = 'Speaker Acquisition Coordinator' and y.is_current
+    and not exists (select 1 from os.position_assignments a where a.executive_id = e.id and a.during @> current_date);`);
   await signIn(page, PEOPLE.coordOutreach);
-  expect((await page.goto("/os/projects/new"))?.status(), "Coordinators cannot").toBe(404);
+  await page.goto("/os/projects");
+  await page.getByRole("link", { name: "New project" }).click();
+  await page.getByLabel("Project name").fill("Speaker outreach list");
+  await page.getByRole("button", { name: "Create project" }).click();
+  await expect(page.getByRole("heading", { name: "Speaker outreach list" })).toBeVisible();
+  await page.goto("/os/tasks/new");
+  await expect(page.getByLabel("Who?").locator("option", { hasText: "Otto Outreach" })).toHaveCount(1);
 
   await signIn(page, PEOPLE.dirContent);
   await page.goto("/os/projects/new");
@@ -337,34 +348,86 @@ test("files: attached by someone on the task, refused to everyone else", async (
   await outsider.close();
 });
 
-test("SOP: draft, approval, publish, immutable history, restore", async ({ page }) => {
+test("SOP: only a VP writes it, and only the President approves it", async ({ page }) => {
   await signIn(page, PEOPLE.dirContent);
+  expect((await page.goto("/os/sops/new"))?.status()).toBe(404);
+  await page.goto("/os/sops");
+  await expect(page.getByRole("link", { name: "New SOP" })).toHaveCount(0);
+
+  // The President writes for any team, their own office included, and needs no second approval.
+  await signIn(page, PEOPLE.president);
+  await page.goto("/os/sops");
+  await page.getByRole("link", { name: "New SOP" }).click();
+  await page.getByLabel("Title").fill("How the President's Office works");
+  await page.getByLabel("Owning department").selectOption({ label: "President's Office" });
+  await page.getByLabel("Procedure").fill("One line");
+  await page.getByRole("button", { name: "Create draft" }).click();
+  await expect(page.getByRole("button", { name: "Send to the President" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Approve and publish" }).click();
+  await page.getByRole("button", { name: "Yes, continue" }).click();
+  await expect(page.getByRole("heading", { name: "Current version: 1.0" })).toBeVisible();
+  await page.goto("/os/sops/new");
+  await expect(page.getByLabel("Owning department").locator("option", { hasText: "Finance" })).toHaveCount(1);
+
+  await signIn(page, PEOPLE.vpContent);
   await page.goto("/os/sops/new");
   await page.getByLabel("Title").fill("Posting guide");
   await page.getByLabel("Procedure").fill("Line one\nLine two");
   await page.getByRole("button", { name: "Create draft" }).click();
   await expect(page.getByRole("heading", { name: "Posting guide" })).toBeVisible();
-  await page.getByRole("button", { name: "Submit for approval" }).click();
-  await expect(page.getByRole("button", { name: "Submit for approval" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Publish" })).toHaveCount(0);
   const url = page.url();
+
+  // The team can read a draft and not touch it.
+  await signIn(page, PEOPLE.dirContent);
+  await page.goto(url);
+  await expect(page.getByRole("heading", { name: "Draft: 1.0" })).toBeVisible();
+  await expect(page.getByLabel("Procedure")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Send to the President" })).toHaveCount(0);
 
   await signIn(page, PEOPLE.vpContent);
   await page.goto(url);
-  await page.getByRole("button", { name: "Publish" }).click();
-  await page.getByRole("button", { name: "Yes, continue" }).click();
-  await expect(page.getByRole("heading", { name: "Current version: 1.0" })).toBeVisible();
+  await page.getByRole("button", { name: "Send to the President" }).click();
+  await expect(page.getByText("Waiting for the President to approve it.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Approve and publish" })).toHaveCount(0);
 
+  await signIn(page, PEOPLE.president);
+  await page.goto("/os/president");
+  const waiting = page.locator(".os-request", { hasText: "Posting guide" });
+  await waiting.locator("summary", { hasText: "Send back" }).click();
+  await waiting.getByLabel("What needs to change?").fill("Add a third line");
+  await waiting.getByRole("button", { name: "Send back" }).click();
+  await expect(waiting).toHaveCount(0);
+
+  await signIn(page, PEOPLE.vpContent);
+  await page.goto(url);
+  await page.getByRole("button", { name: "Send to the President" }).click();
+  await expect(page.getByText("Waiting for the President to approve it.")).toBeVisible();
+
+  await signIn(page, PEOPLE.president);
+  await page.goto("/os/president");
+  await waiting.getByRole("button", { name: "Approve and publish" }).click();
+  await expect(waiting).toHaveCount(0);
+
+  // A revision goes through the same two people.
+  await signIn(page, PEOPLE.vpContent);
+  await page.goto(url);
+  await expect(page.getByRole("heading", { name: "Current version: 1.0" })).toBeVisible();
   await page.getByRole("button", { name: "Start minor revision" }).click();
   await expect(page.getByRole("heading", { name: "Draft: 1.1" })).toBeVisible();
   await page.getByLabel("Procedure").fill("Line one\nLine two changed");
   await page.getByRole("button", { name: "Save draft" }).click();
   await expect(page.getByText("Draft saved.")).toBeVisible();
-  await page.getByRole("button", { name: "Submit for approval" }).click();
-  await page.getByRole("button", { name: "Publish" }).click();
+  await page.getByRole("button", { name: "Send to the President" }).click();
+  await expect(page.getByText("Waiting for the President to approve it.")).toBeVisible();
+
+  await signIn(page, PEOPLE.president);
+  await page.goto(url);
+  await page.getByRole("button", { name: "Approve and publish" }).click();
   await page.getByRole("button", { name: "Yes, continue" }).click();
   await expect(page.getByRole("heading", { name: "Current version: 1.1" })).toBeVisible();
 
+  await signIn(page, PEOPLE.vpContent);
+  await page.goto(url);
   await page.getByRole("link", { name: "Compare" }).click();
   await expect(page.locator(".os-diff-del")).toContainText("Line two");
   await expect(page.locator(".os-diff-add")).toContainText("Line two changed");

@@ -47,8 +47,8 @@ from (values
   ('vp.outreach@wec.test', 'VP Outreach'),
   ('coord.outreach@wec.test', 'Speaker Acquisition Coordinator'),
   ('vp.finance@wec.test', 'VP Finance'),
-  ('dir.finance@wec.test', 'Director of Finance'),
-  ('former@wec.test', 'Sponsorship Coordinator')
+  ('dir.finance@wec.test', 'Director of Financial Operations'),
+  ('former@wec.test', 'Director of Sponsorship')
 ) as v (email, title)
 join os.executives e on e.email = v.email
 join os.positions p on p.title = v.title;

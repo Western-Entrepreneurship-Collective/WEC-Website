@@ -34,7 +34,7 @@ After any migration that adds a function, keep `20261031000900_os_finalize.sql`'
 
 Do these in order. Nothing here touches the public site until the Vercel step, and that step only adds variables.
 
-1. **Create a Supabase project** on the free plan, in the Canada Central region. The privacy policy says the data is in Canada, so this has to stay true.
+1. **Create a Supabase project** on the free plan. The club's project is in `us-west-2`, and the privacy policy says the data is in the United States, so a move has to change both.
 2. **Auth settings.**
    - Authentication → Sign In / Providers → Email: keep the provider **on**, turn **"Allow new users to sign up" off**. Turning the email provider itself off also stops password logins.
    - URL Configuration: Site URL `https://joinwec.ca/os`.
@@ -54,7 +54,7 @@ Do these in order. Nothing here touches the public site until the Vercel step, a
 10. **Health check.** In the GitHub repository: variable `WEC_OS_URL` (`https://joinwec.ca`) and secret `WEC_OS_JOBS_SECRET`. Run "WEC OS health" once by hand.
 11. **Create the first administrator:** `node scripts/os-bootstrap-admin.mjs` (usage at the top of the file). It refuses to run a second time.
 
-12. **Function region.** Consider setting Vercel's function region to Montreal (`yul1`) to sit beside the database. It also moves the two public form routes, so it is a separate decision.
+12. **Function region.** Consider setting Vercel's function region to Oregon (`pdx1`) to sit beside the database. It also moves the two public form routes, so it is a separate decision.
 
 **Creating everyone at once:** `node scripts/os-create-accounts.mjs <list.csv> --dry-run`, then again without `--dry-run` (the list's format is at the top of the file). This works instead of step 11 too: mark at least one person `admin`. The list and the passwords it writes stay outside this repository, which is public. Each person gets their temporary password from you, one at a time. Their account stays closed until they replace it, and anyone who loses theirs can use Forgot your password.
 
@@ -102,7 +102,8 @@ Every rule below lives in the database, and `supabase/tests/01_access_matrix.sql
 - **President:** every project and task. Approves events. No technical admin rights from the position.
 - **System Administrator:** accounts, structure, permissions, templates, automation, audit. Sees the schedule (names, dates, status), not task content. A person can be both.
 - **Vice President:** their department in full, and answers its cross-team requests.
-- **Director / Coordinator:** their department's shared work, except restricted tasks. A request reaches them only after their VP accepts it.
+- **Director / Coordinator:** their department's shared work, except restricted tasks. A request reaches them only after their VP accepts it. VPs, Directors and Coordinators hold the same permissions, listed under Admin, Permissions. A VP differs by holding the lead seat, which is what receives requests, sees restricted tasks and manages all of the team's projects, and by the SOP rule below.
+- **SOPs:** a team's VP or the President creates and edits them, and only the President approves them, every version. The President can publish their own drafts directly. The rest of the team can read drafts. With the President's seat open nothing gets published.
 - **Internal projects:** the owning team and the President. Linking to an event opens nothing. A team can choose to show an event lead a name and a percentage, never tasks.
 - **Shared projects (kind `GLOBAL`):** every executive sees the name and progress. Tasks stay with the teams chosen.
 - **Cross-team tasks:** both teams see that one task and the name of the project it belongs to, and nothing else from it.

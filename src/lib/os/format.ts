@@ -55,6 +55,11 @@ export function shortDue(v: string | null | undefined) {
 export const daysUntil = (v: string) => (new Date(v).getTime() - new Date().getTime()) / 86_400_000;
 export const hoursSince = (v: string) => (new Date().getTime() - new Date(v).getTime()) / 3_600_000;
 
+// Whether this person can create and edit a team's SOPs. The database decides; this keeps
+// the screen from offering what would be refused.
+export const editsSops = (me: { is_president: boolean; positions: { org_role: string; department_id: string }[] }, departmentId?: string) =>
+  me.is_president || me.positions.some(p => p.org_role === "vp" && (!departmentId || p.department_id === departmentId));
+
 export const decisionLabel = (v: string) => (v === "submitted" ? "Sent for approval" : label(v));
 
 export const projectKindHelp: Record<string, string> = {
@@ -79,7 +84,7 @@ const NOTIFICATION_TEXT: Record<string, string> = {
   "deadline.upcoming": "Due soon", "deadline.overdue": "Overdue", "deadline.proposed": "New date proposed", "deadline.decided": "Date proposal answered",
   "event.proposed": "Event proposal to review", "event.decided": "Decision on your event", "event.closed": "Event closed", "global.proposed": "Global Project to review", "global.decided": "Decision on your Global Project", "approval.pending": "Still waiting for your decision",
   "project.generated": "New project for your team", "project.deadline": "Project due soon",
-  "sop.submitted": "SOP revision to review", "sop.returned": "SOP revision returned", "sop.published": "SOP revision published", "sop.review_due": "SOP due for review", "announcement.published": "New announcement",
+  "sop.submitted": "SOP to approve", "sop.returned": "SOP revision returned", "sop.published": "SOP revision published", "sop.review_due": "SOP due for review", "announcement.published": "New announcement",
 };
 export const notificationText = (kind: string) => NOTIFICATION_TEXT[kind] ?? kind;
 
