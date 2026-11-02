@@ -10,6 +10,7 @@ export const metadata: Metadata = { title: "Sign in" };
 
 export default async function LoginPage() {
   const me = await getMe();
+  if (me?.must_change_password) redirect("/os/change-password");
   if (me?.status === "active") redirect("/os");
   return (
     <>

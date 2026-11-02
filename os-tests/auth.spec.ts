@@ -1,5 +1,9 @@
+import { execFileSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { PEOPLE, apiAs, latestEmailLink, signIn } from "./support/helpers";
+import { PEOPLE, apiAs, dbQuery, latestEmailLink, signIn } from "./support/helpers";
 import { LOCAL } from "./support/local";
 
 test("signing in and out works, and pages need a session", async ({ page }) => {
@@ -97,6 +101,70 @@ test("invitation, activation and password recovery, end to end", async ({ page }
   await page.getByLabel("Email").fill("nobody@wec.test");
   await page.getByRole("button", { name: "Send reset link" }).click();
   await expect(page.getByText(/reset link is on its way/)).toBeVisible();
+});
+
+test("a batch of accounts: the temporary password opens nothing until it is replaced", async ({ page }) => {
+  const dir = mkdtempSync(join(tmpdir(), "wec-accounts-"));
+  const list = join(dir, "list.csv");
+  const email = `batch.${Date.now()}@wec.test`;
+  writeFileSync(list, `email,name,position,admin\n${email},"Bea Batch",Director of Engagement,\n`);
+  const home = join(dir, "home");
+  mkdirSync(home);
+  const env = { ...process.env, HOME: home, SUPABASE_URL: LOCAL.url, SUPABASE_SERVICE_ROLE_KEY: LOCAL.serviceKey };
+  const script = "scripts/os-create-accounts.mjs";
+
+  expect(execFileSync("node", [script, list, "--dry-run"], { env, encoding: "utf8" })).toContain("nothing was created");
+  expect(await dbQuery(`select count(*) from os.executives where email = '${email}'`)).toBe("0");
+
+  const printed = execFileSync("node", [script, list], { env, encoding: "utf8" });
+  const file = readdirSync(home).find(f => f.startsWith("wec-os-passwords-"))!;
+  expect(statSync(join(home, file)).mode & 0o777).toBe(0o600);
+  const temporary = readFileSync(join(home, file), "utf8").trim().split("\n")[1].split(",")[3].replaceAll('"', "");
+  expect(temporary).toMatch(/^\w{5}-\w{5}-\w{5}-\w{5}$/);
+  expect(printed).not.toContain(temporary);
+
+  // Running it again leaves the account and its password alone.
+  expect(execFileSync("node", [script, list], { env, encoding: "utf8" })).toContain("left alone");
+
+  await page.goto("/os/login");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(temporary);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(/\/os\/change-password$/);
+
+  // No other page opens first.
+  await page.goto("/os");
+  await expect(page).toHaveURL(/\/os\/change-password$/);
+  await page.goto("/os/teams");
+  await expect(page).toHaveURL(/\/os\/change-password$/);
+
+  await page.getByLabel("New password").fill(temporary);
+  await page.getByLabel("Repeat it").fill(temporary);
+  await page.getByRole("button", { name: "Save and continue" }).click();
+  await expect(page.locator(".os-form-error")).toContainText("different from the temporary one");
+
+  await page.getByLabel("New password").fill("bea-chose-this-password");
+  await page.getByLabel("Repeat it").fill("bea-chose-this-password");
+  await page.getByRole("button", { name: "Save and continue" }).click();
+  await expect(page).toHaveURL(/\/os\/welcome$/);
+  await expect(page.getByRole("heading", { name: "Welcome to WEC OS, Bea." })).toBeVisible();
+
+  // The temporary password is finished.
+  await page.context().clearCookies();
+  await page.goto("/os/login");
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill(temporary);
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page.locator(".os-form-error")).toBeVisible();
+  await page.getByLabel("Email").fill(email);
+  await page.getByLabel("Password").fill("bea-chose-this-password");
+  await page.getByRole("button", { name: "Sign in" }).click();
+  await expect(page).toHaveURL(/\/os\/welcome$/);
+});
+
+test("the batch script refuses a list kept inside the public repository", async () => {
+  const env = { ...process.env, SUPABASE_URL: LOCAL.url, SUPABASE_SERVICE_ROLE_KEY: LOCAL.serviceKey };
+  expect(() => execFileSync("node", ["scripts/os-create-accounts.mjs", "package.json"], { env, stdio: "pipe" })).toThrow(/outside this repository/);
 });
 
 test("deactivating someone cuts off a session that is already open", async ({ browser }) => {

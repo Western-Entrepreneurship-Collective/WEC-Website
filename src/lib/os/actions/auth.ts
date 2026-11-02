@@ -21,6 +21,7 @@ export async function login(_: ActionResult, fd: FormData): Promise<ActionResult
     await supabase.auth.signOut();
     return { ok: false, error: LOGIN_FAILED };
   }
+  if (me.must_change_password) redirect("/os/change-password");
   if (me.status === "invited") await rpc("activate_account");
   redirect("/os");
 }
@@ -69,6 +70,21 @@ export async function activateAccount(_: ActionResult, fd: FormData): Promise<Ac
 export async function resetPassword(_: ActionResult, fd: FormData): Promise<ActionResult> {
   try {
     await verifyAndSetPassword(fd, "recovery");
+  } catch (error) {
+    return { ok: false, error: publicMessage(error) };
+  }
+  redirect("/os");
+}
+
+// A database trigger sees the stored password change and opens the account. This only asks
+// for the change, so skipping this page or calling the API directly opens nothing.
+export async function replaceTemporaryPassword(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  try {
+    const password = checkPassword(fd);
+    const supabase = await createClient();
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error?.code === "same_password") throw new Invalid("Choose a password that is different from the temporary one.");
+    if (error) throw new Invalid("That password was not accepted. Try a longer one.");
   } catch (error) {
     return { ok: false, error: publicMessage(error) };
   }

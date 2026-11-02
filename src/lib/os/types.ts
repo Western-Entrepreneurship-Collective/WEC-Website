@@ -19,6 +19,7 @@ export type Me = {
   full_name: string;
   preferred_name: string | null;
   status: "invited" | "active" | "deactivated";
+  must_change_password: boolean;
   onboarding: Record<string, string>;
   is_admin: boolean;
   is_president: boolean;

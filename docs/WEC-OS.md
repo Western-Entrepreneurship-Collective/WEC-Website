@@ -53,6 +53,8 @@ Do these in order. Nothing here touches the public site until the Vercel step, a
    ```
 10. **Health check.** In the GitHub repository: variable `WEC_OS_URL` (`https://joinwec.ca`) and secret `WEC_OS_JOBS_SECRET`. Run "WEC OS health" once by hand.
 11. **Create the first administrator:** `node scripts/os-bootstrap-admin.mjs` (usage at the top of the file). It refuses to run a second time.
+
+**Creating everyone at once:** `node scripts/os-create-accounts.mjs <list.csv> --dry-run`, then again without `--dry-run` (the list's format is at the top of the file). This works instead of step 11 too: mark at least one person `admin`. The list and the passwords it writes stay outside this repository, which is public. Each person gets their temporary password from you, one at a time. Their account stays closed until they replace it, and anyone who loses theirs can use Forgot your password.
 12. **Function region.** Consider setting Vercel's function region to Montreal (`yul1`) to sit beside the database. It also moves the two public form routes, so it is a separate decision.
 
 Invite everyone else from `/os/admin/executives`. Have at least two administrators. With two or more, nobody can change their own access or reshape a seat, role or department they sit in, so each checks the other. A sole administrator is exempt from those limits because nobody else could act, which also means that person could give themselves any access, with only the audit log to show it.

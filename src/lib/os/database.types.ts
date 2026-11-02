@@ -244,6 +244,14 @@ export type Database = {
 "service_health":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"service_position_seats":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "seat_count": number,"title": string
+            }[]
+                           },
+"service_provision_account":
+{ Args: { "p_email": string,"p_full_name": string,"p_grant_admin"?: boolean,"p_position_title": string }; Returns: number
+                           },
 "service_run_sweep":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
@@ -641,28 +649,28 @@ isOneToOne: false
                   ]
                 },"executives": {
                   Row: {
-                    "activated_at": string | null,"created_at": string,"deactivated_at": string | null,"email": string,"full_name": string,"id": string,"onboarding": NonNullable<Json>,"preferred_name": string | null,"status": string,"updated_at": string
+                    "activated_at": string | null,"created_at": string,"deactivated_at": string | null,"email": string,"full_name": string,"id": string,"must_change_password": boolean,"onboarding": NonNullable<Json>,"preferred_name": string | null,"status": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "activated_at"?: string | null,"created_at"?: string,"deactivated_at"?: string | null,"email": string,"full_name": string,"id": string,"onboarding"?: NonNullable<Json>,"preferred_name"?: string | null,"status"?: string,"updated_at"?: string
+                    "activated_at"?: string | null,"created_at"?: string,"deactivated_at"?: string | null,"email": string,"full_name": string,"id": string,"must_change_password"?: boolean,"onboarding"?: NonNullable<Json>,"preferred_name"?: string | null,"status"?: string,"updated_at"?: string
                   }
                   Update: {
-                    "activated_at"?: string | null,"created_at"?: string,"deactivated_at"?: string | null,"email"?: string,"full_name"?: string,"id"?: string,"onboarding"?: NonNullable<Json>,"preferred_name"?: string | null,"status"?: string,"updated_at"?: string
+                    "activated_at"?: string | null,"created_at"?: string,"deactivated_at"?: string | null,"email"?: string,"full_name"?: string,"id"?: string,"must_change_password"?: boolean,"onboarding"?: NonNullable<Json>,"preferred_name"?: string | null,"status"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     
                   ]
                 },"invitations": {
                   Row: {
-                    "accepted_at": string | null,"created_at": string,"email": string,"full_name": string,"grant_admin": boolean,"id": string,"invited_by": string | null,"position_id": string | null,"revoked_at": string | null,"seat_no": number | null
+                    "accepted_at": string | null,"created_at": string,"email": string,"full_name": string,"grant_admin": boolean,"id": string,"invited_by": string | null,"position_id": string | null,"revoked_at": string | null,"seat_no": number | null,"temporary_password": boolean
                   }
                   ComputedFields: never
                   Insert: {
-                    "accepted_at"?: string | null,"created_at"?: string,"email": string,"full_name": string,"grant_admin"?: boolean,"id"?: string,"invited_by"?: string | null,"position_id"?: string | null,"revoked_at"?: string | null,"seat_no"?: number | null
+                    "accepted_at"?: string | null,"created_at"?: string,"email": string,"full_name": string,"grant_admin"?: boolean,"id"?: string,"invited_by"?: string | null,"position_id"?: string | null,"revoked_at"?: string | null,"seat_no"?: number | null,"temporary_password"?: boolean
                   }
                   Update: {
-                    "accepted_at"?: string | null,"created_at"?: string,"email"?: string,"full_name"?: string,"grant_admin"?: boolean,"id"?: string,"invited_by"?: string | null,"position_id"?: string | null,"revoked_at"?: string | null,"seat_no"?: number | null
+                    "accepted_at"?: string | null,"created_at"?: string,"email"?: string,"full_name"?: string,"grant_admin"?: boolean,"id"?: string,"invited_by"?: string | null,"position_id"?: string | null,"revoked_at"?: string | null,"seat_no"?: number | null,"temporary_password"?: boolean
                   }
                   Relationships: [
                     {

@@ -17,6 +17,7 @@ export const getMe = cache(async (): Promise<Me | null> => {
 
 export async function requireMe(): Promise<Me> {
   const me = await getMe();
+  if (me?.must_change_password) redirect("/os/change-password");
   if (!me || me.status !== "active") redirect("/os/login");
   return me;
 }
