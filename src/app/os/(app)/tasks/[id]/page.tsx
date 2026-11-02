@@ -4,13 +4,14 @@ import { notFound } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/os/ActionForm";
 import { RequestCard } from "@/components/os/RequestCard";
 import { Upload } from "@/components/os/Upload";
-import { Avatar, Field, Hidden, Meter, TaskRow, TeamTile } from "@/components/os/ui";
+import { Field, Hidden, Meter, Person, TaskRow } from "@/components/os/ui";
 import {
   addComment, addDependency, assignTask, decideDeadline, delegateRequest, deleteChecklistItem, proposeDeadline, removeDependency,
   saveChecklistItem, setTaskStatus, updateTask,
 } from "@/lib/os/actions/work";
 import { can, displayName, getDirectory, inDepartment, nameLookup, requireMe } from "@/lib/os/dal";
 import { formatDate, formatDateTime, label, torontoDateKey } from "@/lib/os/format";
+import { getSeats, seatHolder, teamLead, titleLookup } from "@/lib/os/org";
 import { createClient, rpc } from "@/lib/os/supabase";
 
 export const metadata: Metadata = { title: "Task" };
@@ -30,6 +31,8 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
 
   const directory = await getDirectory();
   const nameOf = nameLookup(directory);
+  const seats = await getSeats();
+  const titleOf = titleLookup(seats);
   const [context, deps, subtasks, checklist, comments, reviews, proposals, attachments, history, assignments, project, siblings] = await Promise.all([
     rpc<Context[]>("task_context", { p_task: id }),
     rpc<Dep[]>("task_dependencies", { p_task: id }),
@@ -63,21 +66,117 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
   const blockedBy = deps.filter(d => d.direction === "blocked_by");
   const shown = task.status === "submitted" ? "in_progress" : task.status === "revisions_requested" ? "todo" : task.status;
   const canReopen = !archived && task.status === "done" && (canWork || (task.is_cross_team && inRequesting));
+  const canCancel = canEdit && open && (!task.is_cross_team || inRequesting || me.is_president);
+  // Someone who gave this to another person or team follows it from the middle of the page.
+  const sent = task.is_cross_team ? inRequesting : task.assigned_by === me.id && task.assigned_to !== null && task.assigned_to !== me.id;
+  const Heading = sent ? "h2" : "h3";
+  const asker = seatHolder(seats, task.assigned_by) ?? teamLead(seats, task.requesting_department_id);
+  const doer = seatHolder(seats, task.assigned_to) ?? teamLead(seats, task.responsible_department_id);
+  const more = (
+    <>
+      {task.assigned_by ? <p className="os-muted">Given by {task.assigned_by === me.id ? "you" : nameOf(task.assigned_by)}.</p> : <p className="os-muted">Created automatically.</p>}
+
+      {task.is_cross_team && (inRequesting || inResponsible || me.is_president) && !archived && open ? (
+        openProposal ? (
+          <section>
+            <Heading>New date proposed</Heading>
+            <p>{nameOf(openProposal.proposed_by)} proposed <strong>{formatDateTime(openProposal.proposed_due_at)}</strong>{openProposal.note ? `: ${openProposal.note}` : "."}</p>
+            {openProposal.proposed_by !== me.id || me.is_president ? (
+              <div className="os-row">
+                <ActionForm action={decideDeadline}><Hidden name="proposal" value={openProposal.id} /><Hidden name="accept" value="true" /><SubmitButton>Agree</SubmitButton></ActionForm>
+                <ActionForm action={decideDeadline}><Hidden name="proposal" value={openProposal.id} /><Hidden name="accept" value="false" /><SubmitButton variant="ghost">Decline</SubmitButton></ActionForm>
+              </div>
+            ) : <p className="os-muted">Waiting for an answer.</p>}
+          </section>
+        ) : (
+          <ActionForm action={proposeDeadline} className="os-stack" resetOnSuccess>
+            <Hidden name="id" value={id} />
+            <Field label="Propose a new date"><input name="due" type="datetime-local" required /></Field>
+            <Field label="Why"><input name="note" /></Field>
+            <div><SubmitButton variant="ghost">Propose</SubmitButton></div>
+          </ActionForm>
+        )
+      ) : null}
+
+      <section>
+        <Heading>Files</Heading>
+        {(attachments.data ?? []).length ? <ul className="os-list">{(attachments.data ?? []).map(a => <li key={a.id}><a className="os-link" href={`/os/attachments/${a.id}`}>{a.file_name}</a><span className="os-muted">{Math.ceil(a.size_bytes / 1024)} KB</span></li>)}</ul> : null}
+        {canEdit ? <Upload type="task" entity={id} /> : (attachments.data ?? []).length ? null : <p className="os-muted">No files.</p>}
+      </section>
+
+      <section>
+        <Heading>Can&apos;t start until</Heading>
+        {blockedBy.length === 0 ? <p className="os-muted">Nothing. It&apos;s free to start.</p> : (
+          <ul className="os-list">
+            {blockedBy.map(d => (
+              <li key={d.task_id}>
+                <span>{d.status === "done" ? "✓ " : ""}{d.can_open ? <Link href={`/os/tasks/${d.task_id}`}>{d.title}</Link> : d.title}</span>
+                {canEdit ? <ActionForm action={removeDependency}><Hidden name="id" value={id} /><Hidden name="depends_on" value={d.task_id} /><button className="os-link-btn" type="submit">Remove</button></ActionForm> : null}
+              </li>
+            ))}
+          </ul>
+        )}
+        {deps.some(d => d.direction === "blocks") ? <><Heading>Other tasks waiting on this</Heading><ul className="os-list">{deps.filter(d => d.direction === "blocks").map(d => <li key={d.task_id}>{d.can_open ? <Link href={`/os/tasks/${d.task_id}`}>{d.title}</Link> : d.title}</li>)}</ul></> : null}
+        {canEdit && open ? (
+          <ActionForm action={addDependency} className="os-inline-form" resetOnSuccess>
+            <Hidden name="id" value={id} />
+            <Field label="Add something this waits on">
+              <select name="depends_on" required defaultValue="">
+                <option value="" disabled>Choose a task</option>
+                {(siblings.data ?? []).filter(t => !deps.some(d => d.task_id === t.id)).map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
+              </select>
+            </Field>
+            <SubmitButton variant="ghost">Add</SubmitButton>
+          </ActionForm>
+        ) : null}
+      </section>
+
+      {canEdit ? (
+        <ActionForm action={updateTask} className="os-stack">
+          <Hidden name="id" value={id} /><Hidden name="expected" value={task.updated_at} /><Hidden name="deliverables" value={task.deliverables} /><Hidden name="priority" value={task.priority} /><Hidden name="visibility" value={task.visibility} />
+          <Hidden name="due" value={task.due_at ? torontoDateKey(new Date(task.due_at)) : ""} />
+          <Heading>Edit this task</Heading>
+          <Field label="Title"><input name="title" defaultValue={task.title} required maxLength={200} /></Field>
+          <Field label="Details"><textarea name="description" rows={4} defaultValue={task.description} /></Field>
+          <div><SubmitButton variant="ghost">Save</SubmitButton></div>
+        </ActionForm>
+      ) : null}
+
+      <section>
+        <Heading>History</Heading>
+        <ul className="os-timeline">
+          {[...(reviews.data ?? []).map(r => ({ at: r.created_at, text: `${label(r.kind)} by ${nameOf(r.actor_id)}${r.note ? `: ${r.note}` : ""}`, key: r.id })),
+            ...(history.data ?? []).map(h => ({ at: h.created_at, text: `${h.note || "Assigned"}: ${nameOf(h.assigned_to)}`, key: `h${h.id}` }))]
+            .sort((a, b) => a.at.localeCompare(b.at))
+            .map(h => <li key={h.key}><span className="os-muted">{formatDateTime(h.at)}</span>{h.text}</li>)}
+        </ul>
+      </section>
+
+    </>
+  );
 
   return (
     <div className="os-page">
-      <nav className="os-crumbs" aria-label="You are here">
-        <Link href="/os/projects">Projects</Link><span aria-hidden="true">/</span>
-        {ctx?.can_open_project ? <Link href={`/os/projects/${ctx.project_id}`}>{ctx.project_name}</Link> : <span>{ctx?.project_name}</span>}
-        {task.parent_task_id ? <><span aria-hidden="true">/</span><Link href={`/os/tasks/${task.parent_task_id}`}>Parent task</Link></> : null}
-      </nav>
+      <div className="os-task-top">
+        <nav className="os-crumbs" aria-label="You are here">
+          <Link href="/os/projects">Projects</Link><span aria-hidden="true">/</span>
+          {ctx?.can_open_project ? <Link href={`/os/projects/${ctx.project_id}`}>{ctx.project_name}</Link> : <span>{ctx?.project_name}</span>}
+          {task.parent_task_id ? <><span aria-hidden="true">/</span><Link href={`/os/tasks/${task.parent_task_id}`}>Parent task</Link></> : null}
+        </nav>
+        {sent && canCancel ? (
+          <ActionForm action={setTaskStatus} confirm="Withdraw this task? It stays on record but no longer counts as open.">
+            <Hidden name="id" value={id} /><Hidden name="status" value="cancelled" />
+            <SubmitButton variant="danger">Withdraw this task</SubmitButton>
+          </ActionForm>
+        ) : null}
+      </div>
 
       <div className="os-task-layout">
         <article className="os-task-sheet">
           <header>
             <h1>{task.title}</h1>
             {task.is_cross_team ? (
-              <p className="os-asked"><TeamTile name={ctx?.requesting_department} size="small" /><span>asked</span><TeamTile name={ctx?.responsible_department} size="small" /><span>{ctx?.requesting_department} asked {ctx?.responsible_department} for this.</span></p>
+              <p className="os-asked"><Person name={asker ?? "Nobody in the lead seat"} title={ctx?.requesting_department} /><span>asked</span><Person name={doer ?? "Nobody in the lead seat"} title={ctx?.responsible_department} /></p>
             ) : null}
           </header>
 
@@ -87,7 +186,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
           {task.status === "cancelled" ? <p className="os-note">{task.request_state === "declined" ? `${ctx?.responsible_department} declined this.` : "This was cancelled."} It stays on record.</p> : null}
           {isAsked && !archived && !responsibleHead ? <p className="os-note">Waiting for {ctx?.responsible_department}&apos;s lead to take it or give it to someone.</p> : null}
           {isAsked && !archived && responsibleHead ? (
-            <RequestCard task={task} from={ctx?.requesting_department ?? "Another team"} why={`${ctx?.requesting_department} is asking your team for this`} people={team.filter(p => p.id !== me.id).map(p => ({ id: p.id, name: displayName(p) }))} meId={me.id} />
+            <RequestCard task={task} from={ctx?.requesting_department ?? "Another team"} why={`${asker ? `${asker}, ` : ""}${ctx?.requesting_department} is asking your team for this`} people={team.filter(p => p.id !== me.id).map(p => ({ id: p.id, name: displayName(p) }))} meId={me.id} />
           ) : null}
 
           <section aria-labelledby="details">
@@ -134,17 +233,19 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
             <h2 id="comments">Comments</h2>
             {(comments.data ?? []).length ? (
               <ul className="os-comments">
-                {(comments.data ?? []).map(c => <li key={c.id}><Avatar name={nameOf(c.author_id)} /><div><small className="os-muted"><strong>{nameOf(c.author_id)}</strong> · {formatDateTime(c.created_at)}</small><p className="os-pre">{c.body}</p></div></li>)}
+                {(comments.data ?? []).map(c => <li key={c.id}><div><div className="os-comment-head"><Person name={nameOf(c.author_id)} title={titleOf(c.author_id)} /><small className="os-muted">{formatDateTime(c.created_at)}</small></div><p className="os-pre">{c.body}</p></div></li>)}
               </ul>
             ) : null}
             {!archived ? (
               <ActionForm action={addComment} className="os-inline-form" resetOnSuccess ariaLabel="Add a comment">
                 <Hidden name="id" value={id} />
-                <Field label="Comment" hint={task.is_cross_team ? "Both teams can read this." : undefined}><input name="body" required maxLength={8000} placeholder="Write a comment" /></Field>
+                <Field label="Comment" hint={task.is_cross_team ? "Both teams can read this." : undefined}><input name="body" required maxLength={8000} /></Field>
                 <SubmitButton variant="ghost">Post</SubmitButton>
               </ActionForm>
             ) : null}
           </section>
+
+          {sent ? more : null}
         </article>
 
         <aside className="os-task-side">
@@ -179,7 +280,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
                 <div><SubmitButton variant="ghost">Change</SubmitButton></div>
               </ActionForm>
             ) : (
-              <><span className="os-side-label">Who</span><p className="os-row"><Avatar name={task.assigned_to ? nameOf(task.assigned_to) : null} />{task.assigned_to === me.id ? "You" : task.assigned_to ? nameOf(task.assigned_to) : "Nobody yet"}</p></>
+              <><span className="os-side-label">Who</span><p><Person name={task.assigned_to === me.id ? "You" : task.assigned_to ? nameOf(task.assigned_to) : "Nobody yet"} title={titleOf(task.assigned_to)} /></p></>
             )}
           </div>
 
@@ -200,95 +301,18 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
             <p>{ctx?.can_open_project ? <Link className="os-link" href={`/os/projects/${ctx.project_id}`}>{ctx.project_name}</Link> : ctx?.project_name}</p>
           </div>
 
-          <details className="os-more">
-            <summary>More</summary>
-            <div className="os-stack">
-              {task.assigned_by ? <p className="os-muted">Given by {task.assigned_by === me.id ? "you" : nameOf(task.assigned_by)}.</p> : <p className="os-muted">Created automatically.</p>}
-
-              {task.is_cross_team && (inRequesting || inResponsible || me.is_president) && !archived && open ? (
-                openProposal ? (
-                  <div>
-                    <h3>New date proposed</h3>
-                    <p>{nameOf(openProposal.proposed_by)} proposed <strong>{formatDateTime(openProposal.proposed_due_at)}</strong>{openProposal.note ? `: ${openProposal.note}` : "."}</p>
-                    {openProposal.proposed_by !== me.id || me.is_president ? (
-                      <div className="os-row">
-                        <ActionForm action={decideDeadline}><Hidden name="proposal" value={openProposal.id} /><Hidden name="accept" value="true" /><SubmitButton>Agree</SubmitButton></ActionForm>
-                        <ActionForm action={decideDeadline}><Hidden name="proposal" value={openProposal.id} /><Hidden name="accept" value="false" /><SubmitButton variant="ghost">Decline</SubmitButton></ActionForm>
-                      </div>
-                    ) : <p className="os-muted">Waiting for an answer.</p>}
-                  </div>
-                ) : (
-                  <ActionForm action={proposeDeadline} className="os-stack" resetOnSuccess>
-                    <Hidden name="id" value={id} />
-                    <Field label="Propose a new date"><input name="due" type="datetime-local" required /></Field>
-                    <Field label="Why"><input name="note" /></Field>
-                    <div><SubmitButton variant="ghost">Propose</SubmitButton></div>
-                  </ActionForm>
-                )
-              ) : null}
-
-              <div>
-                <h3>Files</h3>
-                {(attachments.data ?? []).length ? <ul className="os-list">{(attachments.data ?? []).map(a => <li key={a.id}><a className="os-link" href={`/os/attachments/${a.id}`}>{a.file_name}</a><span className="os-muted">{Math.ceil(a.size_bytes / 1024)} KB</span></li>)}</ul> : null}
-                {canEdit ? <Upload type="task" entity={id} /> : (attachments.data ?? []).length ? null : <p className="os-muted">No files.</p>}
-              </div>
-
-              <div>
-                <h3>Can&apos;t start until</h3>
-                {blockedBy.length === 0 ? <p className="os-muted">Nothing. It&apos;s free to start.</p> : (
-                  <ul className="os-list">
-                    {blockedBy.map(d => (
-                      <li key={d.task_id}>
-                        <span>{d.status === "done" ? "✓ " : ""}{d.can_open ? <Link href={`/os/tasks/${d.task_id}`}>{d.title}</Link> : d.title}</span>
-                        {canEdit ? <ActionForm action={removeDependency}><Hidden name="id" value={id} /><Hidden name="depends_on" value={d.task_id} /><button className="os-link-btn" type="submit">Remove</button></ActionForm> : null}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {deps.some(d => d.direction === "blocks") ? <><h3>Other tasks waiting on this</h3><ul className="os-list">{deps.filter(d => d.direction === "blocks").map(d => <li key={d.task_id}>{d.can_open ? <Link href={`/os/tasks/${d.task_id}`}>{d.title}</Link> : d.title}</li>)}</ul></> : null}
-                {canEdit && open ? (
-                  <ActionForm action={addDependency} className="os-inline-form" resetOnSuccess>
-                    <Hidden name="id" value={id} />
-                    <Field label="Add something this waits on">
-                      <select name="depends_on" required defaultValue="">
-                        <option value="" disabled>Choose a task</option>
-                        {(siblings.data ?? []).filter(t => !deps.some(d => d.task_id === t.id)).map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
-                      </select>
-                    </Field>
-                    <SubmitButton variant="ghost">Add</SubmitButton>
-                  </ActionForm>
-                ) : null}
-              </div>
-
-              {canEdit ? (
-                <ActionForm action={updateTask} className="os-stack">
-                  <Hidden name="id" value={id} /><Hidden name="expected" value={task.updated_at} /><Hidden name="deliverables" value={task.deliverables} /><Hidden name="priority" value={task.priority} /><Hidden name="visibility" value={task.visibility} />
-                  <Hidden name="due" value={task.due_at ? torontoDateKey(new Date(task.due_at)) : ""} />
-                  <h3>Edit this task</h3>
-                  <Field label="Title"><input name="title" defaultValue={task.title} required maxLength={200} /></Field>
-                  <Field label="Details"><textarea name="description" rows={4} defaultValue={task.description} /></Field>
-                  <div><SubmitButton variant="ghost">Save</SubmitButton></div>
-                </ActionForm>
-              ) : null}
-
-              <div>
-                <h3>History</h3>
-                <ul className="os-timeline">
-                  {[...(reviews.data ?? []).map(r => ({ at: r.created_at, text: `${label(r.kind)} by ${nameOf(r.actor_id)}${r.note ? `: ${r.note}` : ""}`, key: r.id })),
-                    ...(history.data ?? []).map(h => ({ at: h.created_at, text: `${h.note || "Assigned"}: ${nameOf(h.assigned_to)}`, key: `h${h.id}` }))]
-                    .sort((a, b) => a.at.localeCompare(b.at))
-                    .map(h => <li key={h.key}><span className="os-muted">{formatDateTime(h.at)}</span>{h.text}</li>)}
-                </ul>
-              </div>
-
-              {canEdit && open && (!task.is_cross_team || inRequesting || me.is_president) ? (
-                <ActionForm action={setTaskStatus} confirm="Cancel this task? It stays on record but no longer counts as open.">
+          {sent ? null : (
+            <details className="os-more">
+              <summary>More</summary>
+              <div className="os-stack">
+                {more}
+                {canCancel ? <ActionForm action={setTaskStatus} confirm="Cancel this task? It stays on record but no longer counts as open.">
                   <Hidden name="id" value={id} /><Hidden name="status" value="cancelled" />
                   <button className="os-link-btn os-danger-link" type="submit">{task.is_cross_team ? "Withdraw this task" : "Cancel this task"}</button>
-                </ActionForm>
-              ) : null}
-            </div>
-          </details>
+                </ActionForm> : null}
+              </div>
+            </details>
+          )}
         </aside>
       </div>
     </div>

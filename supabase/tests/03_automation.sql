@@ -1,7 +1,7 @@
 -- Event → Projects → Tasks, atomic generation, duplicate prevention, dates, reminders.
 begin;
 \ir helpers.psql
-select plan(50);
+select plan(51);
 
 -- ─── Proposal authorization ────────────────────────────────────────────────
 select tests.login(:'vpco');
@@ -89,6 +89,7 @@ select is((select count(*)::text from os.notifications), current_setting('t.n1')
 select is((select count(*)::text from os.tasks), current_setting('t.t1'), 'and makes no second recurring task');
 select is((select count(*)::text from os.automation_runs), current_setting('t.r1'), 'and logs no second run');
 select isnt((select value from os.settings where key = 'sweep_heartbeat'), 'null'::jsonb, 'the heartbeat is written');
+select is((select count(*)::int from os.projects where system_key like 'recurring:%'), 0, 'the sweep makes no recurring projects');
 
 -- ─── Job failure, retry, and loop stop ─────────────────────────────────────
 insert into os.jobs (id, kind, max_attempts) values ('d0000000-0000-0000-0000-000000000001', 'no.such.kind', 2);

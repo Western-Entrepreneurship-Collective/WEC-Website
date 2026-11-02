@@ -37,9 +37,9 @@ test("event: proposal, approval, generated projects and tasks", async ({ page })
   await page.getByRole("link", { name: EVENT }).click();
   await expect(page.locator(".os-event-head").getByText("Approved")).toBeVisible();
   const byTeam = page.getByRole("group", { name: "Team progress" });
-  await expect(byTeam.getByRole("link", { name: "Content", exact: true })).toBeVisible();
-  await expect(byTeam.getByRole("link", { name: "Outreach", exact: true })).toBeVisible();
-  await expect(byTeam.getByRole("link", { name: "Sponsorship", exact: true })).toHaveCount(0);
+  await expect(byTeam.getByRole("link", { name: /Content$/ })).toBeVisible();
+  await expect(byTeam.getByRole("link", { name: /Outreach$/ })).toBeVisible();
+  await expect(byTeam.getByRole("link", { name: /Sponsorship$/ })).toHaveCount(0);
 
   await signIn(page, PEOPLE.vpContent);
   await page.goto("/os/notifications");
@@ -195,7 +195,7 @@ test("another team's page shows what's between you, not their work", async ({ pa
   await signIn(page, PEOPLE.dirContent);
   await page.getByRole("link", { name: "Teams", exact: true }).click();
   await expect(page.getByRole("link", { name: /Open your team/ })).toBeVisible();
-  await page.getByRole("link", { name: "Finance", exact: true }).click();
+  await page.getByRole("link", { name: /Finance$/ }).click();
   await expect(page.getByText("Finance's private projects and other tasks stay with Finance.")).toBeVisible();
   await page.getByRole("link", { name: "Send Finance a task" }).click();
   await expect(page.getByLabel("Who?").locator("option:checked")).toHaveText("Finance");
@@ -250,7 +250,7 @@ test("a task for another team: sent, taken, finished, on one record", async ({ p
   // The receiving VP has it on their own home page, and can give it away in one move.
   await signIn(page, PEOPLE.vpContent);
   const request = page.locator(".os-request", { hasText: "Design the report cover" });
-  await expect(request).toContainText("From Finance, for Year-end report");
+  await expect(request).toContainText("From Finn Finance, Finance, for Year-end report");
   await request.getByRole("link", { name: "Design the report cover" }).click();
   await expect(page.getByText("Year-end report").first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Year-end report" })).toHaveCount(0);
@@ -304,7 +304,7 @@ test("declining says why, and a team with no VP goes to the President", async ({
   await signIn(page, PEOPLE.president);
   await page.goto("/os/president");
   const routed = page.locator(".os-request", { hasText: "Book the room" });
-  await expect(routed).toContainText("Sent to Operations, which has no VP right now");
+  await expect(routed).toContainText("Finn Finance, Finance sent this to Operations, which has no VP right now");
   await routed.getByRole("button", { name: "Take it" }).click();
   await expect(routed).toHaveCount(0);
   await page.goto("/os");
@@ -462,6 +462,48 @@ test("meeting: minutes stay in the team, and an action becomes a task", async ({
 
   await signIn(page, PEOPLE.dirFinance);
   expect((await page.goto(url))?.status()).toBe(404);
+});
+
+test("starting a project from the task form comes back to the task", async ({ page }) => {
+  await signIn(page, PEOPLE.vpContent);
+  await page.goto("/os/tasks/new");
+  await page.waitForLoadState("networkidle");
+  await page.getByLabel("What needs doing?").fill("Draft the sponsor deck");
+  await page.getByLabel("Who?").selectOption({ label: "Dana Director" });
+  await page.getByLabel("Details").fill("Twelve slides at most.");
+  await page.locator("#task-step").fill("Collect the logos");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+
+  await page.getByRole("link", { name: "Start a new project" }).click();
+  await page.getByLabel("Project name").fill("Sponsor deck");
+  await page.getByRole("button", { name: "Create project and go back to the task" }).click();
+
+  await expect(page).toHaveURL(/\/os\/tasks\/new\?project=.+restore=1/);
+  await expect(page.getByLabel("What needs doing?")).toHaveValue("Draft the sponsor deck");
+  await expect(page.getByLabel("Project", { exact: true }).locator("option:checked")).toHaveText("Sponsor deck");
+  await expect(page.getByLabel("Who?").locator("option:checked")).toHaveText("Dana Director");
+  await expect(page.getByLabel("Details")).toHaveValue("Twelve slides at most.");
+  await expect(page.getByText("Collect the logos")).toBeVisible();
+  await page.locator(".os-form-card button[type=submit]").click();
+  await expect(page).not.toHaveURL(/tasks\/new/);
+});
+
+test("a task sent to someone: the page leads with it, and withdrawing is one button away", async ({ page }) => {
+  await signIn(page, PEOPLE.vpContent);
+  await page.goto("/os/teams/content");
+  await page.getByRole("link", { name: "Draft the sponsor deck" }).click();
+  await expect(page.locator(".os-task-sheet").getByRole("heading", { name: "Files" })).toBeVisible();
+  await expect(page.locator(".os-task-sheet").getByRole("heading", { name: "History" })).toBeVisible();
+  await expect(page.locator(".os-task-side summary", { hasText: "More" })).toHaveCount(0);
+  await page.locator(".os-task-top").getByRole("button", { name: "Withdraw this task" }).click();
+  await page.getByRole("button", { name: "Yes, continue" }).click();
+  await expect(page.getByText("This was cancelled.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Withdraw this task" })).toHaveCount(0);
+
+  await signIn(page, PEOPLE.dirContent);
+  await page.goto("/os/tasks?show=closed");
+  await page.getByRole("link", { name: "Draft the sponsor deck" }).click();
+  await expect(page.locator(".os-task-side summary", { hasText: "More" })).toBeVisible();
 });
 
 test("administration: structure, permissions, templates, year transition", async ({ page }) => {

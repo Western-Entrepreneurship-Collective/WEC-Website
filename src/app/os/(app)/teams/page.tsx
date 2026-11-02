@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Page, TeamTile } from "@/components/os/ui";
+import { Page, Person } from "@/components/os/ui";
 import { can, getDepartments, requireMe } from "@/lib/os/dal";
 import { getSeats } from "@/lib/os/org";
 
@@ -29,12 +29,10 @@ export default async function TeamsPage() {
           const lead = seats.find(s => s.departmentId === d.id && s.isHead)?.name;
           return (
             <li key={d.id} className="os-team-card">
-              <div className="os-with-tile">
-                <TeamTile name={d.name} />
-                <span><Link href={`/os/teams/${d.slug}`}>{d.name}</Link><small>{d.description}</small></span>
+              <div className="os-named">
+                <span><Link href={`/os/teams/${d.slug}`}><Person name={lead ?? "Lead seat open"} title={d.name} /></Link><small>{d.description}</small></span>
               </div>
               <div className="os-team-foot">
-                <span className={lead ? undefined : "os-warn-text"}>{lead ?? "Lead seat open"}</span>
                 {canSend ? <Link className="os-btn os-btn-ghost" href={`/os/tasks/new?to=${d.id}`} aria-label={`Send ${d.name} a task`}>Send a task</Link> : null}
               </div>
             </li>

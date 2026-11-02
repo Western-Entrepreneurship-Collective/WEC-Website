@@ -4,11 +4,11 @@ import { redirect } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/os/ActionForm";
 import { Kanban } from "@/components/os/Kanban";
 import { RequestCard } from "@/components/os/RequestCard";
-import { Avatar, Hidden, Meter, TaskRow, TeamTile, ViewSwitch } from "@/components/os/ui";
+import { Hidden, Meter, Person, TaskRow, ViewSwitch } from "@/components/os/ui";
 import { setTaskStatus } from "@/lib/os/actions/work";
 import { getDepartments, requireMe } from "@/lib/os/dal";
 import { shortDue, torontoDateKey } from "@/lib/os/format";
-import { getSeats } from "@/lib/os/org";
+import { getSeats, seatHolder, teamLead, titleLookup } from "@/lib/os/org";
 import { projectNames } from "@/lib/os/projectNames";
 import { createClient, rpc } from "@/lib/os/supabase";
 import type { ProjectSummary, Task } from "@/lib/os/types";
@@ -74,9 +74,10 @@ export default async function MyTasksPage({ searchParams }: { searchParams: Prom
   const teamPeople = (departmentId: string) => seats.filter(s => s.departmentId === departmentId && s.execId && s.execId !== me.id).map(s => ({ id: s.execId!, name: s.name! }));
   const teamOpen = heads.data ?? [];
   const lateOnTeam = teamOpen.filter(isLate);
+  const titleOf = titleLookup(seats);
   const load = headIds.length ? [...new Map(seats.filter(s => s.execId && headIds.includes(s.departmentId)).map(s => [s.execId!, s])).values()].map(s => {
     const theirs = teamOpen.filter(t => t.assigned_to === s.execId);
-    return { id: s.execId!, name: s.execId === me.id ? "You" : s.name!, open: theirs.length, late: theirs.filter(isLate).length };
+    return { id: s.execId!, name: s.execId === me.id ? "You" : s.name!, title: titleOf(s.execId), open: theirs.length, late: theirs.filter(isLate).length };
   }) : [];
   const most = Math.max(1, ...load.map(p => p.open));
   const board = view === "board";
@@ -104,7 +105,7 @@ export default async function MyTasksPage({ searchParams }: { searchParams: Prom
                   <h2 id="asked">Requests for {headOf.map(p => p.department_name).join(" and ")}</h2>
                   <p>{asked.length} {asked.length === 1 ? "is" : "are"} waiting for you to take or assign.</p>
                 </header>
-                {asked.map(t => <RequestCard key={t.id} task={t} from={nameOfTeam(t.requesting_department_id)} project={names.get(t.id)} people={teamPeople(t.responsible_department_id)} meId={me.id} />)}
+                {asked.map(t => <RequestCard key={t.id} task={t} from={[seatHolder(seats, t.assigned_by) ?? teamLead(seats, t.requesting_department_id), nameOfTeam(t.requesting_department_id)].filter(Boolean).join(", ")} project={names.get(t.id)} people={teamPeople(t.responsible_department_id)} meId={me.id} />)}
               </section>
             ) : null}
 
@@ -158,9 +159,8 @@ export default async function MyTasksPage({ searchParams }: { searchParams: Prom
                 <ul className="os-load">
                   {load.map(p => (
                     <li key={p.id}>
-                      <Avatar name={p.name === "You" ? seats.find(s => s.execId === me.id)?.name : p.name} />
                       <div>
-                        <span><strong>{p.name}</strong><small className={p.late ? "os-overdue" : undefined}>{p.open} open{p.late ? `, ${p.late} late` : ""}</small></span>
+                        <span><Person name={p.name} title={p.title} /><small className={p.late ? "os-overdue" : undefined}>{p.open} open{p.late ? `, ${p.late} late` : ""}</small></span>
                         <Meter value={(p.open / most) * 100} tone={p.late ? "bad" : undefined} />
                       </div>
                     </li>
@@ -183,9 +183,8 @@ export default async function MyTasksPage({ searchParams }: { searchParams: Prom
                 <h2 id="waiting">Waiting on others</h2>
                 <ul className="os-plain-list">
                   {waitingOnOthers.map(t => (
-                    <li key={t.id} className="os-with-tile">
-                      <TeamTile name={nameOfTeam(t.responsible_department_id)} size="small" />
-                      <span><Link href={`/os/tasks/${t.id}`}>{t.title}</Link><small>{nameOfTeam(t.responsible_department_id)}. {t.assigned_to ? `${seats.find(s => s.execId === t.assigned_to)?.name?.split(" ")[0] ?? "Someone"} is on it` : "Waiting for an answer"}{t.due_at ? `, due ${shortDue(t.due_at)}` : ""}</small></span>
+                    <li key={t.id} className="os-named">
+                      <span><Link href={`/os/tasks/${t.id}`}>{t.title}</Link><small>{[seatHolder(seats, t.assigned_to) ?? teamLead(seats, t.responsible_department_id), nameOfTeam(t.responsible_department_id)].filter(Boolean).join(", ")}. {t.assigned_to ? "On it" : "Waiting for an answer"}{t.due_at ? `, due ${shortDue(t.due_at)}` : ""}</small></span>
                     </li>
                   ))}
                 </ul>

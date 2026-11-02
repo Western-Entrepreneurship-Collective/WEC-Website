@@ -1,7 +1,5 @@
 import Link from "next/link";
 import { dueText, dueTone, formatDue, label, shortDue } from "@/lib/os/format";
-import { initials } from "@/lib/os/initials";
-import { teamLook } from "@/lib/os/teams";
 import { TaskTick } from "./TaskTick";
 import type { Task } from "@/lib/os/types";
 
@@ -31,8 +29,8 @@ export function Section({ title, action, children, id }: { title: string; action
   );
 }
 
-export function Avatar({ name, lead }: { name: string | null | undefined; lead?: boolean }) {
-  return <span className={`os-avatar${lead ? " is-lead" : ""}${name ? "" : " is-open"}`} aria-hidden="true">{initials(name)}</span>;
+export function Person({ name, title }: { name: string; title?: string | null }) {
+  return <span className="os-person"><strong>{name}</strong>{title ? <small>{title}</small> : null}</span>;
 }
 
 export const Due = ({ value }: { value: string | null | undefined }) => <span className={`os-due os-due-${dueTone(value)}`}>{dueText(value)}</span>;
@@ -137,11 +135,6 @@ export function PriorityField({ value }: { value?: string }) {
       </select>
     </Field>
   );
-}
-
-export function TeamTile({ name, size }: { name: string | null | undefined; size?: "small" }) {
-  const look = teamLook(name);
-  return <span className={`os-tile${size ? ` os-tile-${size}` : ""}`} style={{ background: look.tile }} aria-hidden="true">{look.code}</span>;
 }
 
 export function Meter({ value, tone }: { value: number; tone?: "bad" }) {

@@ -14,9 +14,9 @@ function Submit({ label, blocked }: { label: string; blocked: boolean }) {
 }
 
 /** A project is one team's or several teams'. Nothing here asks anyone to learn a project type. */
-export function ProjectForm({ project, myTeams, otherTeams, events, templates, people, startEvent, startMulti }: {
+export function ProjectForm({ project, myTeams, otherTeams, events, templates, people, startEvent, startMulti, thenTask }: {
   project?: { id: string; name: string; summary: string; lead: string | null; starts_on: string | null; due_on: string | null; updated_at: string; team: string; teams: string[]; fixedEvent: boolean; visibility: string; share: boolean };
-  myTeams: Named[]; otherTeams: Named[]; events: Named[]; templates: Template[]; people: Named[]; startEvent?: string; startMulti?: boolean;
+  myTeams: Named[]; otherTeams: Named[]; events: Named[]; templates: Template[]; people: Named[]; startEvent?: string; startMulti?: boolean; thenTask?: boolean;
 }) {
   const [state, action] = useActionState(saveProject, null);
   const [multi, setMulti] = useState(project ? project.teams.length > 0 : Boolean(startMulti));
@@ -30,8 +30,9 @@ export function ProjectForm({ project, myTeams, otherTeams, events, templates, p
   const usable = templates.filter(t => t.kind === kind && (kind !== "internal" || t.department_id === team));
   return (
     <form action={action} className="os-form-card os-stack" aria-labelledby="project-heading">
-      <div className="os-form-head"><h1 id="project-heading">{project ? "Edit project" : "New project"}</h1><Link href={project ? `/os/projects/${project.id}` : "/os/projects"} aria-label="Close">Close</Link></div>
+      <div className="os-form-head"><h1 id="project-heading">{project ? "Edit project" : "New project"}</h1><Link href={project ? `/os/projects/${project.id}` : thenTask ? "/os/tasks/new?restore=1" : "/os/projects"} aria-label="Close">Close</Link></div>
       {project ? <><input type="hidden" name="id" value={project.id} /><input type="hidden" name="expected" value={project.updated_at} /><input type="hidden" name="visibility" value={project.visibility} />{project.share ? <input type="hidden" name="share_progress_with_event_lead" value="true" /> : null}</> : null}
+      {thenTask ? <input type="hidden" name="then" value="task" /> : null}
       <div className="os-field"><label htmlFor="project-name">Project name</label><input id="project-name" name="name" required maxLength={160} defaultValue={project?.name} /></div>
       {!project ? (
         myTeams.length > 1 ? (
@@ -86,7 +87,7 @@ export function ProjectForm({ project, myTeams, otherTeams, events, templates, p
 
       {needsTeam ? <p className="os-outcome" aria-live="polite">Choose at least one other team, or switch to Just my team.</p> : null}
       {state?.error ? <p className="os-form-error" role="alert">{state.error}</p> : null}
-      <div><Submit label={project ? "Save changes" : "Create project"} blocked={needsTeam} /></div>
+      <div><Submit label={project ? "Save changes" : thenTask ? "Create project and go back to the task" : "Create project"} blocked={needsTeam} /></div>
     </form>
   );
 }

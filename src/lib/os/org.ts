@@ -36,4 +36,10 @@ export const getSeats = cache(async (): Promise<Seat[]> => {
     }));
 });
 
-export { initials } from "./initials";
+export const seatHolder = (seats: Seat[], id: string | null | undefined) => (id ? seats.find(s => s.execId === id)?.name ?? null : null);
+export const teamLead = (seats: Seat[], departmentId: string | null | undefined) => seats.find(s => s.departmentId === departmentId && s.isHead)?.name ?? null;
+
+// Everything someone holds, for showing a position under their name.
+export function titleLookup(seats: Seat[]) {
+  return (id: string | null | undefined) => seats.filter(s => s.execId === id && id).map(s => s.title).join(", ");
+}

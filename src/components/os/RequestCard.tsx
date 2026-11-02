@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ActionForm, SubmitButton } from "./ActionForm";
-import { Field, Hidden, TeamTile } from "./ui";
+import { Field, Hidden } from "./ui";
 import { shortDue } from "@/lib/os/format";
 import { respondToRequest } from "@/lib/os/actions/work";
 import type { Task } from "@/lib/os/types";
@@ -12,7 +12,6 @@ export function RequestCard({ task, from, project, people, meId, why }: {
   return (
     <article className="os-request">
       <div className="os-request-head">
-        <TeamTile name={from} />
         <div>
           <Link href={`/os/tasks/${task.id}`}>{task.title}</Link>
           <small>{why ?? `From ${from}${project ? `, for ${project}` : ""}`}</small>

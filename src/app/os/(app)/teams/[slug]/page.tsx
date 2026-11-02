@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Avatar, Empty, Meter, TaskRow, TeamTile } from "@/components/os/ui";
+import { Empty, Meter, TaskRow } from "@/components/os/ui";
 import { can, getDirectory, nameLookup } from "@/lib/os/dal";
 import { getSeats } from "@/lib/os/org";
 import { projectNames } from "@/lib/os/projectNames";
@@ -18,12 +18,11 @@ export default async function TeamPage({ params }: { params: Promise<{ slug: str
   const lead = seats.find(s => s.isHead);
   const people = (
     <ul className="os-team-people" aria-label="People">
-      {seats.map(s => <li key={s.key}><Avatar name={s.name} lead={s.isHead} /><span><strong>{s.name ?? "Open seat"}{s.execId === me.id ? " (you)" : ""}</strong><small>{s.title}</small></span></li>)}
+      {seats.map(s => <li key={s.key}><span><strong>{s.name ?? "Open seat"}{s.execId === me.id ? " (you)" : ""}</strong><small>{s.title}</small></span></li>)}
     </ul>
   );
   const band = (extra?: React.ReactNode) => (
     <header className="os-team-band">
-      <TeamTile name={department.name} />
       <div><nav className="os-crumbs" aria-label="You are here"><Link href="/os/teams">Teams</Link></nav><h1>{department.name}</h1><p>{department.description}</p></div>
       {people}
       {extra}

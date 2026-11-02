@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ActionForm, SubmitButton } from "@/components/os/ActionForm";
 import { RequestCard } from "@/components/os/RequestCard";
-import { Empty, Field, Hidden, Meter, TaskRow, TeamTile } from "@/components/os/ui";
+import { Empty, Field, Hidden, Meter, Person, TaskRow } from "@/components/os/ui";
 import { publishSopVersion, returnSopVersion } from "@/lib/os/actions/knowledge";
 import { archiveAnnouncement, decideEvent, publishAnnouncement } from "@/lib/os/actions/work";
 import { displayName, getDepartments, getDirectory, requirePresident } from "@/lib/os/dal";
 import { daysUntil, formatDate } from "@/lib/os/format";
-import { getSeats } from "@/lib/os/org";
+import { getSeats, seatHolder, teamLead } from "@/lib/os/org";
 import { projectNames } from "@/lib/os/projectNames";
 import { createClient, rpc } from "@/lib/os/supabase";
 
@@ -96,7 +96,7 @@ export default async function PresidentPage() {
               </article>
             ))}
             {routed.map(t => (
-              <RequestCard key={t.id} task={t} from={nameOfTeam(t.requesting_department_id)} why={`Sent to ${nameOfTeam(t.responsible_department_id)}, which has no VP right now${names.get(t.id) ? `. For ${names.get(t.id)}` : ""}`} people={peopleIn(t.responsible_department_id)} meId={me.id} />
+              <RequestCard key={t.id} task={t} from={nameOfTeam(t.requesting_department_id)} why={`${[seatHolder(seats, t.assigned_by) ?? teamLead(seats, t.requesting_department_id), nameOfTeam(t.requesting_department_id)].filter(Boolean).join(", ")} sent this to ${nameOfTeam(t.responsible_department_id)}, which has no VP right now${names.get(t.id) ? `. For ${names.get(t.id)}` : ""}`} people={peopleIn(t.responsible_department_id)} meId={me.id} />
             ))}
           </section>
 
@@ -143,8 +143,7 @@ export default async function PresidentPage() {
                 const trouble = [row?.overdue_tasks ? `${row.overdue_tasks} overdue` : null, row?.blocked_tasks ? `${row.blocked_tasks} stuck` : null].filter(Boolean).join(", ");
                 return (
                   <li key={d.id} className="os-team-line">
-                    <TeamTile name={d.name} size="small" />
-                    <Link href={`/os/teams/${d.slug}`}>{d.name}</Link>
+                    <Link href={`/os/teams/${d.slug}`}><Person name={teamLead(seats, d.id) ?? "Lead seat open"} title={d.name} /></Link>
                     {trouble ? <small className="os-overdue">{trouble}</small> : hasLead(d.id) ? <small>On track</small> : <small className="os-warn-text">VP seat open</small>}
                   </li>
                 );
