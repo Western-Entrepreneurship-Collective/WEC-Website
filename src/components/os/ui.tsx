@@ -1,6 +1,8 @@
 import Link from "next/link";
-import { dueText, dueTone, formatDue, label } from "@/lib/os/format";
+import { dueText, dueTone, formatDue, label, shortDue } from "@/lib/os/format";
 import { initials } from "@/lib/os/initials";
+import { teamLook } from "@/lib/os/teams";
+import { TaskTick } from "./TaskTick";
 import type { Task } from "@/lib/os/types";
 
 export function Page({ title, eyebrow, subtitle, actions, children }: { title: string; eyebrow?: string; subtitle?: string; actions?: React.ReactNode; children: React.ReactNode }) {
@@ -121,8 +123,8 @@ export const Field = ({ label: labelText, hint, children }: { label: string; hin
   <label className="os-field"><span>{labelText}</span>{children}{hint ? <small>{hint}</small> : null}</label>
 );
 
-export const Check = ({ name, label: labelText, defaultChecked }: { name: string; label: string; defaultChecked?: boolean }) => (
-  <label className="os-check"><input type="checkbox" name={name} defaultChecked={defaultChecked} /><span>{labelText}</span></label>
+export const Check = ({ name, label: labelText, defaultChecked, value }: { name: string; label: string; defaultChecked?: boolean; value?: string }) => (
+  <label className="os-check"><input type="checkbox" name={name} value={value} defaultChecked={defaultChecked} /><span>{labelText}</span></label>
 );
 
 export const Hidden = ({ name, value }: { name: string; value: string | null | undefined }) => <input type="hidden" name={name} value={value ?? ""} />;
@@ -134,5 +136,39 @@ export function PriorityField({ value }: { value?: string }) {
         <option value="low">Low</option><option value="normal">Normal</option><option value="high">High</option><option value="urgent">Urgent</option>
       </select>
     </Field>
+  );
+}
+
+export function TeamTile({ name, size }: { name: string | null | undefined; size?: "small" }) {
+  const look = teamLook(name);
+  return <span className={`os-tile${size ? ` os-tile-${size}` : ""}`} style={{ background: look.tile }} aria-hidden="true">{look.code}</span>;
+}
+
+export function Meter({ value, tone }: { value: number; tone?: "bad" }) {
+  return <span className={`os-meter${tone ? ` is-${tone}` : ""}`} aria-hidden="true"><span style={{ width: `${Math.min(100, Math.max(0, value))}%` }} /></span>;
+}
+
+export const ViewSwitch = ({ items, label: labelText }: { items: { href: string; label: string; on: boolean }[]; label: string }) => (
+  <nav className="os-switch" aria-label={labelText}>
+    {items.map(i => <Link key={i.label} href={i.href} aria-current={i.on ? "page" : undefined}>{i.label}</Link>)}
+  </nav>
+);
+
+// Only what a list needs. The tick is left out for anyone who can't finish this task.
+export function TaskRow({ task, sub, canTick }: { task: Pick<Task, "id" | "title" | "status" | "due_at" | "updated_at"> & { blocked_auto?: boolean }; sub?: string | null; canTick?: boolean }) {
+  const done = task.status === "done";
+  const waiting = task.status === "blocked" && task.blocked_auto;
+  const chip = waiting ? "Waiting" : ["in_progress", "blocked"].includes(task.status) ? label(task.status) : task.status === "unassigned" ? "Unassigned" : null;
+  const late = !done && Boolean(task.due_at) && new Date(task.due_at!) < new Date();
+  return (
+    <div className={`os-task${done ? " is-done" : ""}`}>
+      {canTick && !waiting ? <TaskTick id={task.id} title={task.title} done={done} updatedAt={task.updated_at} /> : <span className="os-task-gap" aria-hidden="true" />}
+      <div className="os-task-main">
+        <Link href={`/os/tasks/${task.id}`}>{task.title}</Link>
+        {sub ? <small>{sub}</small> : null}
+      </div>
+      {chip && !done ? <span className={`os-chip-status${task.status === "blocked" && !waiting ? " is-stuck" : ""}`}>{chip}</span> : null}
+      <span className={late ? "os-task-due is-late" : "os-task-due"}>{shortDue(task.due_at)}{late ? <span className="sr-only"> (overdue)</span> : null}</span>
+    </div>
   );
 }

@@ -40,6 +40,7 @@ export type ProjectSummary = {
   id: string; kind: string; name: string; status: string; approval_status: string; starts_on: string | null; due_on: string | null;
   progress: number; department_name: string | null; event_id: string | null; event_name: string | null; archived_at: string | null;
   can_open: boolean; lead_name: string | null; next_due: string | null; overdue_tasks: number;
+  done_tasks: number; total_tasks: number; owning_department_id: string | null; other_teams: string[];
 };
 
 export type CalendarItem = {

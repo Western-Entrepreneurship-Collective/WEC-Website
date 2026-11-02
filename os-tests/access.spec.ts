@@ -15,7 +15,7 @@ test("administration and the President's page are 404 for everyone they are not 
     const response = await page.goto(path);
     expect(response?.status(), path).toBe(404);
   }
-  await expect(page.getByRole("link", { name: "Administration" })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "Admin", exact: true })).toHaveCount(0);
 
   await signIn(page, PEOPLE.president);
   expect((await page.goto("/os/president"))?.status()).toBe(200);
@@ -45,7 +45,7 @@ test("an unknown address is a 404 inside the workspace, and a sign-in page outsi
   await signIn(page, PEOPLE.dirContent);
   expect((await page.goto("/os/no-such-page"))?.status()).toBe(404);
   await expect(page.getByRole("heading", { name: "Nothing here" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Home", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "My tasks", exact: true })).toBeVisible();
 });
 
 test("the API, called directly with a real login, gives the same answers", async () => {

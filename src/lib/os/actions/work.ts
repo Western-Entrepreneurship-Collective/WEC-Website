@@ -2,7 +2,7 @@
 import { redirect } from "next/navigation";
 import { createServiceClient } from "../admin";
 import { rpc } from "../supabase";
-import { bool, date, dateTime, optional, optionalUuid, text, uuid, uuids } from "../validate";
+import { Invalid, bool, date, dateTime, dueDate, optional, optionalUuid, text, uuid, uuids } from "../validate";
 import { run } from "./run";
 import type { ActionResult } from "../types";
 
@@ -66,24 +66,30 @@ const projectFields = (fd: FormData) => ({
   share_progress_with_event_lead: bool(fd, "share_progress_with_event_lead"),
 });
 
-export async function createProject(_: ActionResult, fd: FormData): Promise<ActionResult> {
-  let id = "";
+// "Just my team" or "Multiple teams" is the choice people make. The kind follows from it.
+export async function saveProject(_: ActionResult, fd: FormData): Promise<ActionResult> {
+  let id = optionalUuid(fd, "id");
   const r = await run(async () => {
-    id = await rpc<string>("create_project", { p_fields: projectFields(fd), p_departments: uuids(fd, "departments"), p_template: optionalUuid(fd, "template") });
+    const multi = fd.get("audience") === "multi";
+    const teams = multi ? uuids(fd, "teams") : [];
+    if (multi && teams.length === 0) throw new Invalid("Choose at least one other team, or switch to Just my team.");
+    const fields = projectFields(fd);
+    if (id) {
+      await rpc("update_project", { p_project: id, p_fields: fields, p_expected: optional(fd, "expected") });
+      await rpc("set_project_teams", { p_project: id, p_departments: teams });
+    } else {
+      const kind = !multi ? "INTERNAL" : fields.event_id ? "EVENT" : "GLOBAL";
+      id = await rpc<string>("create_project", { p_fields: { ...fields, kind }, p_departments: teams, p_template: optionalUuid(fd, "template") });
+    }
   });
   if (!r.ok) return r;
   redirect(`/os/projects/${id}`);
 }
 
-export const updateProject = async (_: ActionResult, fd: FormData) =>
-  run(() => rpc("update_project", { p_project: uuid(fd, "id"), p_fields: projectFields(fd), p_expected: optional(fd, "expected") }), "Saved.");
 export const setProjectStatus = async (_: ActionResult, fd: FormData) => run(() => rpc("set_project_status", { p_project: uuid(fd, "id"), p_status: text(fd, "status", { max: 20 }) }));
 export const setProjectPeople = async (_: ActionResult, fd: FormData) =>
   run(() => rpc("set_project_people", { p_project: uuid(fd, "id"), p_departments: uuids(fd, "departments"), p_participants: uuids(fd, "participants") }), "Saved.");
 export const archiveProject = async (_: ActionResult, fd: FormData) => run(() => rpc("archive_project", { p_project: uuid(fd, "id") }), "Archived.");
-export const submitGlobal = async (_: ActionResult, fd: FormData) => run(() => rpc("submit_global_project", { p_project: uuid(fd, "id") }), "Sent to the President.");
-export const decideGlobal = async (_: ActionResult, fd: FormData) =>
-  run(() => rpc("decide_global_project", { p_project: uuid(fd, "id"), p_decision: text(fd, "decision", { max: 40 }), p_note: optional(fd, "note") ?? "" }));
 export const saveMilestone = async (_: ActionResult, fd: FormData) =>
   run(() => rpc("save_milestone", { p_id: optionalUuid(fd, "id"), p_project: optionalUuid(fd, "project"), p_title: text(fd, "title", { max: 160, label: "Title" }), p_due: date(fd, "due_on", "Date"), p_core: bool(fd, "core") }));
 export const setMilestoneDone = async (_: ActionResult, fd: FormData) => run(() => rpc("set_milestone_done", { p_id: uuid(fd, "id"), p_done: bool(fd, "done") }));
@@ -94,7 +100,7 @@ const taskFields = (fd: FormData) => ({
   deliverables: optional(fd, "deliverables") ?? "",
   priority: optional(fd, "priority", 10) ?? "",
   visibility: optional(fd, "visibility", 12) ?? "",
-  due_at: dateTime(fd, "due_at") ?? "",
+  due_at: dateTime(fd, "due_at") ?? dueDate(fd, "due") ?? "",
   assigned_to: optionalUuid(fd, "assigned_to") ?? "",
   parent_task_id: optionalUuid(fd, "parent_task_id") ?? "",
   responsible_department_id: optionalUuid(fd, "responsible_department_id") ?? "",
@@ -121,26 +127,31 @@ export const saveChecklistItem = async (_: ActionResult, fd: FormData) =>
 export const deleteChecklistItem = async (_: ActionResult, fd: FormData) => run(() => rpc("delete_checklist_item", { p_id: uuid(fd, "item") }));
 export const addDependency = async (_: ActionResult, fd: FormData) => run(() => rpc("add_task_dependency", { p_task: uuid(fd, "id"), p_depends_on: uuid(fd, "depends_on") }));
 export const removeDependency = async (_: ActionResult, fd: FormData) => run(() => rpc("remove_task_dependency", { p_task: uuid(fd, "id"), p_depends_on: uuid(fd, "depends_on") }));
-export const submitDeliverable = async (_: ActionResult, fd: FormData) => run(() => rpc("submit_deliverable", { p_task: uuid(fd, "id"), p_note: optional(fd, "note") ?? "" }), "Submitted for review.");
-export const reviewDeliverable = async (_: ActionResult, fd: FormData) =>
-  run(() => rpc("review_deliverable", { p_task: uuid(fd, "id"), p_accept: fd.get("accept") === "true", p_note: optional(fd, "note") ?? "" }));
 
-export async function createRequest(_: ActionResult, fd: FormData): Promise<ActionResult> {
+// One form for every task. Who decides what it becomes: a person's task, or a request to a team.
+export async function newTask(_: ActionResult, fd: FormData): Promise<ActionResult> {
   let id = "";
   const r = await run(async () => {
-    id = await rpc<string>("create_cross_team_request", {
-      p_project: uuid(fd, "project"), p_receiving: uuid(fd, "receiving"),
-      p_fields: { title: text(fd, "title", { max: 200, label: "Title" }), description: optional(fd, "description") ?? "", deliverables: optional(fd, "deliverables") ?? "",
-        priority: optional(fd, "priority", 10) ?? "", due_at: dateTime(fd, "due_at") ?? "", requesting_department_id: optionalUuid(fd, "requesting") ?? "" },
+    const who = String(fd.get("who") ?? "me");
+    const person = who.startsWith("p:") ? who.slice(2) : null;
+    const team = who.startsWith("t:") ? who.slice(2) : null;
+    const idCheck = new FormData();
+    if (person) idCheck.set("x", person);
+    if (team) idCheck.set("x", team);
+    optionalUuid(idCheck, "x");
+    id = await rpc<string>("new_task", {
+      p_project: uuid(fd, "project"), p_person: person, p_team: team,
+      p_fields: { title: text(fd, "title", { max: 200, label: "What needs doing" }), description: optional(fd, "description") ?? "", due_at: dueDate(fd, "due") ?? "" },
+      p_steps: fd.getAll("steps").map(String).slice(0, 50).map(s => s.slice(0, 300)),
     });
   });
   if (!r.ok) return r;
+  if (fd.get("stay")) return { ok: true, message: "Added." };
   redirect(`/os/tasks/${id}`);
 }
 
 export const respondToRequest = async (_: ActionResult, fd: FormData) =>
   run(() => rpc("respond_to_request", { p_task: uuid(fd, "id"), p_action: text(fd, "action", { max: 10 }), p_note: optional(fd, "note") ?? "", p_delegate: optionalUuid(fd, "delegate") }));
-export const clarifyRequest = async (_: ActionResult, fd: FormData) => run(() => rpc("clarify_request", { p_task: uuid(fd, "id"), p_note: text(fd, "note", { label: "Answer" }) }));
 export const delegateRequest = async (_: ActionResult, fd: FormData) => run(() => rpc("delegate_request", { p_task: uuid(fd, "id"), p_delegate: uuid(fd, "delegate") }), "Delegated.");
 export const proposeDeadline = async (_: ActionResult, fd: FormData) => run(() => rpc("propose_deadline", { p_task: uuid(fd, "id"), p_due: dateTime(fd, "due", { required: true, label: "New date" }), p_note: optional(fd, "note") ?? "" }), "Proposed.");
 export const decideDeadline = async (_: ActionResult, fd: FormData) => run(() => rpc("decide_deadline", { p_proposal: uuid(fd, "proposal"), p_accept: fd.get("accept") === "true" }));
@@ -154,7 +165,6 @@ export const updatePreferences = async (_: ActionResult, fd: FormData) => run(()
 export async function markOnboarding(step: string) {
   await rpc("mark_onboarding", { p_step: step });
 }
-export const dismissChecklist = async () => run(() => rpc("mark_onboarding", { p_step: "dismissed" }));
 export async function finishWelcome() {
   await rpc("mark_onboarding", { p_step: "welcomed" });
   redirect("/os");

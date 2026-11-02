@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { PEOPLE, dbQuery, futureLocal, signIn } from "./support/helpers";
+import { PEOPLE, dbQuery, futureLocal, signIn, statusOf } from "./support/helpers";
 
 test.describe.configure({ mode: "serial" });
 
@@ -21,7 +21,7 @@ test("event: proposal, approval, generated projects and tasks", async ({ page })
   await expect(page.getByRole("heading", { name: EVENT })).toBeVisible();
   await expect(page.getByText("Projects are generated when this event is approved.")).toBeVisible();
   await page.getByRole("button", { name: "Send to the President" }).click();
-  await expect(page.locator(".os-page-head").getByText("In review")).toBeVisible();
+  await expect(page.locator(".os-event-head").getByText("In review")).toBeVisible();
 
   await signIn(page, PEOPLE.vpContent);
   await page.goto("/os/events");
@@ -30,10 +30,12 @@ test("event: proposal, approval, generated projects and tasks", async ({ page })
   await signIn(page, PEOPLE.president);
   await page.goto("/os/notifications");
   await expect(page.locator(".os-unread", { hasText: EVENT })).toContainText("Event proposal to review");
-  await page.goto("/os/president");
+  await page.getByRole("link", { name: "All of WEC" }).click();
+  const proposal = page.locator(".os-request", { hasText: EVENT });
+  await proposal.getByRole("button", { name: "Approve" }).click();
+  await expect(proposal).toHaveCount(0);
   await page.getByRole("link", { name: EVENT }).click();
-  await page.getByRole("button", { name: "Approve" }).click();
-  await expect(page.locator(".os-page-head").getByText("Approved")).toBeVisible();
+  await expect(page.locator(".os-event-head").getByText("Approved")).toBeVisible();
   const byTeam = page.getByRole("group", { name: "Team progress" });
   await expect(byTeam.getByRole("link", { name: "Content", exact: true })).toBeVisible();
   await expect(byTeam.getByRole("link", { name: "Outreach", exact: true })).toBeVisible();
@@ -47,7 +49,7 @@ test("event: proposal, approval, generated projects and tasks", async ({ page })
   await expect(page.getByRole("link", { name: "Collect promotional requirements" })).toBeVisible();
 
   await signIn(page, PEOPLE.dirFinance);
-  await page.goto(`/os/calendar/core?view=agenda&date=${futureLocal(40).slice(0, 10)}`);
+  await page.goto(`/os/calendar?scope=all&month=${futureLocal(45).slice(0, 7)}`);
   await expect(page.getByRole("link", { name: EVENT })).toBeVisible();
 });
 
@@ -57,50 +59,137 @@ test("task: assign, complete, and readiness moves", async ({ page }) => {
   await page.getByRole("link", { name: `${EVENT} — Content` }).click();
   await page.getByRole("link", { name: "Collect promotional requirements" }).click();
   await page.waitForLoadState("networkidle");
-  await page.locator("summary", { hasText: "Change who has this" }).click();
-  await page.getByLabel("Assign to").selectOption({ label: "Dana Director" });
-  await page.getByRole("button", { name: "Assign", exact: true }).click();
+  await page.getByLabel("Who").selectOption({ label: "Dana Director" });
+  await page.getByRole("button", { name: "Change", exact: true }).click();
   await expect(page.getByText("Assigned.", { exact: true })).toBeVisible();
 
   await signIn(page, PEOPLE.dirContent);
-  await page.goto("/os/tasks");
-  await page.getByRole("link", { name: "Collect promotional requirements" }).click();
-  await page.getByRole("button", { name: "Mark done" }).click();
-  await expect(page.locator(".os-page-head").getByText("Done")).toBeVisible();
+  await page.goto("/os");
+  const row = page.locator(".os-next-up", { hasText: "Collect promotional requirements" });
+  await row.getByRole("link", { name: "Collect promotional requirements" }).click();
+  await page.getByRole("group", { name: "Status" }).getByRole("button", { name: "Done" }).click();
+  await expect(statusOf(page)).toHaveText("Done");
 
   await page.goto("/os/events");
   await expect(page.locator(".os-list li", { hasText: EVENT })).not.toContainText("0% ready");
 });
 
-test("projects: one list with views, grouped tasks, and settings kept apart", async ({ page }) => {
+test("projects: my team or all of WEC, grouped tasks, and editing kept apart", async ({ page }) => {
   await signIn(page, PEOPLE.vpContent);
   await page.getByRole("link", { name: "Projects", exact: true }).click();
   await expect(page.getByRole("link", { name: `${EVENT} — Content` })).toBeVisible();
-  await page.getByRole("link", { name: /^Events/ }).last().click();
-  await expect(page).toHaveURL(/show=event/);
+  // Another team's part of an event stays with that team, in either view.
+  await expect(page.getByRole("link", { name: `${EVENT} — Outreach` })).toHaveCount(0);
+  await page.getByRole("link", { name: "All of WEC" }).click();
+  await expect(page.getByRole("link", { name: `${EVENT} — Outreach` })).toHaveCount(0);
   await page.getByRole("link", { name: `${EVENT} — Content` }).click();
-  await expect(page.getByRole("region", { name: "Ready now" }).getByRole("link", { name: "Prepare graphics" })).toBeVisible();
-  await expect(page.getByRole("region", { name: "Waiting on an earlier step" }).getByRole("link", { name: "Publish event announcement" })).toBeVisible();
-  await page.getByRole("link", { name: "Settings", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Save people" })).toBeVisible();
-
-  // A Director has no settings tab, and the address doesn't open one.
+  await expect(page.getByRole("region", { name: "To do" }).getByRole("link", { name: "Prepare graphics" })).toBeVisible();
+  await page.getByRole("link", { name: "Edit", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Edit project" })).toBeVisible();
+  await expect(page.locator("summary", { hasText: "Add individual people" })).toBeVisible();
   const url = page.url();
+
+  // A Director who does not lead it has no Edit link, and the address doesn't open it.
   await signIn(page, PEOPLE.dirContent);
-  await page.goto(url);
-  await expect(page.getByRole("button", { name: "Save people" })).toHaveCount(0);
-  await expect(page.getByRole("link", { name: "Settings", exact: true })).toHaveCount(0);
+  expect((await page.goto(url))?.status()).toBe(404);
+  await page.goto(url.replace("/edit", ""));
+  await expect(page.getByRole("link", { name: "Edit", exact: true })).toHaveCount(0);
 });
 
-test("another team's page shows who to ask, not their work", async ({ page }) => {
+test("a project for one team, then shared with another", async ({ page }) => {
   await signIn(page, PEOPLE.dirContent);
-  await page.getByRole("link", { name: "All Teams" }).click();
+  await page.goto("/os/projects/new");
+  await page.getByLabel("Project name").fill("Posting guide refresh");
+  await expect(page.getByText("Only Content and the President can see it.")).toBeVisible();
+  await page.getByRole("button", { name: "Create project" }).click();
+  await expect(page.getByRole("heading", { name: "Posting guide refresh" })).toBeVisible();
+  const url = page.url();
+
+  await signIn(page, PEOPLE.dirFinance);
+  expect((await page.goto(url))?.status(), "private to Content").toBe(404);
+
+  await signIn(page, PEOPLE.vpContent);
+  await page.goto(`${url}/edit`);
+  await page.getByLabel(/^Multiple teams/).check();
+  await expect(page.getByText("Choose at least one other team")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save changes" })).toBeDisabled();
+  await page.getByRole("checkbox", { name: "Finance" }).check();
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("Content, with Finance.")).toBeVisible();
+
+  await signIn(page, PEOPLE.dirFinance);
+  await page.goto(url);
+  await expect(page.getByRole("heading", { name: "Posting guide refresh" })).toBeVisible();
+  await expect(page.getByRole("form", { name: "Add a task" })).toBeVisible();
+});
+
+test("several teams at once, with no approval, and outsiders see progress only", async ({ page }) => {
+  await signIn(page, PEOPLE.coordOutreach);
+  expect((await page.goto("/os/projects/new"))?.status(), "Coordinators cannot").toBe(404);
+
+  await signIn(page, PEOPLE.dirContent);
+  await page.goto("/os/projects/new");
+  await page.getByLabel("Project name").fill("Annual Sponsorship Strategy");
+  await page.getByLabel(/^Multiple teams/).check();
+  await page.getByRole("checkbox", { name: "Outreach" }).check();
+  await page.getByRole("button", { name: "Create project" }).click();
+  await expect(page.getByText("Content, with Outreach.")).toBeVisible();
+  const url = page.url();
+
+  await signIn(page, PEOPLE.vpOutreach);
+  await page.goto(url);
+  await expect(page.getByRole("form", { name: "Add a task" })).toBeVisible();
+
+  await signIn(page, PEOPLE.vpFinance);
+  await page.goto("/os/projects?scope=all");
+  await expect(page.getByRole("link", { name: "Annual Sponsorship Strategy" })).toBeVisible();
+  await page.goto(url);
+  await expect(page.getByText(/details belong to the teams working on it/)).toBeVisible();
+});
+
+test("a new task needs a project, and carries its details and steps", async ({ page }) => {
+  await signIn(page, PEOPLE.dirContent);
+  await page.getByRole("link", { name: "New task" }).click();
+  await expect(page.getByLabel("Project", { exact: true })).toHaveValue("");
+  await page.getByLabel("What needs doing?").fill("Prepare the spring graphics");
+  await page.getByRole("button", { name: "Create task" }).click();
+  await expect(page).toHaveURL(/\/os\/tasks\/new$/);
+
+  await page.getByLabel("Project", { exact: true }).selectOption({ label: "Posting guide refresh" });
+  await page.getByLabel("Who?").selectOption({ label: "Connie Content" });
+  await expect(page.getByText("This goes straight onto Connie's task list.")).toBeVisible();
+  await page.getByLabel("Details").fill("Use the event colours.");
+  await page.locator("#task-step").fill("Make the post");
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await page.locator("#task-step").fill("Make the header");
+  await page.locator("#task-step").press("Enter");
+  await page.getByLabel("Due").fill(futureLocal(4).slice(0, 10));
+  await page.getByRole("button", { name: "Create task" }).click();
+
+  await expect(page.getByRole("heading", { name: "Prepare the spring graphics" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Details" })).toContainText("Use the event colours.");
+  await expect(page.getByText("0 of 2 done")).toBeVisible();
+  await page.getByRole("button", { name: "Tick Make the post" }).click();
+  await expect(page.getByText("1 of 2 done")).toBeVisible();
+
+  // Added from inside the project too, without leaving it.
+  await page.getByRole("link", { name: "Posting guide refresh" }).first().click();
+  await page.getByRole("textbox", { name: "Add a task" }).fill("Check the links");
+  await page.getByRole("form", { name: "Add a task" }).getByRole("button", { name: "Add", exact: true }).click();
+  await expect(page.getByRole("link", { name: "Check the links" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Add a task" })).toHaveValue("");
+});
+
+test("another team's page shows what's between you, not their work", async ({ page }) => {
+  await signIn(page, PEOPLE.dirContent);
+  await page.getByRole("link", { name: "Teams", exact: true }).click();
   await expect(page.getByRole("link", { name: /Open your team/ })).toBeVisible();
-  await page.getByRole("link", { name: /Finance/ }).first().click();
-  await expect(page.getByText(/private to the team and the President/)).toBeVisible();
-  await page.getByRole("link", { name: "Ask Finance for something" }).click();
-  await expect(page.getByLabel("Send to")).toHaveValue(/.+/);
-  await expect(page.getByLabel("Send to").locator("option:checked")).toHaveText("Finance");
+  await page.getByRole("link", { name: "Finance", exact: true }).click();
+  await expect(page.getByText("Finance's private projects and other tasks stay with Finance.")).toBeVisible();
+  await page.getByRole("link", { name: "Send Finance a task" }).click();
+  await expect(page.getByLabel("Who?").locator("option:checked")).toHaveText("Finance");
+  await expect(page.getByRole("button", { name: "Send to Finance" })).toBeVisible();
+  await expect(page.getByText(/Finance sees this task and the project's name, and nothing else/)).toBeVisible();
 });
 
 test("kanban: a card moves with the keyboard-reachable control", async ({ page }) => {
@@ -108,127 +197,129 @@ test("kanban: a card moves with the keyboard-reachable control", async ({ page }
     insert into os.tasks (project_id, title, assigned_by, assigned_to, requesting_department_id, responsible_department_id)
     select 'b8000000-0000-0000-0000-000000000002', 'Move me', e.id, e.id, d.id, d.id from os.executives e, os.departments d where e.email = 'dir.content@wec.test' and d.slug = 'content';`);
   await signIn(page, PEOPLE.dirContent);
-  await page.goto("/os/tasks?view=board");
+  await page.getByRole("link", { name: "Board", exact: true }).click();
   const card = page.locator(".os-card", { hasText: "Move me" });
   await card.getByRole("combobox").focus();
   await card.getByRole("combobox").selectOption("in_progress");
-  await expect(page.getByRole("region", { name: "In progress" }).locator(".os-card", { hasText: "Move me" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Doing" }).locator(".os-card", { hasText: "Move me" })).toBeVisible();
   await page.reload();
-  await expect(page.getByRole("region", { name: "In progress" }).locator(".os-card", { hasText: "Move me" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Doing" }).locator(".os-card", { hasText: "Move me" })).toBeVisible();
   expect(await dbQuery("select status from os.tasks where title = 'Move me'")).toBe("in_progress");
+
+  // A task waiting on an earlier one isn't anyone being stuck.
+  await signIn(page, PEOPLE.vpContent);
+  await page.goto("/os?view=board");
+  const waiting = page.locator(".os-card", { hasText: "Publish event announcement" });
+  await expect(page.getByRole("region", { name: "To do" }).locator(".os-card", { hasText: "Publish event announcement" })).toContainText("Waiting on an earlier task");
+  await expect(waiting.getByRole("combobox")).toBeDisabled();
 });
 
-test("cross-team: the whole request flow, on one record", async ({ page }) => {
+test("a task for another team: sent, taken, finished, on one record", async ({ page }) => {
   await dbQuery(`insert into os.projects (id, kind, owning_department_id, name) values ('b8000000-0000-0000-0000-000000000001', 'INTERNAL', (select id from os.departments where slug = 'finance'), 'Year-end report') on conflict do nothing;
     insert into os.tasks (project_id, title, assigned_by, assigned_to, requesting_department_id, responsible_department_id)
     select 'b8000000-0000-0000-0000-000000000001', 'Sibling only Finance sees', e.id, e.id, d.id, d.id from os.executives e, os.departments d where e.email = 'vp.finance@wec.test' and d.slug = 'finance';`);
 
-  // 1. Create
   await signIn(page, PEOPLE.dirFinance);
-  await page.goto("/os/requests/new?project=b8000000-0000-0000-0000-000000000001");
-  await expect(page.getByText(/will see this request and the name of the project/)).toBeVisible();
-  await page.getByLabel("Title").fill("Design the report cover");
-  await page.getByLabel("Send to").selectOption({ label: "Content" });
-  await page.getByLabel("Due").fill(futureLocal(20));
-  await page.getByRole("button", { name: "Send request" }).click();
+  await page.goto("/os/tasks/new?project=b8000000-0000-0000-0000-000000000001");
+  await page.getByLabel("What needs doing?").fill("Design the report cover");
+  await page.getByLabel("Who?").selectOption({ label: "Content" });
+  await expect(page.getByText(/Connie Content will choose who does this/)).toBeVisible();
+  await page.getByLabel("Due").fill(futureLocal(20).slice(0, 10));
+  await page.getByRole("button", { name: "Send to Content" }).click();
   await expect(page.getByRole("heading", { name: "Design the report cover" })).toBeVisible();
-  await expect(page.locator(".os-page-head").getByText("Awaiting response")).toBeVisible();
+  await expect(statusOf(page)).toHaveText("Awaiting response");
   const url = page.url();
+  await page.goto("/os");
+  await expect(page.getByRole("region", { name: "Waiting on others" }).getByRole("link", { name: "Design the report cover" })).toBeVisible();
 
-  // 2-3. The receiving VP is told, and it is in the queue. Their Director does not see it yet.
+  // Their Director does not see it until it is theirs.
   await signIn(page, PEOPLE.dirContent);
   expect((await page.goto(url))?.status()).toBe(404);
 
+  // The receiving VP has it on their own home page, and can give it away in one move.
   await signIn(page, PEOPLE.vpContent);
-  await page.goto("/os/teams/content/requests");
-  await expect(page.getByRole("link", { name: "Design the report cover" })).toBeVisible();
-  await page.goto("/os/notifications");
-  await page.getByRole("link", { name: "Design the report cover" }).first().click();
+  const request = page.locator(".os-request", { hasText: "Design the report cover" });
+  await expect(request).toContainText("From Finance, for Year-end report");
+  await request.getByRole("link", { name: "Design the report cover" }).click();
   await expect(page.getByText("Year-end report").first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Year-end report" })).toHaveCount(0);
+  await page.goto("/os");
+  await request.getByLabel("Assign Design the report cover to").selectOption({ label: "Dana Director" });
+  await request.getByRole("button", { name: "Assign" }).click();
+  await expect(request).toHaveCount(0);
 
-  // 4-5. Accept and delegate
-  await page.waitForLoadState("networkidle");
-  await page.getByLabel("Delegate to").selectOption({ label: "Dana Director" });
-  await page.getByRole("button", { name: "Accept" }).click();
-  await expect(page.locator(".os-page-head").getByText("To do")).toBeVisible();
-
-  // 6. The assignee delivers
+  // Whoever has it talks and finishes it, with nothing else from Finance's project in sight.
   await signIn(page, PEOPLE.dirContent);
   await page.goto(url);
   await page.getByRole("textbox", { name: "Comment" }).fill("Working on it.");
   await page.getByRole("button", { name: "Post" }).click();
   await expect(page.locator(".os-comments")).toContainText("Working on it.");
-  await page.getByLabel("Note with the deliverable").fill("First pass");
-  await page.getByRole("button", { name: "Submit for review" }).click();
-  await expect(page.locator(".os-page-head").getByText("In review")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Accept deliverable" })).toHaveCount(0);
-  // Nothing else from Finance's project came with it.
   await expect(page.getByText("Sibling only Finance sees")).toHaveCount(0);
+  await page.getByRole("group", { name: "Status" }).getByRole("button", { name: "Done" }).click();
+  await expect(statusOf(page)).toHaveText("Done");
+  await expect(page.getByText("Finance has been told, and can reopen this")).toBeVisible();
 
-  // 7. The requester sends it back, then accepts
+  // The team that asked sees the same answer, and can send it back.
   await signIn(page, PEOPLE.dirFinance);
   await page.goto(url);
-  await page.getByLabel("What needs revising").fill("Bigger logo");
-  await page.getByRole("button", { name: "Request revisions" }).click();
-  await expect(page.locator(".os-page-head").getByText("Revisions")).toBeVisible();
-
-  await signIn(page, PEOPLE.dirContent);
-  await page.goto(url);
-  await page.getByRole("button", { name: "Submit for review" }).click();
-  await expect(page.locator(".os-page-head").getByText("In review")).toBeVisible();
-
-  await signIn(page, PEOPLE.dirFinance);
-  await page.goto(url);
-  await page.getByRole("button", { name: "Accept deliverable" }).click();
-  await expect(page.locator(".os-page-head").getByText("Done")).toBeVisible();
-
-  // 8. Same answer on both sides, and only one row exists.
-  await signIn(page, PEOPLE.vpContent);
-  await page.goto(url);
-  await expect(page.locator(".os-page-head").getByText("Done")).toBeVisible();
+  await expect(statusOf(page)).toHaveText("Done");
+  await page.getByRole("button", { name: "Reopen" }).click();
+  await expect(statusOf(page)).toHaveText("To do");
   expect(await dbQuery("select count(*) from os.tasks where title = 'Design the report cover'")).toBe("1");
 });
 
-test("global project: a VP proposes, the President publishes", async ({ page }) => {
-  await signIn(page, PEOPLE.dirContent);
-  expect((await page.goto("/os/projects/new?kind=GLOBAL"))?.status(), "Directors cannot").toBe(404);
+test("declining says why, and a team with no VP goes to the President", async ({ page }) => {
+  await signIn(page, PEOPLE.dirFinance);
+  await page.goto("/os/tasks/new?project=b8000000-0000-0000-0000-000000000001");
+  await page.getByLabel("What needs doing?").fill("Write the outreach letter");
+  await page.getByLabel("Who?").selectOption({ label: "Outreach" });
+  await page.getByRole("button", { name: "Send to Outreach" }).click();
+  await expect(page.getByRole("heading", { name: "Write the outreach letter" })).toBeVisible();
+
+  await page.goto("/os/tasks/new?project=b8000000-0000-0000-0000-000000000001");
+  await page.getByLabel("What needs doing?").fill("Book the room");
+  await page.getByLabel("Who?").selectOption({ label: "Operations" });
+  await expect(page.getByText(/The President, since Operations has no VP right now/)).toBeVisible();
+  await page.getByRole("button", { name: "Send to Operations" }).click();
+  await expect(page.getByRole("heading", { name: "Book the room" })).toBeVisible();
 
   await signIn(page, PEOPLE.vpOutreach);
-  await page.goto("/os/projects/new?kind=GLOBAL");
-  await page.getByLabel("Name", { exact: true }).fill("Annual Sponsorship Strategy");
-  await page.getByLabel("Due").fill(new Date(Date.now() + 40 * 86_400_000).toISOString().slice(0, 10));
-  await page.getByRole("button", { name: "Create project" }).click();
-  await expect(page.getByRole("heading", { name: "Annual Sponsorship Strategy" })).toBeVisible();
-  await page.getByRole("button", { name: "Send to the President" }).click();
-  await expect(page.locator(".os-page-head").getByText("Awaiting response")).toBeVisible();
-  const url = page.url();
-
-  await signIn(page, PEOPLE.vpFinance);
-  await page.goto("/os/projects/global");
-  await expect(page.getByText("Annual Sponsorship Strategy")).toHaveCount(0);
+  const asked = page.locator(".os-request", { hasText: "Write the outreach letter" });
+  await asked.locator("summary", { hasText: "Decline" }).click();
+  await asked.getByLabel("Why? They will be told.").fill("Not our area");
+  await asked.getByRole("button", { name: "Decline" }).click();
+  await expect(asked).toHaveCount(0);
 
   await signIn(page, PEOPLE.president);
-  await page.goto(url);
-  await page.getByRole("button", { name: "Approve and publish" }).click();
-  await expect(page.getByRole("button", { name: "Approve and publish" })).toHaveCount(0);
+  await page.goto("/os/president");
+  const routed = page.locator(".os-request", { hasText: "Book the room" });
+  await expect(routed).toContainText("Sent to Operations, which has no VP right now");
+  await routed.getByRole("button", { name: "Take it" }).click();
+  await expect(routed).toHaveCount(0);
+  await page.goto("/os");
+  await expect(page.getByRole("link", { name: "Book the room" }).first()).toBeVisible();
+});
 
-  await signIn(page, PEOPLE.vpFinance);
-  await page.goto("/os/projects/global");
-  await expect(page.getByText("Annual Sponsorship Strategy")).toBeVisible();
-  await page.goto(url);
-  await expect(page.getByText(/details belong to the teams working on it/)).toBeVisible();
+test("the calendar is a month from Sunday to Saturday", async ({ page }) => {
+  await signIn(page, PEOPLE.dirContent);
+  await page.getByRole("link", { name: "Calendar", exact: true }).click();
+  await expect(page.locator(".os-cal-head span").first()).toHaveText("Sun");
+  const heading = await page.getByRole("heading", { level: 1 }).textContent();
+  await page.getByRole("link", { name: "Next month" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).not.toHaveText(heading!);
+  await page.getByRole("link", { name: "Today" }).click();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText(heading!);
+  expect((await page.locator(".os-cal-day").count()) % 7).toBe(0);
 });
 
 test("files: attached by someone on the task, refused to everyone else", async ({ page, browser }) => {
   await signIn(page, PEOPLE.dirFinance);
-  await page.goto("/os/tasks");
-  await page.goto("/os/teams/finance");
   await dbQuery("update os.tasks set assigned_to = (select id from os.executives where email = 'dir.finance@wec.test') where title = 'Sibling only Finance sees'");
-  await page.goto("/os/tasks");
-  await page.getByRole("link", { name: "Sibling only Finance sees" }).click();
+  await page.goto("/os");
+  await page.getByRole("link", { name: "Sibling only Finance sees" }).first().click();
   await expect(page.getByRole("heading", { name: "Sibling only Finance sees" })).toBeVisible();
   const taskUrl = page.url();
+  await page.locator(".os-task-side summary", { hasText: "More" }).click();
   await page.locator('input[type="file"]').setInputFiles({ name: "notes.txt", mimeType: "text/plain", buffer: Buffer.from("private notes") });
   const link = page.getByRole("link", { name: "notes.txt" });
   await expect(link).toBeVisible({ timeout: 15000 });

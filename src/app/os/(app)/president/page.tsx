@@ -1,82 +1,134 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ActionForm, SubmitButton } from "@/components/os/ActionForm";
-import { Calendar } from "@/components/os/Calendar";
-import { ProjectTable } from "@/components/os/ProjectTable";
-import { DueDate, Empty, Field, Hidden, Page, Panel, Pill, Progress, Stat } from "@/components/os/ui";
-import { archiveAnnouncement, publishAnnouncement } from "@/lib/os/actions/work";
-import { requirePresident } from "@/lib/os/dal";
-import { formatDate, formatDateTime } from "@/lib/os/format";
+import { RequestCard } from "@/components/os/RequestCard";
+import { Empty, Field, Hidden, Meter, TaskRow, TeamTile } from "@/components/os/ui";
+import { archiveAnnouncement, decideEvent, publishAnnouncement } from "@/lib/os/actions/work";
+import { displayName, getDepartments, getDirectory, requirePresident } from "@/lib/os/dal";
+import { daysUntil, formatDate } from "@/lib/os/format";
+import { getSeats } from "@/lib/os/org";
+import { projectNames } from "@/lib/os/projectNames";
 import { createClient, rpc } from "@/lib/os/supabase";
-import type { ProjectSummary } from "@/lib/os/types";
 
-export const metadata: Metadata = { title: "President" };
+export const metadata: Metadata = { title: "All of WEC" };
 
 type Escalation = { task_id: string; title: string; status: string; due_at: string | null; department_name: string; project_name: string; is_overdue: boolean };
-type Dependency = { task_id: string; title: string; status: string; request_state: string; due_at: string | null; requesting: string; responsible: string };
 type DepartmentRow = { department_id: string; department_name: string; open_tasks: number; done_tasks: number; overdue_tasks: number; blocked_tasks: number };
 
-export default async function PresidentPage({ searchParams }: { searchParams: Promise<{ view?: string; date?: string; show?: string | string[] }> }) {
-  await requirePresident();
+export default async function PresidentPage() {
+  const me = await requirePresident();
   const supabase = await createClient();
-  const [pendingEvents, upcoming, announcements, projects, escalations, dependencies, departments] = await Promise.all([
+  const [pendingEvents, upcoming, announcements, escalations, progress, seats, departments, directory, pending] = await Promise.all([
     supabase.from("events").select("*").eq("status", "submitted").order("submitted_at"),
-    supabase.from("events").select("*").in("status", ["approved", "in_progress"]).order("starts_at").limit(8),
+    supabase.from("events").select("*").in("status", ["approved", "in_progress"]).order("starts_at").limit(1),
     supabase.from("announcements").select("*").is("archived_at", null).order("published_at", { ascending: false }).limit(5),
-    rpc<ProjectSummary[]>("project_summaries"),
     rpc<Escalation[]>("escalations"),
-    rpc<Dependency[]>("cross_team_dependencies"),
     rpc<DepartmentRow[]>("department_progress"),
+    getSeats(),
+    getDepartments(),
+    getDirectory(),
+    supabase.from("tasks").select("*").in("request_state", ["pending", "clarification_requested"]).order("created_at").limit(50),
   ]);
-  const pendingGlobals = projects.filter(p => p.kind === "GLOBAL" && p.approval_status === "pending");
-  const readiness = new Map(await Promise.all((upcoming.data ?? []).map(async e => [e.id, await rpc<number>("event_readiness", { p_event: e.id })] as const)));
-  const overdue = escalations.filter(e => e.is_overdue);
-  const blocked = escalations.filter(e => e.status === "blocked");
+  const hasLead = (departmentId: string) => seats.some(s => s.departmentId === departmentId && s.isHead && s.name);
+  const nameOfTeam = (id: string) => departments.find(d => d.id === id)?.name ?? "A team";
+  // Requests reach the President only for a team with nobody in its lead seat.
+  const routed = (pending.data ?? []).filter(t => !hasLead(t.responsible_department_id));
+  const names = await projectNames(routed.map(t => t.id));
+  const peopleIn = (departmentId: string) => [...new Map(seats.filter(s => s.departmentId === departmentId && s.execId && s.execId !== me.id).map(s => [s.execId!, s.name!])).entries()].map(([id, name]) => ({ id, name }));
+  const event = (upcoming.data ?? [])[0];
+  const readiness = event ? await rpc<number>("event_readiness", { p_event: event.id }) : 0;
+  const nameOf = (id: string) => { const p = directory.find(x => x.id === id); return p ? displayName(p) : "Someone"; };
+
   return (
-    <Page eyebrow="Organization" title="President's dashboard">
-      <div className="os-stats">
-        <Stat label="Event approvals" value={(pendingEvents.data ?? []).length} />
-        <Stat label="Global approvals" value={pendingGlobals.length} />
-        <Stat label="Overdue tasks" value={overdue.length} />
-        <Stat label="Blocked tasks" value={blocked.length} />
+    <div className="os-page">
+      <header className="os-page-head">
+        <div>
+          <p className="os-eyebrow">{new Intl.DateTimeFormat("en-CA", { weekday: "long", month: "long", day: "numeric", timeZone: "America/Toronto" }).format(new Date())}</p>
+          <h1>All of WEC</h1>
+        </div>
+      </header>
+      <div className="os-split">
+        <div className="os-stack-lg">
+          <section className="os-requests" aria-labelledby="decide">
+            <header><h2 id="decide">Waiting on you</h2>{(pendingEvents.data ?? []).length + routed.length === 0 ? <p>Nothing right now.</p> : null}</header>
+            {(pendingEvents.data ?? []).map(e => (
+              <article key={e.id} className="os-request">
+                <div className="os-request-head">
+                  <div>
+                    <Link href={`/os/events/${e.id}`}>{e.name}</Link>
+                    <small>Event proposal{e.submitted_by ? ` from ${nameOf(e.submitted_by)}` : ""}</small>
+                  </div>
+                  <span className="os-request-due">{formatDate(e.starts_at)}. Tier {e.tier}</span>
+                </div>
+                <ActionForm action={decideEvent} className="os-stack">
+                  <Hidden name="id" value={e.id} />
+                  <Field label="Note" hint="Needed if you send it back."><input name="note" maxLength={2000} /></Field>
+                  <div className="os-row os-wrap">
+                    <SubmitButton name="decision" value="approved">Approve</SubmitButton>
+                    <SubmitButton name="decision" value="changes_requested" variant="ghost">Send back</SubmitButton>
+                    <SubmitButton name="decision" value="rejected" variant="danger">Reject</SubmitButton>
+                  </div>
+                </ActionForm>
+              </article>
+            ))}
+            {routed.map(t => (
+              <RequestCard key={t.id} task={t} from={nameOfTeam(t.requesting_department_id)} why={`Sent to ${nameOfTeam(t.responsible_department_id)}, which has no VP right now${names.get(t.id) ? `. For ${names.get(t.id)}` : ""}`} people={peopleIn(t.responsible_department_id)} meId={me.id} />
+            ))}
+          </section>
+
+          <section className="os-band os-band-bad" aria-label="Stuck or overdue">
+            <h2><span>Stuck or overdue across WEC</span><em>{escalations.length}</em></h2>
+            <div>
+              {escalations.length === 0 ? <Empty>Nothing is stuck or overdue.</Empty> : escalations.slice(0, 15).map(e => (
+                <TaskRow key={e.task_id} task={{ id: e.task_id, title: e.title, status: e.status, due_at: e.due_at, updated_at: "" }} sub={`${e.department_name}. ${e.project_name}`} />
+              ))}
+            </div>
+          </section>
+
+          <section className="os-panel" aria-labelledby="post">
+            <h2 id="post">Tell the executive team</h2>
+            <ActionForm action={publishAnnouncement} className="os-stack" resetOnSuccess>
+              <Field label="Title"><input name="title" required maxLength={160} /></Field>
+              <Field label="Message"><textarea name="body" rows={2} required /></Field>
+              <div><SubmitButton>Post</SubmitButton></div>
+            </ActionForm>
+            {(announcements.data ?? []).length ? (
+              <ul className="os-list">
+                {(announcements.data ?? []).map(a => <li key={a.id}><span>{a.title}</span><ActionForm action={archiveAnnouncement} confirm="Take this announcement down?"><Hidden name="id" value={a.id} /><button className="os-link-btn" type="submit">Take down</button></ActionForm></li>)}
+              </ul>
+            ) : null}
+          </section>
+        </div>
+
+        <aside className="os-stack-lg">
+          <section className="os-panel" aria-labelledby="events">
+            <h2 id="events">Next event</h2>
+            {event ? (
+              <>
+                <Link href={`/os/events/${event.id}`}>{event.name}</Link>
+                <Meter value={readiness} />
+                <small className="os-muted">{readiness}% ready, {Math.max(0, Math.ceil(daysUntil(event.starts_at)))} days away</small>
+              </>
+            ) : <Empty>No approved events coming up.</Empty>}
+          </section>
+          <section className="os-panel" aria-labelledby="teams">
+            <h2 id="teams">Teams</h2>
+            <ul className="os-plain-list">
+              {departments.map(d => {
+                const row = progress.find(p => p.department_id === d.id);
+                const trouble = [row?.overdue_tasks ? `${row.overdue_tasks} overdue` : null, row?.blocked_tasks ? `${row.blocked_tasks} stuck` : null].filter(Boolean).join(", ");
+                return (
+                  <li key={d.id} className="os-team-line">
+                    <TeamTile name={d.name} size="small" />
+                    <Link href={`/os/teams/${d.slug}`}>{d.name}</Link>
+                    {trouble ? <small className="os-overdue">{trouble}</small> : hasLead(d.id) ? <small>On track</small> : <small className="os-warn-text">VP seat open</small>}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        </aside>
       </div>
-      <div className="os-grid">
-        <Panel title="Pending event approvals">
-          {(pendingEvents.data ?? []).length === 0 ? <Empty>Nothing waiting.</Empty> : <ul className="os-list">{(pendingEvents.data ?? []).map(e => <li key={e.id}><Link href={`/os/events/${e.id}`}>{e.name}</Link><span className="os-muted">Tier {e.tier} · {formatDateTime(e.starts_at)}</span></li>)}</ul>}
-        </Panel>
-        <Panel title="Pending Global Project approvals">
-          {pendingGlobals.length === 0 ? <Empty>Nothing waiting.</Empty> : <ul className="os-list">{pendingGlobals.map(p => <li key={p.id}><Link href={`/os/projects/${p.id}`}>{p.name}</Link><span className="os-muted">{p.department_name}</span></li>)}</ul>}
-        </Panel>
-        <Panel title="Upcoming events and readiness">
-          {(upcoming.data ?? []).length === 0 ? <Empty>No approved events coming up.</Empty> : <ul className="os-list">{(upcoming.data ?? []).map(e => <li key={e.id}><span><Link href={`/os/events/${e.id}`}>{e.name}</Link> <span className="os-muted">{formatDate(e.starts_at)}</span></span><span className="os-list-side"><Progress value={readiness.get(e.id) ?? 0} /><span className="os-muted">{readiness.get(e.id) ?? 0}%</span></span></li>)}</ul>}
-        </Panel>
-        <Panel title="Department progress">
-          <div className="os-table-wrap" tabIndex={0} role="group" aria-label="Table">
-            <table className="os-table">
-              <thead><tr><th scope="col">Team</th><th scope="col">Open</th><th scope="col">Done</th><th scope="col">Overdue</th><th scope="col">Blocked</th></tr></thead>
-              <tbody>{departments.map(d => <tr key={d.department_id}><td>{d.department_name}</td><td>{d.open_tasks}</td><td>{d.done_tasks}</td><td className={d.overdue_tasks ? "os-overdue" : undefined}>{d.overdue_tasks}</td><td>{d.blocked_tasks}</td></tr>)}</tbody>
-            </table>
-          </div>
-        </Panel>
-        <Panel title="Blocked and overdue work">
-          {escalations.length === 0 ? <Empty>Nothing is blocked or overdue.</Empty> : <ul className="os-list">{escalations.slice(0, 15).map(e => <li key={e.task_id}><span><Link href={`/os/tasks/${e.task_id}`}>{e.title}</Link> <span className="os-muted">{e.department_name}</span></span><span><Pill value={e.status} /> <DueDate value={e.due_at} status={e.status} /></span></li>)}</ul>}
-        </Panel>
-        <Panel title="Cross-team dependencies">
-          {dependencies.length === 0 ? <Empty>No open requests between teams.</Empty> : <ul className="os-list">{dependencies.slice(0, 15).map(d => <li key={d.task_id}><span><Link href={`/os/tasks/${d.task_id}`}>{d.title}</Link> <span className="os-muted">{d.requesting} → {d.responsible}</span></span><Pill value={d.request_state === "accepted" ? d.status : d.request_state} /></li>)}</ul>}
-        </Panel>
-        <Panel title="Announcements">
-          <ActionForm action={publishAnnouncement} className="os-stack" resetOnSuccess>
-            <Field label="Title"><input name="title" required maxLength={160} /></Field>
-            <Field label="Message"><textarea name="body" rows={3} required /></Field>
-            <div><SubmitButton variant="ghost">Publish to every executive</SubmitButton></div>
-          </ActionForm>
-          <ul className="os-list">
-            {(announcements.data ?? []).map(a => <li key={a.id}><span>{a.title}</span><ActionForm action={archiveAnnouncement} confirm="Take this announcement down?"><Hidden name="id" value={a.id} /><button className="os-link-btn" type="submit">Take down</button></ActionForm></li>)}
-          </ul>
-        </Panel>
-      </div>
-      <Panel title="Project overview"><ProjectTable projects={projects} empty="No projects yet." /></Panel>
-      <Panel title="Core Calendar"><Calendar scope="core" basePath="/os/president" searchParams={await searchParams} /></Panel>
-    </Page>
+    </div>
   );
 }

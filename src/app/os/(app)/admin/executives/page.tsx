@@ -1,6 +1,7 @@
 import { ActionForm, SubmitButton } from "@/components/os/ActionForm";
+import { InviteForm } from "@/components/os/InviteForm";
 import { Check, Empty, Field, Hidden, Panel, PeopleSelect, Pill } from "@/components/os/ui";
-import { assignPosition, deactivateExecutive, endAssignment, inviteExecutive, reactivateExecutive, resendInvitation, revokeInvitation, setSystemAdmin } from "@/lib/os/actions/admin";
+import { assignPosition, deactivateExecutive, endAssignment, reactivateExecutive, resendInvitation, revokeInvitation, setSystemAdmin } from "@/lib/os/actions/admin";
 import { getDirectory, requireAdmin } from "@/lib/os/dal";
 import { formatDate } from "@/lib/os/format";
 import { createClient } from "@/lib/os/supabase";
@@ -23,18 +24,7 @@ export default async function AdminExecutives() {
   return (
     <>
       <Panel title="Invite an executive">
-        <ActionForm action={inviteExecutive} className="os-stack" resetOnSuccess>
-          <div className="os-form-grid">
-            <Field label="Full name"><input name="full_name" required maxLength={120} /></Field>
-            <Field label="Email"><input name="email" type="email" required /></Field>
-            <Field label="Position">
-              <select name="position" defaultValue=""><option value="">Assign later</option>{positionOptions.map(p => <option key={p.id} value={p.id}>{p.departments?.name}: {p.title}</option>)}</select>
-            </Field>
-            <Field label="Seat" hint="For a title held by more than one person."><input name="seat" type="number" min="1" defaultValue="1" /></Field>
-          </div>
-          <Check name="grant_admin" label="Also a System Administrator" />
-          <div><SubmitButton>Send invitation</SubmitButton></div>
-        </ActionForm>
+        <InviteForm positions={positionOptions.map(p => ({ id: p.id, title: p.title, team: p.departments?.name }))} />
       </Panel>
       {(invitations.data ?? []).length ? (
         <Panel title="Open invitations">

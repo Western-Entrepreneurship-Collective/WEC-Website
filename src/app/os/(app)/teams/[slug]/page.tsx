@@ -1,142 +1,144 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { Avatar, Due, Progress, Section, Status } from "@/components/os/ui";
-import { projectHealth } from "@/components/os/ProjectTable";
+import { Avatar, Empty, Meter, TaskRow, TeamTile } from "@/components/os/ui";
 import { can, getDirectory, nameLookup } from "@/lib/os/dal";
-import { formatDate, label, projectKindHelp } from "@/lib/os/format";
 import { getSeats } from "@/lib/os/org";
+import { projectNames } from "@/lib/os/projectNames";
 import { createClient, rpc } from "@/lib/os/supabase";
 import type { ProjectSummary } from "@/lib/os/types";
 import { getTeam } from "./team";
 
-export default async function TeamDashboard({ params }: { params: Promise<{ slug: string }> }) {
+export const metadata: Metadata = { title: "Team" };
+
+export default async function TeamPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const { me, department, canOpen } = await getTeam(slug);
   const supabase = await createClient();
   const seats = (await getSeats()).filter(s => s.departmentId === department.id);
   const lead = seats.find(s => s.isHead);
+  const people = (
+    <ul className="os-team-people" aria-label="People">
+      {seats.map(s => <li key={s.key}><Avatar name={s.name} lead={s.isHead} /><span><strong>{s.name ?? "Open seat"}{s.execId === me.id ? " (you)" : ""}</strong><small>{s.title}</small></span></li>)}
+    </ul>
+  );
+  const band = (extra?: React.ReactNode) => (
+    <header className="os-team-band">
+      <TeamTile name={department.name} />
+      <div><nav className="os-crumbs" aria-label="You are here"><Link href="/os/teams">Teams</Link></nav><h1>{department.name}</h1><p>{department.description}</p></div>
+      {people}
+      {extra}
+    </header>
+  );
 
-  // Someone from another team: who to ask, how this team works, and their own
-  // requests here. This team's projects and tasks stay private.
+  // Someone from another team: who to ask, the work between the two teams, and what
+  // this team has chosen to publish. Its private work stays with it.
   if (!canOpen) {
     const mine = me.positions.map(p => p.department_id);
-    const [{ data: sops }, { data: requests }] = await Promise.all([
-      supabase.from("sops").select("id, title, review_on").eq("department_id", department.id).is("archived_at", null).not("current_version_id", "is", null).order("title"),
-      mine.length ? supabase.from("tasks").select("*").eq("responsible_department_id", department.id).in("requesting_department_id", mine).eq("is_cross_team", true).order("updated_at", { ascending: false }).limit(10) : Promise.resolve({ data: [] }),
+    const myName = me.positions[0]?.department_name;
+    const [{ data: sops }, between, projects, directory] = await Promise.all([
+      supabase.from("sops").select("id, title").eq("department_id", department.id).is("archived_at", null).not("current_version_id", "is", null).order("title"),
+      mine.length ? supabase.from("tasks").select("*").eq("is_cross_team", true).not("status", "in", "(done,cancelled)")
+        .or(`and(responsible_department_id.eq.${department.id},requesting_department_id.in.(${mine.join(",")})),and(requesting_department_id.eq.${department.id},responsible_department_id.in.(${mine.join(",")}))`).order("due_at", { nullsFirst: false }).limit(20) : Promise.resolve({ data: [] }),
+      rpc<ProjectSummary[]>("project_summaries", { p_department: department.id }),
+      getDirectory(),
     ]);
-    const nameOf = nameLookup(await getDirectory());
+    const nameOf = nameLookup(directory);
+    const shared = between.data ?? [];
+    const names = await projectNames(shared.map(t => t.id));
     return (
-      <div className="os-split">
-        <div className="os-stack-lg">
-          {department.description ? <p className="os-body">{department.description}</p> : null}
-          {can(me, "request.create") && mine.length ? <div><Link className="os-btn os-btn-primary" href={`/os/requests/new?to=${department.id}`}>Ask {department.name} for something</Link></div> : null}
-          {(requests ?? []).length ? (
-            <Section title={`Your team's requests to ${department.name}`}>
-              <ul className="os-rows">
-                {(requests ?? []).map(t => (
-                  <li key={t.id}>
-                    <Link href={`/os/tasks/${t.id}`}>{t.title}</Link>
-                    <Status tone={t.status === "done" ? "good" : t.status === "cancelled" ? "plain" : "info"}>{t.request_state === "accepted" ? `${label(t.status)}${t.assigned_to ? `, ${nameOf(t.assigned_to)} has it` : ""}` : label(t.request_state)}</Status>
-                  </li>
-                ))}
-              </ul>
-            </Section>
-          ) : null}
-          <Section title={`How ${department.name} works`}>
-            {(sops ?? []).length === 0 ? <p className="os-empty">No SOPs you can read yet.</p> : <ul className="os-rows">{(sops ?? []).map(s => <li key={s.id}><Link href={`/os/sops/${s.id}`}>{s.title}</Link></li>)}</ul>}
-          </Section>
-          <p className="os-muted">{department.name}&apos;s own projects, tasks and meeting notes are private to the team and the President.</p>
+      <div className="os-page">
+        {band(can(me, "request.create") && mine.length ? <Link className="os-btn os-btn-primary" href={`/os/tasks/new?to=${department.id}`}>Send {department.name} a task</Link> : null)}
+        {!lead?.name ? <p className="os-note">{department.name} has no VP right now, so tasks sent here go to the President.</p> : null}
+        <div className="os-split">
+          <div className="os-stack-lg">
+            <section className="os-panel" aria-labelledby="between">
+              <h2 id="between">{myName ? `Between ${myName} and ${department.name}` : `Your tasks with ${department.name}`}</h2>
+              {shared.length ? <div>{shared.map(t => <TaskRow key={t.id} task={t} sub={[t.assigned_to ? nameOf(t.assigned_to) : "Not taken yet", names.get(t.id)].filter(Boolean).join(". ")} />)}</div> : <Empty>Nothing between your teams right now.</Empty>}
+            </section>
+            <section className="os-panel" aria-labelledby="shared">
+              <h2 id="shared">Projects you can see</h2>
+              {projects.length ? (
+                <ul className="os-plain-list">
+                  {projects.map(p => <li key={p.id} className="os-project-line"><Link href={`/os/projects/${p.id}`}>{p.name}</Link><small>{p.done_tasks} of {p.total_tasks} done</small><Meter value={p.progress} /></li>)}
+                </ul>
+              ) : <Empty>None right now.</Empty>}
+            </section>
+            <p className="os-muted">{department.name}&apos;s private projects and other tasks stay with {department.name}.</p>
+          </div>
+          <aside className="os-panel">
+            <h2>Their published SOPs</h2>
+            {(sops ?? []).length ? <ul className="os-plain-list">{(sops ?? []).map(s => <li key={s.id}><Link href={`/os/sops/${s.id}`}>{s.title}</Link></li>)}</ul> : <Empty>None yet.</Empty>}
+          </aside>
         </div>
-        <aside className="os-panel">
-          <h2>People</h2>
-          <ul className="os-people-list">
-            {seats.map(s => <li key={s.key}><Avatar name={s.name} lead={s.isHead} /><span><strong>{s.name ?? "Open seat"}</strong><small>{s.title}{s.isHead ? ", receives requests" : ""}</small></span></li>)}
-          </ul>
-          {!lead?.name ? <p className="os-muted">With no lead right now, requests to this team go to the President.</p> : null}
-        </aside>
       </div>
     );
   }
 
-  const [projects, incoming, outgoing, open, sops, meetings, directory] = await Promise.all([
+  const [projects, incoming, open, sopCount, meetingCount, handover] = await Promise.all([
     rpc<ProjectSummary[]>("project_summaries", { p_department: department.id }),
-    supabase.from("tasks").select("*").eq("responsible_department_id", department.id).in("request_state", ["pending", "clarification_requested"]).order("created_at").limit(10),
-    supabase.from("tasks").select("*").eq("requesting_department_id", department.id).eq("is_cross_team", true).not("status", "in", "(done,cancelled)").order("due_at", { nullsFirst: false }).limit(10),
-    supabase.from("tasks").select("id, title, due_at, assigned_to, status, blocked_auto").eq("responsible_department_id", department.id).not("status", "in", "(done,cancelled)").order("due_at", { nullsFirst: false }).limit(200),
-    supabase.from("sops").select("id, title").eq("department_id", department.id).is("archived_at", null).order("title").limit(5),
-    supabase.from("meetings").select("id, title, starts_at").eq("department_id", department.id).order("starts_at", { ascending: false }).limit(3),
-    getDirectory(),
+    supabase.from("tasks").select("id, requesting_department_id").eq("responsible_department_id", department.id).in("request_state", ["pending", "clarification_requested"]),
+    supabase.from("tasks").select("*").eq("responsible_department_id", department.id).not("status", "in", "(done,cancelled)").neq("status", "unassigned").order("due_at", { nullsFirst: false }).limit(200),
+    supabase.from("sops").select("id", { count: "exact", head: true }).eq("department_id", department.id).is("archived_at", null),
+    supabase.from("meetings").select("id", { count: "exact", head: true }).eq("department_id", department.id),
+    supabase.from("projects").select("id, name").eq("owning_department_id", department.id).like("system_key", "handover:%").is("archived_at", null).order("created_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
-  const nameOf = nameLookup(directory);
-  const openTasks = open.data ?? [];
-  const late = openTasks.filter(t => t.due_at && new Date(t.due_at) < new Date()).length;
-  const waitingOnUs = incoming.data ?? [];
-  const lines = [
-    waitingOnUs.length ? `${waitingOnUs.length} request${waitingOnUs.length === 1 ? " is" : "s are"} waiting on your team.` : null,
-    late ? `${late} task${late === 1 ? " is" : "s are"} running late.` : null,
-  ].filter(Boolean);
+  const { data: unclaimed } = await supabase.from("tasks").select("*").eq("responsible_department_id", department.id).eq("status", "unassigned").is("request_state", null).order("due_at", { nullsFirst: false }).limit(50);
+  const tasks = open.data ?? [];
+  const names = await projectNames([...tasks, ...(unclaimed ?? [])].map(t => t.id));
+  const waiting = incoming.data ?? [];
+  const isHead = me.is_president || me.positions.some(p => p.is_head && p.department_id === department.id);
+  const holders = [...new Map(seats.filter(s => s.execId).map(s => [s.execId!, s])).values()];
+  const leadWord = lead?.name ? lead.name.split(" ")[0] : "the President";
+  const canTick = (t: { assigned_to: string | null; assigned_by: string | null; is_cross_team: boolean }) => isHead || t.assigned_to === me.id || (t.assigned_by === me.id && !t.is_cross_team);
+  const lateCount = (id: string) => tasks.filter(t => t.assigned_to === id && t.due_at && new Date(t.due_at) < new Date()).length;
+
   return (
-    <>
-      <p className="os-page-sub">{department.description} {lines.join(" ") || "Nothing is late, and no requests are waiting."}</p>
+    <div className="os-page">
+      {band()}
       <div className="os-split">
         <div className="os-stack-lg">
-          {waitingOnUs.length ? (
-            <Section title="Waiting on us" action={<Link className="os-link" href={`/os/teams/${slug}/requests`}>All requests</Link>}>
-              <ul className="os-needs">
-                {waitingOnUs.map(t => (
-                  <li key={t.id} className="os-need">
-                    <div><Link className="os-need-title" href={`/os/tasks/${t.id}`}>{t.title}</Link><small>{t.request_state === "pending" ? "Another team is asking for this" : "Waiting on an answer to your question"}</small></div>
-                    {t.due_at ? <Due value={t.due_at} /> : null}
-                    <Link className="os-btn os-btn-primary" href={`/os/tasks/${t.id}`} aria-label={`Answer: ${t.title}`}>Answer</Link>
-                  </li>
-                ))}
-              </ul>
-            </Section>
+          {waiting.length ? (
+            <section className="os-request-banner" aria-labelledby="requests">
+              <h2 id="requests">{waiting.length} {waiting.length === 1 ? "request" : "requests"} waiting on {isHead && lead?.execId === me.id ? "you" : leadWord}</h2>
+              {isHead ? <Link className="os-btn os-btn-invert" href={lead?.execId === me.id ? "/os" : "/os/president"}>See requests</Link> : null}
+            </section>
           ) : null}
-          <Section title="Projects" action={<Link className="os-link" href={`/os/teams/${slug}/projects`}>All</Link>}>
-            {projects.length === 0 ? <p className="os-empty">No projects yet. Approved events and new internal projects show up here.</p> : (
-              <ul className="os-rows os-project-rows">
-                {projects.map(p => {
-                  const h = projectHealth(p);
-                  return (
-                    <li key={p.id}>
-                      <span><Link href={`/os/projects/${p.id}`}>{p.name}</Link><small className="os-block os-muted">{label(p.kind)}. {projectKindHelp[p.kind]}.</small></span>
-                      <span className="os-list-side"><Progress value={p.progress} /><span className="os-muted">{p.progress}%</span></span>
-                      <Status tone={h.tone}>{h.text}</Status>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </Section>
-          {(outgoing.data ?? []).length ? (
-            <Section title="Waiting on other teams">
-              <ul className="os-rows">
-                {(outgoing.data ?? []).map(t => <li key={t.id}><Link href={`/os/tasks/${t.id}`}>{t.title}</Link><span className="os-muted">{t.request_state === "accepted" ? `${label(t.status)}${t.assigned_to ? `, ${nameOf(t.assigned_to)} has it` : ""}` : label(t.request_state)}</span></li>)}
-              </ul>
-            </Section>
+          {holders.map(s => {
+            const theirs = tasks.filter(t => t.assigned_to === s.execId);
+            const late = lateCount(s.execId!);
+            return (
+              <section key={s.execId} className="os-panel" aria-label={s.name ?? ""}>
+                <h2>{s.name} {late ? <em className="os-overdue">{late} overdue</em> : null}</h2>
+                {theirs.length ? <div>{theirs.map(t => <TaskRow key={t.id} task={t} sub={names.get(t.id)} canTick={canTick(t)} />)}</div> : <p className="os-muted">Nothing open.</p>}
+              </section>
+            );
+          })}
+          {(unclaimed ?? []).length ? (
+            <section className="os-panel" aria-label="Nobody has these yet">
+              <h2>Nobody has these yet</h2>
+              <div>{(unclaimed ?? []).map(t => <TaskRow key={t.id} task={t} sub={names.get(t.id)} />)}</div>
+            </section>
           ) : null}
         </div>
         <aside className="os-stack-lg">
-          <section className="os-panel">
-            <h2>Who has what</h2>
-            <ul className="os-people-list">
-              {seats.map(s => {
-                const count = openTasks.filter(t => t.assigned_to === s.execId).length;
-                const overdue = openTasks.filter(t => t.assigned_to === s.execId && t.due_at && new Date(t.due_at) < new Date()).length;
-                return <li key={s.key}><Avatar name={s.name} lead={s.isHead} /><span><strong>{s.name ?? "Open seat"}{s.execId === me.id ? " (you)" : ""}</strong><small className={overdue ? "os-overdue" : undefined}>{overdue ? `${overdue} overdue` : s.title}</small></span>{s.name ? <em className="os-count">{count}</em> : null}</li>;
-              })}
+          <section className="os-panel" aria-labelledby="projects">
+            <h2 id="projects">Projects</h2>
+            {projects.length ? (
+              <ul className="os-plain-list">
+                {projects.map(p => <li key={p.id} className="os-project-line"><Link href={`/os/projects/${p.id}`}>{p.name}</Link><small>{p.done_tasks} of {p.total_tasks}</small><Meter value={p.progress} /></li>)}
+              </ul>
+            ) : <Empty>No projects yet.</Empty>}
+          </section>
+          <section className="os-panel" aria-labelledby="know">
+            <h2 id="know">Reference</h2>
+            <ul className="os-plain-list">
+              <li><Link href={`/os/teams/${slug}/sops`}>SOPs ({sopCount.count ?? 0})</Link></li>
+              <li><Link href={`/os/teams/${slug}/meetings`}>Meeting notes ({meetingCount.count ?? 0})</Link></li>
+              {handover.data ? <li><Link href={`/os/projects/${handover.data.id}`}>{handover.data.name}</Link></li> : null}
             </ul>
           </section>
-          <Section title="Team knowledge">
-            {(sops.data ?? []).length === 0 && (meetings.data ?? []).length === 0 ? <p className="os-empty">SOPs and meeting notes you add show up here.</p> : (
-              <ul className="os-rows">
-                {(sops.data ?? []).map(s => <li key={s.id}><Link href={`/os/sops/${s.id}`}>{s.title}</Link><small className="os-muted">SOP</small></li>)}
-                {(meetings.data ?? []).map(m => <li key={m.id}><Link href={`/os/meetings/${m.id}`}>{m.title}</Link><small className="os-muted">{formatDate(m.starts_at)}</small></li>)}
-              </ul>
-            )}
-          </Section>
         </aside>
       </div>
-    </>
+    </div>
   );
 }

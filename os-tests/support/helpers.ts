@@ -25,6 +25,15 @@ export async function signIn(page: Page, email: string) {
 }
 
 // A real session, used to call the API the way an attacker with their own login could.
+export async function signOut(page: Page) {
+  await page.locator(".os-me-menu summary").click();
+  await page.getByRole("button", { name: "Sign out" }).click();
+  await expect(page).toHaveURL(/\/os\/login$/);
+}
+
+// A task page's status: the pressed button, or the words if this person can't change it.
+export const statusOf = (page: Page) => page.locator('.os-status-buttons [aria-pressed="true"], .os-status-text');
+
 export async function apiAs(email: string) {
   const client = createClient(LOCAL.url, LOCAL.anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const { error } = await client.auth.signInWithPassword({ email, password: LOCAL.password });

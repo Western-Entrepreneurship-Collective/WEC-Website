@@ -45,6 +45,13 @@ export function toLocalInput(v: string | null | undefined) {
 
 export const torontoDateKey = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
 
+// Short enough for a task row: "Thu, Nov 5", or "Oct 30" once it has passed.
+export function shortDue(v: string | null | undefined) {
+  if (!v) return "No date";
+  const past = new Date(v) < new Date();
+  return new Intl.DateTimeFormat("en-CA", { timeZone: TZ, month: "short", day: "numeric", ...(past ? {} : { weekday: "short" }) }).format(new Date(v));
+}
+
 export const daysUntil = (v: string) => (new Date(v).getTime() - new Date().getTime()) / 86_400_000;
 export const hoursSince = (v: string) => (new Date().getTime() - new Date(v).getTime()) / 3_600_000;
 
@@ -52,22 +59,22 @@ export const decisionLabel = (v: string) => (v === "submitted" ? "Sent for appro
 
 export const projectKindHelp: Record<string, string> = {
   EVENT: "One team's part of an event",
-  GLOBAL: "Organization-wide. Every executive sees its progress",
+  GLOBAL: "Shared between teams. Every executive sees its progress",
   INTERNAL: "Only this team and the President",
 };
 
 const LABELS: Record<string, string> = {
-  unassigned: "Unassigned", todo: "To do", in_progress: "In progress", blocked: "Blocked", submitted: "In review", revisions_requested: "Revisions", done: "Done", cancelled: "Cancelled",
+  unassigned: "Unassigned", todo: "To do", in_progress: "Doing", blocked: "Stuck", submitted: "In review", revisions_requested: "Revisions", done: "Done", cancelled: "Cancelled",
   waiting: "Waiting", pending: "Awaiting response", clarification_requested: "Clarification asked", accepted: "Accepted", declined: "Declined",
   draft: "Draft", changes_requested: "Changes requested", rejected: "Rejected", approved: "Approved", completed: "Completed", archived: "Archived", planning: "Planning", active: "Active", on_hold: "On hold",
   not_required: "No approval needed", behind: "Behind", on_track: "On track", not_started: "Not started", needs_lead: "Needs a lead", published: "Published", superseded: "Superseded", open: "Open", low: "Low", normal: "Normal", high: "High", urgent: "Urgent", running: "Running", succeeded: "Succeeded", failed: "Failed", dead: "Failed for good", skipped: "Skipped", invited: "Invited", deactivated: "Deactivated",
-  EVENT: "Event project", GLOBAL: "Global project", INTERNAL: "Internal project",
+  EVENT: "Event project", GLOBAL: "Shared project", INTERNAL: "Team project",
 };
 export const label = (v: string | null | undefined) => (v ? LABELS[v] ?? v.replace(/_/g, " ") : "");
 
 const NOTIFICATION_TEXT: Record<string, string> = {
   "task.assigned": "Assigned to you", "task.commented": "New comment", "task.completed": "Completed", "task.deadline_changed": "Deadline changed", "task.blocked": "Blocked by another task", "task.unblocked": "No longer blocked", "task.blocked_escalated": "Blocked for too long",
-  "request.received": "New cross-team request", "request.accept": "Your request was accepted", "request.decline": "Your request was declined", "request.clarify": "Clarification asked on your request", "request.clarified": "Request clarified",
+  "request.received": "Another team sent you a task", "request.accept": "Your request was accepted", "request.decline": "Your request was declined", "request.clarify": "Clarification asked on your request", "request.clarified": "Request clarified",
   "review.requested": "Ready for your review", "review.accepted": "Your deliverable was accepted", "review.revisions": "Revisions requested",
   "deadline.upcoming": "Due soon", "deadline.overdue": "Overdue", "deadline.proposed": "New date proposed", "deadline.decided": "Date proposal answered",
   "event.proposed": "Event proposal to review", "event.decided": "Decision on your event", "event.closed": "Event closed", "global.proposed": "Global Project to review", "global.decided": "Decision on your Global Project", "approval.pending": "Still waiting for your decision",

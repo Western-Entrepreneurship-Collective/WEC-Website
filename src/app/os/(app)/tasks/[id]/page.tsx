@@ -2,15 +2,15 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/os/ActionForm";
-import { MarkOnboarding } from "@/components/os/MarkOnboarding";
+import { RequestCard } from "@/components/os/RequestCard";
 import { Upload } from "@/components/os/Upload";
-import { Avatar, Due, Empty, Field, Hidden, Panel, PeopleSelect, Pill, PriorityField, Section, TaskTable } from "@/components/os/ui";
+import { Avatar, Field, Hidden, Meter, TaskRow, TeamTile } from "@/components/os/ui";
 import {
-  addComment, addDependency, assignTask, clarifyRequest, createTask, decideDeadline, delegateRequest, deleteChecklistItem, proposeDeadline, removeDependency,
-  respondToRequest, reviewDeliverable, saveChecklistItem, setTaskStatus, submitDeliverable, updateTask,
+  addComment, addDependency, assignTask, decideDeadline, delegateRequest, deleteChecklistItem, proposeDeadline, removeDependency,
+  saveChecklistItem, setTaskStatus, updateTask,
 } from "@/lib/os/actions/work";
-import { getDirectory, inDepartment, nameLookup, requireMe } from "@/lib/os/dal";
-import { formatDateTime, label, toLocalInput } from "@/lib/os/format";
+import { displayName, getDirectory, inDepartment, nameLookup, requireMe } from "@/lib/os/dal";
+import { formatDate, formatDateTime, label, torontoDateKey } from "@/lib/os/format";
 import { createClient, rpc } from "@/lib/os/supabase";
 
 export const metadata: Metadata = { title: "Task" };
@@ -18,7 +18,7 @@ export const metadata: Metadata = { title: "Task" };
 type Context = { project_id: string; project_name: string; project_kind: string; can_open_project: boolean; event_id: string | null; requesting_department: string; responsible_department: string };
 type Dep = { task_id: string; title: string; status: string; can_open: boolean; direction: "blocked_by" | "blocks" };
 
-const VISIBILITY: Record<string, string> = { project: "Everyone on the project", team: "The team", restricted: "Only the people on this task and the team's lead" };
+const STATUSES = ["todo", "in_progress", "blocked", "done"] as const;
 
 export default async function TaskPage({ params }: { params: Promise<{ id: string }> }) {
   const me = await requireMe();
@@ -46,7 +46,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
   ]);
   const ctx = context[0];
   const teamIds = new Set((assignments.data ?? []).map(a => a.executive_id));
-  const team = directory.filter(p => teamIds.has(p.id));
+  const team = directory.filter(p => teamIds.has(p.id) && p.status === "active");
   const archived = Boolean(project.data?.archived_at);
 
   const responsibleHead = me.is_president || me.positions.some(p => p.is_head && p.department_id === task.responsible_department_id);
@@ -56,126 +56,52 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
   const canEdit = !archived && (me.is_president || task.assigned_to === me.id || task.assigned_by === me.id || responsibleHead);
   const canWork = canEdit && (!task.is_cross_team || task.assigned_to === me.id || responsibleHead);
   const openProposal = (proposals.data ?? []).find(p => p.state === "open");
-  const canReview = !archived && task.status === "submitted" && (me.is_president || (task.is_cross_team
-    ? task.created_by === me.id || me.positions.some(p => p.is_head && p.department_id === task.requesting_department_id)
-    : (task.assigned_by === me.id && task.assigned_to !== me.id) || responsibleHead));
   const waiting = task.status === "blocked" && task.blocked_auto;
-  const statusShown = task.request_state && task.request_state !== "accepted" ? task.request_state : waiting ? "waiting" : task.status;
-  const reviewer = task.is_cross_team ? "the team that asked for this" : task.assigned_by ? nameOf(task.assigned_by) : "the team's lead";
-  const canSubmit = canWork && ["todo", "in_progress", "revisions_requested"].includes(task.status);
-  const allDone = (checklist.data ?? []).length > 0 && (checklist.data ?? []).every(c => c.is_done);
-
-  const next = archived ? "This project is archived, so this task is read-only."
-    : task.status === "done" ? (task.reviewed_at ? `Accepted by ${nameOf(task.reviewed_by)}.` : "This is finished.")
-    : task.status === "cancelled" ? "This was cancelled. It stays on record."
-    : task.request_state === "pending" ? (responsibleHead ? "Your team was asked for this. Accept it, ask a question, or decline." : "Waiting for the other team's lead to answer.")
-    : task.request_state === "clarification_requested" ? (inRequesting ? "The other team has a question. Answer it below." : "Waiting for the requesting team to answer your question.")
-    : task.status === "unassigned" ? "Nobody has this yet. Choose who does it."
-    : waiting ? "This can't start until the tasks listed under \"Can't start until\" are finished."
-    : task.status === "submitted" ? (canReview ? "Handed in and waiting for you. Accept it or ask for changes." : `Handed in. Waiting for ${reviewer} to accept it.`)
-    : task.status === "revisions_requested" ? "Changes were requested. Make them, then submit it again."
-    : task.requires_review ? `${allDone ? "Everything's ticked off, so submit it." : "Finish the work, then submit it."} ${reviewer[0].toUpperCase() + reviewer.slice(1)} reviews it before it counts as done.`
-    : "Mark it done when it's finished. Your work doesn't need a review.";
+  const isAsked = task.is_cross_team && task.request_state && ["pending", "clarification_requested"].includes(task.request_state);
+  const items = checklist.data ?? [];
+  const ticked = items.filter(c => c.is_done).length;
+  const blockedBy = deps.filter(d => d.direction === "blocked_by");
+  const shown = task.status === "submitted" ? "in_progress" : task.status === "revisions_requested" ? "todo" : task.status;
+  const canReopen = !archived && task.status === "done" && (canWork || (task.is_cross_team && inRequesting));
 
   return (
     <div className="os-page">
-      {canEdit || task.assigned_to === me.id ? (me.onboarding?.task_opened ? null : <MarkOnboarding step="task_opened" />) : null}
-      <nav className="os-crumbs" aria-label="Breadcrumb">
+      <nav className="os-crumbs" aria-label="You are here">
+        <Link href="/os/projects">Projects</Link><span aria-hidden="true">/</span>
         {ctx?.can_open_project ? <Link href={`/os/projects/${ctx.project_id}`}>{ctx.project_name}</Link> : <span>{ctx?.project_name}</span>}
         {task.parent_task_id ? <><span aria-hidden="true">/</span><Link href={`/os/tasks/${task.parent_task_id}`}>Parent task</Link></> : null}
       </nav>
 
-      <header className="os-page-head">
-        <div>
-          <h1>{task.title}</h1>
-          <div className="os-row os-wrap os-head-meta"><Pill value={statusShown} />{open ? <Due value={task.due_at} /> : null}{task.priority !== "normal" ? <Pill value={task.priority} /> : null}{task.is_cross_team ? <span className="os-tag">Cross-team</span> : null}</div>
-        </div>
-        {canWork && open && task.status !== "unassigned" ? (
-          <div className="os-row os-wrap os-head-actions">
-            {task.status === "todo" ? <ActionForm action={setTaskStatus}><Hidden name="id" value={id} /><Hidden name="status" value="in_progress" /><Hidden name="expected" value={task.updated_at} /><SubmitButton variant="ghost">Start</SubmitButton></ActionForm> : null}
-            {task.status === "blocked" && !waiting ? <ActionForm action={setTaskStatus}><Hidden name="id" value={id} /><Hidden name="status" value="in_progress" /><Hidden name="expected" value={task.updated_at} /><SubmitButton variant="ghost">No longer blocked</SubmitButton></ActionForm> : null}
-            {["todo", "in_progress"].includes(task.status) ? <ActionForm action={setTaskStatus}><Hidden name="id" value={id} /><Hidden name="status" value="blocked" /><Hidden name="expected" value={task.updated_at} /><SubmitButton variant="ghost">I&apos;m blocked</SubmitButton></ActionForm> : null}
-            {!task.requires_review && task.status !== "blocked" ? <ActionForm action={setTaskStatus}><Hidden name="id" value={id} /><Hidden name="status" value="done" /><Hidden name="expected" value={task.updated_at} /><SubmitButton>Mark done</SubmitButton></ActionForm> : null}
-          </div>
-        ) : null}
-      </header>
+      <div className="os-task-layout">
+        <article className="os-task-sheet">
+          <header>
+            <h1>{task.title}</h1>
+            {task.is_cross_team ? (
+              <p className="os-asked"><TeamTile name={ctx?.requesting_department} size="small" /><span>asked</span><TeamTile name={ctx?.responsible_department} size="small" /><span>{ctx?.requesting_department} asked {ctx?.responsible_department} for this.</span></p>
+            ) : null}
+          </header>
 
-      <p className="os-next"><strong>What happens next:</strong> {next}</p>
-
-      {task.is_cross_team && !archived && open ? (
-        <>
-          {responsibleHead && task.request_state && ["pending", "clarification_requested"].includes(task.request_state) ? (
-            <Panel title={`${ctx?.requesting_department} is asking your team for this`}>
-              <div className="os-stack">
-                <ActionForm action={respondToRequest} className="os-inline-form" ariaLabel="Accept the request">
-                  <Hidden name="id" value={id} /><Hidden name="action" value="accept" />
-                  <PeopleSelect name="delegate" people={team} label="Delegate to" blank="Decide later" />
-                  <SubmitButton>Accept</SubmitButton>
-                </ActionForm>
-                <details className="os-more">
-                  <summary>Ask a question or decline</summary>
-                  <div className="os-stack">
-                    <ActionForm action={respondToRequest} className="os-inline-form" ariaLabel="Ask for clarification">
-                      <Hidden name="id" value={id} /><Hidden name="action" value="clarify" />
-                      <Field label="Your question"><input name="note" required /></Field>
-                      <SubmitButton variant="ghost">Ask</SubmitButton>
-                    </ActionForm>
-                    <ActionForm action={respondToRequest} className="os-inline-form" ariaLabel="Decline the request" confirm="Decline this request? The requesting team will be told.">
-                      <Hidden name="id" value={id} /><Hidden name="action" value="decline" />
-                      <Field label="Reason for declining"><input name="note" required /></Field>
-                      <SubmitButton variant="danger">Decline</SubmitButton>
-                    </ActionForm>
-                  </div>
-                </details>
-              </div>
-            </Panel>
+          {archived ? <p className="os-note">This project is archived, so this task is read-only.</p> : null}
+          {waiting ? <p className="os-note">This can&apos;t start until {blockedBy.filter(d => d.status !== "done").map(d => d.title).join(" and ") || "an earlier task"} is done.</p> : null}
+          {task.status === "done" ? <p className="os-done-note">Done.{task.is_cross_team ? ` ${ctx?.requesting_department} has been told, and can reopen this if something's missing.` : ""}</p> : null}
+          {task.status === "cancelled" ? <p className="os-note">{task.request_state === "declined" ? `${ctx?.responsible_department} declined this.` : "This was cancelled."} It stays on record.</p> : null}
+          {isAsked && !archived && !responsibleHead ? <p className="os-note">Waiting for {ctx?.responsible_department}&apos;s lead to take it or give it to someone.</p> : null}
+          {isAsked && !archived && responsibleHead ? (
+            <RequestCard task={task} from={ctx?.requesting_department ?? "Another team"} why={`${ctx?.requesting_department} is asking your team for this`} people={team.filter(p => p.id !== me.id).map(p => ({ id: p.id, name: displayName(p) }))} meId={me.id} />
           ) : null}
-          {task.request_state === "clarification_requested" && inRequesting ? (
-            <Panel title="Answer the other team's question">
-              <ActionForm action={clarifyRequest} className="os-inline-form">
-                <Hidden name="id" value={id} />
-                <Field label="Your answer"><input name="note" required /></Field>
-                <SubmitButton>Send answer</SubmitButton>
-              </ActionForm>
-            </Panel>
-          ) : null}
-        </>
-      ) : null}
 
-      {canReview ? (
-        <Panel title="Review what was handed in">
-          <div className="os-stack">
-            <ActionForm action={reviewDeliverable}><Hidden name="id" value={id} /><Hidden name="accept" value="true" /><SubmitButton>Accept deliverable</SubmitButton></ActionForm>
-            <ActionForm action={reviewDeliverable} className="os-inline-form">
-              <Hidden name="id" value={id} /><Hidden name="accept" value="false" />
-              <Field label="What needs revising"><input name="note" required /></Field>
-              <SubmitButton variant="ghost">Request revisions</SubmitButton>
-            </ActionForm>
-          </div>
-        </Panel>
-      ) : null}
+          <section aria-labelledby="details">
+            <h2 id="details">Details</h2>
+            {task.description ? <p className="os-pre">{task.description}</p> : <p className="os-muted">No details yet.</p>}
+            {task.deliverables ? <p className="os-pre os-muted">To hand in: {task.deliverables}</p> : null}
+          </section>
 
-      {canSubmit && task.requires_review ? (
-        <Panel title="Hand it in">
-          <ActionForm action={submitDeliverable} className="os-inline-form">
-            <Hidden name="id" value={id} />
-            <Field label="Note with the deliverable"><input name="note" /></Field>
-            <SubmitButton>Submit for review</SubmitButton>
-          </ActionForm>
-        </Panel>
-      ) : null}
-
-      <div className="os-split">
-        <div className="os-stack-lg">
-          <Section title="What's needed">
-            {task.description ? <p className="os-pre os-body">{task.description}</p> : <p className="os-empty">No description yet.</p>}
-            {task.deliverables ? <><h3>You&apos;ll hand in</h3><p className="os-pre os-body">{task.deliverables}</p></> : null}
-          </Section>
-
-          <Section title="Steps">
-            {(checklist.data ?? []).length === 0 ? <p className="os-empty">No steps. Add some if it helps to break this down.</p> : (
+          <section aria-labelledby="steps">
+            <div className="os-between-line"><h2 id="steps">Steps</h2>{items.length ? <small>{ticked} of {items.length} done</small> : null}</div>
+            {items.length ? <Meter value={(ticked / items.length) * 100} /> : null}
+            {items.length ? (
               <ul className="os-checklist">
-                {(checklist.data ?? []).map(item => (
+                {items.map(item => (
                   <li key={item.id}>
                     <ActionForm action={saveChecklistItem} className="os-row">
                       <Hidden name="item" value={item.id} /><Hidden name="id" value={id} /><Hidden name="label" value={item.label} />
@@ -187,190 +113,182 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
                   </li>
                 ))}
               </ul>
-            )}
+            ) : null}
             {canEdit ? (
               <ActionForm action={saveChecklistItem} className="os-inline-form" resetOnSuccess ariaLabel="Add a step">
                 <Hidden name="id" value={id} />
-                <Field label="New item"><input name="label" required maxLength={300} /></Field>
+                <Field label="Add a step"><input name="label" required maxLength={300} /></Field>
                 <SubmitButton variant="ghost">Add</SubmitButton>
               </ActionForm>
             ) : null}
-          </Section>
+          </section>
 
-          {(subtasks.data ?? []).length || (canEdit && open) ? (
-            <Section title="Subtasks">
-              {(subtasks.data ?? []).length ? <TaskTable tasks={subtasks.data ?? []} nameOf={nameOf} /> : null}
-              {canEdit && open ? (
-                <ActionForm action={createTask} className="os-inline-form" resetOnSuccess ariaLabel="Add a subtask">
-                  <Hidden name="project" value={task.project_id} /><Hidden name="parent_task_id" value={id} /><Hidden name="stay" value="1" />
-                  <Hidden name="assigned_to" value={task.assigned_to} /><Hidden name="visibility" value={task.visibility === "restricted" ? "restricted" : "team"} />
-                  <Hidden name="due_at" value={toLocalInput(task.due_at)} />
-                  <Field label="New subtask"><input name="title" required maxLength={200} /></Field>
-                  <SubmitButton variant="ghost">Add</SubmitButton>
-                </ActionForm>
-              ) : null}
-            </Section>
+          {(subtasks.data ?? []).length ? (
+            <section aria-labelledby="subtasks">
+              <h2 id="subtasks">Smaller tasks</h2>
+              <div>{(subtasks.data ?? []).map(t => <TaskRow key={t.id} task={t} sub={nameOf(t.assigned_to)} canTick={canWork && t.status !== "unassigned"} />)}</div>
+            </section>
           ) : null}
 
-          <Section title="Conversation">
-            {(comments.data ?? []).length === 0 ? null : (
+          <section aria-labelledby="comments">
+            <h2 id="comments">Comments</h2>
+            {(comments.data ?? []).length ? (
               <ul className="os-comments">
                 {(comments.data ?? []).map(c => <li key={c.id}><Avatar name={nameOf(c.author_id)} /><div><small className="os-muted"><strong>{nameOf(c.author_id)}</strong> · {formatDateTime(c.created_at)}</small><p className="os-pre">{c.body}</p></div></li>)}
               </ul>
-            )}
+            ) : null}
             {!archived ? (
-              <ActionForm action={addComment} className="os-stack" resetOnSuccess ariaLabel="Add a comment">
+              <ActionForm action={addComment} className="os-inline-form" resetOnSuccess ariaLabel="Add a comment">
                 <Hidden name="id" value={id} />
-                <Field label="Comment" hint={task.is_cross_team ? "Both teams can read this." : undefined}><textarea name="body" rows={2} required maxLength={8000} placeholder="Ask a question or share an update" /></Field>
-                <div><SubmitButton variant="ghost">Post</SubmitButton></div>
+                <Field label="Comment" hint={task.is_cross_team ? "Both teams can read this." : undefined}><input name="body" required maxLength={8000} placeholder="Write a comment" /></Field>
+                <SubmitButton variant="ghost">Post</SubmitButton>
               </ActionForm>
             ) : null}
-          </Section>
-        </div>
+          </section>
+        </article>
 
-        <aside className="os-panel os-facts">
-          <dl className="os-facts-list">
-            <div><dt>Assigned to</dt><dd><Avatar name={task.assigned_to ? nameOf(task.assigned_to) : null} />{task.assigned_to === me.id ? "You" : nameOf(task.assigned_to)}</dd></div>
-            <div><dt>Given by</dt><dd>{task.assigned_by ? <><Avatar name={nameOf(task.assigned_by)} />{task.assigned_by === me.id ? "You" : nameOf(task.assigned_by)}</> : "Generated automatically"}</dd></div>
-            <div><dt>Due</dt><dd>{formatDateTime(task.due_at)}</dd></div>
-            <div><dt>{task.is_cross_team ? "Asked by" : "Team"}</dt><dd>{task.is_cross_team ? ctx?.requesting_department : ctx?.responsible_department}</dd></div>
-            {task.is_cross_team ? <div><dt>Done by</dt><dd>{ctx?.responsible_department}</dd></div> : null}
-            <div><dt>Who can see this</dt><dd>{task.is_cross_team ? "Both teams, for this task only" : VISIBILITY[task.visibility]}</dd></div>
-          </dl>
-
-          {task.due_was_clamped ? <p className="os-muted">This date had already passed when the task was generated, so it was set to that day.</p> : null}
-
-          {(inRequesting || inResponsible || me.is_president) && !archived && open ? (
-            openProposal ? (
-              <div className="os-facts-block">
-                <h3>New date proposed</h3>
-                <p>{nameOf(openProposal.proposed_by)} proposed <strong>{formatDateTime(openProposal.proposed_due_at)}</strong>{openProposal.note ? `: ${openProposal.note}` : "."}</p>
-                {openProposal.proposed_by !== me.id || me.is_president ? (
-                  <div className="os-row">
-                    <ActionForm action={decideDeadline}><Hidden name="proposal" value={openProposal.id} /><Hidden name="accept" value="true" /><SubmitButton>Agree</SubmitButton></ActionForm>
-                    <ActionForm action={decideDeadline}><Hidden name="proposal" value={openProposal.id} /><Hidden name="accept" value="false" /><SubmitButton variant="ghost">Decline</SubmitButton></ActionForm>
-                  </div>
-                ) : <p className="os-muted">Waiting for an answer.</p>}
+        <aside className="os-task-side">
+          <div>
+            <span id="status-label" className="os-side-label">Status</span>
+            {canWork && !archived && !isAsked && task.status !== "unassigned" && task.status !== "cancelled" && !waiting ? (
+              <div className="os-status-buttons" role="group" aria-labelledby="status-label">
+                {STATUSES.map(s => (
+                  <ActionForm key={s} action={setTaskStatus}>
+                    <Hidden name="id" value={id} /><Hidden name="status" value={s} /><Hidden name="expected" value={task.updated_at} />
+                    <button type="submit" className={`is-${s}`} aria-pressed={shown === s}>{label(s)}</button>
+                  </ActionForm>
+                ))}
               </div>
             ) : (
-              <details className="os-more">
-                <summary>Propose a new date</summary>
-                <ActionForm action={proposeDeadline} className="os-stack" resetOnSuccess>
-                  <Hidden name="id" value={id} />
-                  <Field label="New date"><input name="due" type="datetime-local" required /></Field>
-                  <Field label="Why"><input name="note" /></Field>
-                  <div><SubmitButton variant="ghost">Propose</SubmitButton></div>
-                </ActionForm>
-              </details>
-            )
-          ) : null}
-
-          {task.is_cross_team && task.request_state === "accepted" && responsibleHead && open ? (
-            <details className="os-more">
-              <summary>Change who has this</summary>
-              <ActionForm action={delegateRequest} className="os-inline-form">
-                <Hidden name="id" value={id} />
-                <PeopleSelect name="delegate" people={team} label="Delegate to" value={task.assigned_to} blank={null} />
-                <SubmitButton variant="ghost">Delegate</SubmitButton>
-              </ActionForm>
-            </details>
-          ) : null}
-          {!task.is_cross_team && open && !archived && (canEdit || (task.assigned_to === null && inResponsible)) ? (
-            <details className="os-more" open={task.status === "unassigned"}>
-              <summary>Change who has this</summary>
-              <ActionForm action={assignTask} className="os-inline-form">
-                <Hidden name="id" value={id} />
-                <PeopleSelect name="assignee" people={directory.filter(p => teamIds.has(p.id) || p.id === me.id)} label="Assign to" value={task.assigned_to} />
-                <SubmitButton variant="ghost">Assign</SubmitButton>
-              </ActionForm>
-            </details>
-          ) : null}
-
-          <div className="os-facts-block">
-            <h3>Can&apos;t start until</h3>
-            {deps.filter(d => d.direction === "blocked_by").length === 0 ? <p className="os-muted">Nothing. It&apos;s free to start.</p> : (
-              <ul className="os-list">
-                {deps.filter(d => d.direction === "blocked_by").map(d => (
-                  <li key={d.task_id}>
-                    <span>{d.status === "done" ? "✓ " : ""}{d.can_open ? <Link href={`/os/tasks/${d.task_id}`}>{d.title}</Link> : d.title}</span>
-                    {canEdit ? <ActionForm action={removeDependency}><Hidden name="id" value={id} /><Hidden name="depends_on" value={d.task_id} /><button className="os-link-btn" type="submit">Remove</button></ActionForm> : null}
-                  </li>
-                ))}
-              </ul>
+              <p className={`os-status-text is-${shown}`}>{waiting ? "Waiting" : isAsked ? label("pending") : label(task.status)}</p>
             )}
-            {deps.some(d => d.direction === "blocks") ? <><h3>Other tasks waiting on this</h3><ul className="os-list">{deps.filter(d => d.direction === "blocks").map(d => <li key={d.task_id}>{d.can_open ? <Link href={`/os/tasks/${d.task_id}`}>{d.title}</Link> : d.title}</li>)}</ul></> : null}
-            {canEdit && open ? (
-              <details className="os-more">
-                <summary>Add something this waits on</summary>
-                <ActionForm action={addDependency} className="os-inline-form" resetOnSuccess>
-                  <Hidden name="id" value={id} />
-                  <Field label="Can't start until">
-                    <select name="depends_on" required defaultValue="">
-                      <option value="" disabled>Choose a task</option>
-                      {(siblings.data ?? []).filter(t => !deps.some(d => d.task_id === t.id)).map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
-                    </select>
-                  </Field>
-                  <SubmitButton variant="ghost">Add</SubmitButton>
-                </ActionForm>
-              </details>
-            ) : null}
+            {canReopen && !canWork ? <ActionForm action={setTaskStatus}><Hidden name="id" value={id} /><Hidden name="status" value="todo" /><Hidden name="expected" value={task.updated_at} /><SubmitButton variant="ghost">Reopen</SubmitButton></ActionForm> : null}
           </div>
 
-          <div className="os-facts-block">
-            <h3>Files</h3>
-            {(attachments.data ?? []).length === 0 ? null : <ul className="os-list">{(attachments.data ?? []).map(a => <li key={a.id}><a className="os-link" href={`/os/attachments/${a.id}`}>{a.file_name}</a><span className="os-muted">{Math.ceil(a.size_bytes / 1024)} KB</span></li>)}</ul>}
-            {canEdit ? <Upload type="task" entity={id} /> : (attachments.data ?? []).length === 0 ? <Empty>No files.</Empty> : null}
-          </div>
-
-          {canEdit ? (
-            <details className="os-more">
-              <summary>Edit this task</summary>
-              <ActionForm action={updateTask} className="os-stack">
-                <Hidden name="id" value={id} /><Hidden name="expected" value={task.updated_at} />
-                <Field label="Title"><input name="title" defaultValue={task.title} required maxLength={200} /></Field>
-                <Field label="What's needed"><textarea name="description" rows={4} defaultValue={task.description} /></Field>
-                <Field label="You'll hand in"><textarea name="deliverables" rows={3} defaultValue={task.deliverables} /></Field>
-                <PriorityField value={task.priority} />
-                {task.is_cross_team ? <Hidden name="due_at" value={toLocalInput(task.due_at)} /> : <Field label="Due" hint={task.due_source === "template" ? "Changing this protects it from automatic rescheduling." : undefined}><input name="due_at" type="datetime-local" defaultValue={toLocalInput(task.due_at)} /></Field>}
-                {!task.is_cross_team ? (
-                  <Field label="Who can see this">
-                    <select name="visibility" defaultValue={task.visibility}>
-                      <option value="project">Everyone on the project</option><option value="team">The team</option><option value="restricted">Only the people on this task and the team&apos;s lead</option>
-                    </select>
-                  </Field>
-                ) : null}
-                <div><SubmitButton variant="ghost">Save</SubmitButton></div>
-              </ActionForm>
-            </details>
-          ) : null}
-
-          {canWork && open && !task.requires_review && ["todo", "in_progress"].includes(task.status) ? (
-            <details className="os-more">
-              <summary>Ask for a review first</summary>
-              <ActionForm action={submitDeliverable} className="os-stack">
+          <div>
+            {task.is_cross_team && task.request_state === "accepted" && responsibleHead && open ? (
+              <ActionForm action={delegateRequest} className="os-stack">
                 <Hidden name="id" value={id} />
-                <Field label="Note with the deliverable"><input name="note" /></Field>
-                <div><SubmitButton variant="ghost">Submit for review</SubmitButton></div>
+                <Field label="Who"><select name="delegate" defaultValue={task.assigned_to ?? ""} required>{task.assigned_to ? null : <option value="" disabled>Choose</option>}{directory.filter(p => p.status === "active" && (teamIds.has(p.id) || p.id === me.id || p.id === task.assigned_to)).map(p => <option key={p.id} value={p.id}>{displayName(p)}</option>)}</select></Field>
+                <div><SubmitButton variant="ghost">Change</SubmitButton></div>
               </ActionForm>
-            </details>
-          ) : null}
+            ) : !task.is_cross_team && open && !archived && (canEdit || (task.assigned_to === null && inResponsible)) ? (
+              <ActionForm action={assignTask} className="os-stack">
+                <Hidden name="id" value={id} />
+                <Field label="Who"><select name="assignee" defaultValue={task.assigned_to ?? ""}><option value="">Nobody yet</option>{directory.filter(p => p.status === "active" && (teamIds.has(p.id) || p.id === me.id || p.id === task.assigned_to)).map(p => <option key={p.id} value={p.id}>{displayName(p)}</option>)}</select></Field>
+                <div><SubmitButton variant="ghost">Change</SubmitButton></div>
+              </ActionForm>
+            ) : (
+              <><span className="os-side-label">Who</span><p className="os-row"><Avatar name={task.assigned_to ? nameOf(task.assigned_to) : null} />{task.assigned_to === me.id ? "You" : task.assigned_to ? nameOf(task.assigned_to) : "Nobody yet"}</p></>
+            )}
+          </div>
+
+          <div>
+            {canEdit && open && !task.is_cross_team ? (
+              <ActionForm action={updateTask} className="os-stack">
+                <Hidden name="id" value={id} /><Hidden name="expected" value={task.updated_at} /><Hidden name="title" value={task.title} /><Hidden name="description" value={task.description} /><Hidden name="deliverables" value={task.deliverables} /><Hidden name="priority" value={task.priority} /><Hidden name="visibility" value={task.visibility} />
+                <Field label="Due"><input name="due" type="date" defaultValue={task.due_at ? torontoDateKey(new Date(task.due_at)) : ""} /></Field>
+                <div><SubmitButton variant="ghost">Save date</SubmitButton></div>
+              </ActionForm>
+            ) : (
+              <><span className="os-side-label">Due</span><p>{task.due_at ? formatDate(task.due_at) : "No date"}</p></>
+            )}
+          </div>
+
+          <div>
+            <span className="os-side-label">Project</span>
+            <p>{ctx?.can_open_project ? <Link className="os-link" href={`/os/projects/${ctx.project_id}`}>{ctx.project_name}</Link> : ctx?.project_name}</p>
+          </div>
 
           <details className="os-more">
-            <summary>History</summary>
-            <ul className="os-timeline">
-              {[...(reviews.data ?? []).map(r => ({ at: r.created_at, text: `${label(r.kind)} by ${nameOf(r.actor_id)}${r.note ? `: ${r.note}` : ""}`, key: r.id })),
-                ...(history.data ?? []).map(h => ({ at: h.created_at, text: `${h.note || "Assigned"}: ${nameOf(h.assigned_to)}`, key: `h${h.id}` }))]
-                .sort((a, b) => a.at.localeCompare(b.at))
-                .map(h => <li key={h.key}><span className="os-muted">{formatDateTime(h.at)}</span>{h.text}</li>)}
-            </ul>
-          </details>
+            <summary>More</summary>
+            <div className="os-stack">
+              {task.assigned_by ? <p className="os-muted">Given by {task.assigned_by === me.id ? "you" : nameOf(task.assigned_by)}.</p> : <p className="os-muted">Created automatically.</p>}
 
-          {canEdit && open && (!task.is_cross_team || inRequesting || me.is_president) ? (
-            <ActionForm action={setTaskStatus} confirm="Cancel this task? It stays on record but no longer counts as open.">
-              <Hidden name="id" value={id} /><Hidden name="status" value="cancelled" />
-              <button className="os-link-btn os-danger-link" type="submit">{task.is_cross_team ? "Withdraw this request" : "Cancel this task"}</button>
-            </ActionForm>
-          ) : null}
+              {task.is_cross_team && (inRequesting || inResponsible || me.is_president) && !archived && open ? (
+                openProposal ? (
+                  <div>
+                    <h3>New date proposed</h3>
+                    <p>{nameOf(openProposal.proposed_by)} proposed <strong>{formatDateTime(openProposal.proposed_due_at)}</strong>{openProposal.note ? `: ${openProposal.note}` : "."}</p>
+                    {openProposal.proposed_by !== me.id || me.is_president ? (
+                      <div className="os-row">
+                        <ActionForm action={decideDeadline}><Hidden name="proposal" value={openProposal.id} /><Hidden name="accept" value="true" /><SubmitButton>Agree</SubmitButton></ActionForm>
+                        <ActionForm action={decideDeadline}><Hidden name="proposal" value={openProposal.id} /><Hidden name="accept" value="false" /><SubmitButton variant="ghost">Decline</SubmitButton></ActionForm>
+                      </div>
+                    ) : <p className="os-muted">Waiting for an answer.</p>}
+                  </div>
+                ) : (
+                  <ActionForm action={proposeDeadline} className="os-stack" resetOnSuccess>
+                    <Hidden name="id" value={id} />
+                    <Field label="Propose a new date"><input name="due" type="datetime-local" required /></Field>
+                    <Field label="Why"><input name="note" /></Field>
+                    <div><SubmitButton variant="ghost">Propose</SubmitButton></div>
+                  </ActionForm>
+                )
+              ) : null}
+
+              <div>
+                <h3>Files</h3>
+                {(attachments.data ?? []).length ? <ul className="os-list">{(attachments.data ?? []).map(a => <li key={a.id}><a className="os-link" href={`/os/attachments/${a.id}`}>{a.file_name}</a><span className="os-muted">{Math.ceil(a.size_bytes / 1024)} KB</span></li>)}</ul> : null}
+                {canEdit ? <Upload type="task" entity={id} /> : (attachments.data ?? []).length ? null : <p className="os-muted">No files.</p>}
+              </div>
+
+              <div>
+                <h3>Can&apos;t start until</h3>
+                {blockedBy.length === 0 ? <p className="os-muted">Nothing. It&apos;s free to start.</p> : (
+                  <ul className="os-list">
+                    {blockedBy.map(d => (
+                      <li key={d.task_id}>
+                        <span>{d.status === "done" ? "✓ " : ""}{d.can_open ? <Link href={`/os/tasks/${d.task_id}`}>{d.title}</Link> : d.title}</span>
+                        {canEdit ? <ActionForm action={removeDependency}><Hidden name="id" value={id} /><Hidden name="depends_on" value={d.task_id} /><button className="os-link-btn" type="submit">Remove</button></ActionForm> : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {deps.some(d => d.direction === "blocks") ? <><h3>Other tasks waiting on this</h3><ul className="os-list">{deps.filter(d => d.direction === "blocks").map(d => <li key={d.task_id}>{d.can_open ? <Link href={`/os/tasks/${d.task_id}`}>{d.title}</Link> : d.title}</li>)}</ul></> : null}
+                {canEdit && open ? (
+                  <ActionForm action={addDependency} className="os-inline-form" resetOnSuccess>
+                    <Hidden name="id" value={id} />
+                    <Field label="Add something this waits on">
+                      <select name="depends_on" required defaultValue="">
+                        <option value="" disabled>Choose a task</option>
+                        {(siblings.data ?? []).filter(t => !deps.some(d => d.task_id === t.id)).map(t => <option key={t.id} value={t.id}>{t.title}</option>)}
+                      </select>
+                    </Field>
+                    <SubmitButton variant="ghost">Add</SubmitButton>
+                  </ActionForm>
+                ) : null}
+              </div>
+
+              {canEdit ? (
+                <ActionForm action={updateTask} className="os-stack">
+                  <Hidden name="id" value={id} /><Hidden name="expected" value={task.updated_at} /><Hidden name="deliverables" value={task.deliverables} /><Hidden name="priority" value={task.priority} /><Hidden name="visibility" value={task.visibility} />
+                  <Hidden name="due" value={task.due_at ? torontoDateKey(new Date(task.due_at)) : ""} />
+                  <h3>Edit this task</h3>
+                  <Field label="Title"><input name="title" defaultValue={task.title} required maxLength={200} /></Field>
+                  <Field label="Details"><textarea name="description" rows={4} defaultValue={task.description} /></Field>
+                  <div><SubmitButton variant="ghost">Save</SubmitButton></div>
+                </ActionForm>
+              ) : null}
+
+              <div>
+                <h3>History</h3>
+                <ul className="os-timeline">
+                  {[...(reviews.data ?? []).map(r => ({ at: r.created_at, text: `${label(r.kind)} by ${nameOf(r.actor_id)}${r.note ? `: ${r.note}` : ""}`, key: r.id })),
+                    ...(history.data ?? []).map(h => ({ at: h.created_at, text: `${h.note || "Assigned"}: ${nameOf(h.assigned_to)}`, key: `h${h.id}` }))]
+                    .sort((a, b) => a.at.localeCompare(b.at))
+                    .map(h => <li key={h.key}><span className="os-muted">{formatDateTime(h.at)}</span>{h.text}</li>)}
+                </ul>
+              </div>
+
+              {canEdit && open && (!task.is_cross_team || inRequesting || me.is_president) ? (
+                <ActionForm action={setTaskStatus} confirm="Cancel this task? It stays on record but no longer counts as open.">
+                  <Hidden name="id" value={id} /><Hidden name="status" value="cancelled" />
+                  <button className="os-link-btn os-danger-link" type="submit">{task.is_cross_team ? "Withdraw this task" : "Cancel this task"}</button>
+                </ActionForm>
+              ) : null}
+            </div>
+          </details>
         </aside>
       </div>
     </div>

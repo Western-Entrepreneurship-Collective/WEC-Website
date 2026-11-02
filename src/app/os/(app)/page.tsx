@@ -1,150 +1,208 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ActionForm } from "@/components/os/ActionForm";
-import { Avatar, Due, Section } from "@/components/os/ui";
-import { dismissChecklist } from "@/lib/os/actions/work";
-import { displayName, requireMe } from "@/lib/os/dal";
-import { entityHref, formatDateTime } from "@/lib/os/format";
-import { getNeeds } from "@/lib/os/needs";
+import { ActionForm, SubmitButton } from "@/components/os/ActionForm";
+import { Kanban } from "@/components/os/Kanban";
+import { RequestCard } from "@/components/os/RequestCard";
+import { Avatar, Hidden, Meter, TaskRow, TeamTile, ViewSwitch } from "@/components/os/ui";
+import { setTaskStatus } from "@/lib/os/actions/work";
+import { getDepartments, requireMe } from "@/lib/os/dal";
+import { shortDue, torontoDateKey } from "@/lib/os/format";
 import { getSeats } from "@/lib/os/org";
+import { projectNames } from "@/lib/os/projectNames";
 import { createClient, rpc } from "@/lib/os/supabase";
-import type { CalendarItem } from "@/lib/os/types";
+import type { ProjectSummary, Task } from "@/lib/os/types";
 
-export const metadata: Metadata = { title: "Home" };
+export const metadata: Metadata = { title: "My tasks" };
 
-function greeting() {
-  const hour = Number(new Intl.DateTimeFormat("en-CA", { timeZone: "America/Toronto", hourCycle: "h23", hour: "numeric" }).format(new Date()));
-  return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+const TZ = "America/Toronto";
+const DAY = 86_400_000;
+const CLOSED = "(done,cancelled)";
+const isLate = (t: Pick<Task, "due_at" | "status">) => Boolean(t.due_at) && new Date(t.due_at!) < new Date() && !["done", "cancelled"].includes(t.status);
+
+// Sunday to Saturday, the same as the calendar.
+function thisWeek() {
+  const noon = new Date(`${torontoDateKey(new Date())}T12:00:00Z`);
+  const sunday = noon.getTime() - noon.getUTCDay() * DAY;
+  return Array.from({ length: 7 }, (_, i) => new Date(sunday + i * DAY));
 }
 
-export default async function HomePage() {
+export default async function MyTasksPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
   const me = await requireMe();
   if (!me.onboarding?.welcomed) redirect("/os/welcome");
-
+  const { view } = await searchParams;
   const supabase = await createClient();
-  const now = new Date();
-  const first = displayName(me).split(" ")[0];
-  const position = me.positions[0];
-  const [{ items, later }, seats, announcements, handover, upcoming] = await Promise.all([
-    getNeeds(me),
-    getSeats(),
+  const headOf = me.positions.filter(p => p.is_head);
+  const headIds = headOf.map(p => p.department_id);
+  const [mine, sent, requests, heads, announcements, summaries, seats, departments, onProjects] = await Promise.all([
+    supabase.from("tasks").select("*").eq("assigned_to", me.id).not("status", "in", CLOSED).order("due_at", { nullsFirst: false }).limit(200),
+    supabase.from("tasks").select("*").eq("created_by", me.id).eq("is_cross_team", true).not("status", "in", CLOSED).order("due_at", { nullsFirst: false }).limit(20),
+    headIds.length ? supabase.from("tasks").select("*").in("responsible_department_id", headIds).in("request_state", ["pending", "clarification_requested"]).order("created_at").limit(20) : Promise.resolve({ data: [] }),
+    headIds.length ? supabase.from("tasks").select("id, title, due_at, assigned_to, status").in("responsible_department_id", headIds).not("status", "in", CLOSED).limit(300) : Promise.resolve({ data: [] }),
     supabase.from("announcements").select("*").is("archived_at", null).order("published_at", { ascending: false }).limit(2),
-    position
-      ? supabase.from("projects").select("id, name").eq("owning_department_id", position.department_id).like("system_key", "handover:%").is("archived_at", null).order("created_at", { ascending: false }).limit(1).maybeSingle()
-      : Promise.resolve({ data: null }),
-    rpc<CalendarItem[]>("calendar_items", { p_from: now.toISOString(), p_to: new Date(now.getTime() + 60 * 86_400_000).toISOString(), p_scope: "core" }),
+    rpc<ProjectSummary[]>("project_summaries"),
+    getSeats(),
+    getDepartments(),
+    supabase.from("project_participants").select("project_id").eq("executive_id", me.id),
   ]);
 
-  const done = me.onboarding;
-  const head = me.positions.find(p => p.is_head);
-  const steps = [
-    { label: "Set your password and name", done: true },
-    { label: "Meet your team and see how WEC OS works", done: Boolean(done.welcomed), href: "/os/welcome", action: "Open it" },
-    ...(head ? [{ label: "Check your team's requests", done: Boolean(done.requests_seen), href: `/os/teams/${head.department_slug}/requests`, action: "Check them" }] : []),
-    ...(position ? [{ label: "Open your first task", done: Boolean(done.task_opened), href: "/os/tasks", action: "See your tasks" }] : []),
-    ...(handover.data ? [{ label: "Read your team's handover", done: Boolean(done.handover_read), href: `/os/projects/${handover.data.id}`, action: "Read it" }] : []),
-    ...(me.is_admin ? [{ label: "Look over the administration pages", done: Boolean(done.admin_seen), href: "/os/admin", action: "Open them" }] : []),
-  ];
-  const doneCount = steps.filter(s => s.done).length;
-  const showChecklist = !done.dismissed && doneCount < steps.length;
-  const team = position ? seats.filter(s => s.departmentId === position.department_id) : [];
-  const coming = upcoming.sort((a, b) => a.starts_at.localeCompare(b.starts_at)).slice(0, 4);
+  const tasks = mine.data ?? [];
+  const asked = requests.data ?? [];
+  const waitingOnOthers = sent.data ?? [];
+  const names = await projectNames([...tasks, ...asked, ...waitingOnOthers].map(t => t.id));
+  const nameOfTeam = (id: string) => departments.find(d => d.id === id)?.name ?? "Another team";
+  const canTick = (t: Task) => t.status !== "unassigned";
+  const actionable = tasks.filter(t => !(t.status === "blocked" && t.blocked_auto));
+  const next = actionable[0];
+  const weekEnd = thisWeek()[6];
+  const endOfWeek = torontoDateKey(weekEnd);
+  const inWeek = (t: Task) => Boolean(t.due_at) && torontoDateKey(new Date(t.due_at!)) <= endOfWeek;
+  const rest = tasks.filter(t => t.id !== next?.id);
+  const week = rest.filter(inWeek);
+  const later = rest.filter(t => !inWeek(t));
+  const today = torontoDateKey(new Date());
+  const days = thisWeek().map(d => {
+    const key = d.toISOString().slice(0, 10);
+    const count = tasks.filter(t => t.due_at && torontoDateKey(new Date(t.due_at)) === key).length;
+    return { key, count, short: new Intl.DateTimeFormat("en-CA", { weekday: "short", timeZone: "UTC" }).format(d), num: d.getUTCDate(), long: new Intl.DateTimeFormat("en-CA", { month: "long", day: "numeric", timeZone: "UTC" }).format(d) };
+  });
 
-  const intro = items.length === 0
-    ? later.length ? "Nothing urgent. Your next things are below." : "Nothing is waiting on you right now."
-    : `${items.length === 1 ? "One thing needs" : `${items.length} things need`} you. Everything else can wait.`;
+  const myTeams = new Set(me.positions.map(p => p.department_id));
+  const onIt = new Set([...tasks.map(t => t.project_id), ...(onProjects.data ?? []).map(p => p.project_id)]);
+  const projects = summaries.filter(p => p.can_open && !p.archived_at && (onIt.has(p.id) || (p.owning_department_id && myTeams.has(p.owning_department_id)))).slice(0, 6);
+
+  const teamPeople = (departmentId: string) => seats.filter(s => s.departmentId === departmentId && s.execId && s.execId !== me.id).map(s => ({ id: s.execId!, name: s.name! }));
+  const teamOpen = heads.data ?? [];
+  const lateOnTeam = teamOpen.filter(isLate);
+  const load = headIds.length ? [...new Map(seats.filter(s => s.execId && headIds.includes(s.departmentId)).map(s => [s.execId!, s])).values()].map(s => {
+    const theirs = teamOpen.filter(t => t.assigned_to === s.execId);
+    return { id: s.execId!, name: s.execId === me.id ? "You" : s.name!, open: theirs.length, late: theirs.filter(isLate).length };
+  }) : [];
+  const most = Math.max(1, ...load.map(p => p.open));
+  const board = view === "board";
 
   return (
     <div className="os-page">
       <header className="os-page-head">
         <div>
-          <p className="os-eyebrow">{new Intl.DateTimeFormat("en-CA", { weekday: "long", month: "long", day: "numeric", timeZone: "America/Toronto" }).format(now)}</p>
-          <h1>{greeting()}, {first}.</h1>
-          <p className="os-page-sub">{intro}</p>
+          <p className="os-eyebrow">{new Intl.DateTimeFormat("en-CA", { weekday: "long", month: "long", day: "numeric", timeZone: TZ }).format(new Date())}</p>
+          <h1>My tasks</h1>
         </div>
+        <ViewSwitch label="View" items={[{ href: "/os", label: "List", on: !board }, { href: "/os?view=board", label: "Board", on: board }]} />
       </header>
       {me.positions.length === 0 && !me.is_admin ? <p className="os-note">You don&apos;t hold a position yet, so there isn&apos;t much to show. An administrator can assign you one.</p> : null}
       {(announcements.data ?? []).map(a => <div key={a.id} className="os-announcement"><strong>{a.title}</strong><p>{a.body}</p></div>)}
 
-      <div className="os-split">
-        <div className="os-stack-lg">
-          {showChecklist ? (
-            <section className="os-panel" aria-labelledby="start">
-              <header className="os-panel-head">
-                <h2 id="start">Getting started</h2>
-                <span className="os-row">
-                  <span className="os-muted">{doneCount} of {steps.length} done</span>
-                  <ActionForm action={dismissChecklist}><button type="submit" className="os-link-btn">Hide</button></ActionForm>
-                </span>
-              </header>
-              <div className="os-progress" aria-hidden="true"><span style={{ width: `${(doneCount / steps.length) * 100}%` }} /></div>
-              <ul className="os-steps-list">
-                {steps.map(s => (
-                  <li key={s.label} className={s.done ? "is-done" : undefined}>
-                    <span className="os-step-mark" aria-hidden="true">{s.done ? "✓" : ""}</span>
-                    <span className="os-step-label">{s.label}<span className="sr-only">{s.done ? " (done)" : ""}</span></span>
-                    {!s.done && s.href ? <Link className="os-link" href={s.href}>{s.action}</Link> : null}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ) : null}
+      {board ? (
+        <Kanban cards={tasks.map(t => ({ id: t.id, title: t.title, status: t.status, sub: names.get(t.id), due: shortDue(t.due_at), late: isLate(t), updated_at: t.updated_at, waiting: t.status === "blocked" && t.blocked_auto }))} />
+      ) : (
+        <div className="os-split">
+          <div className="os-stack-lg">
+            {asked.length ? (
+              <section className="os-requests" aria-labelledby="asked">
+                <header>
+                  <h2 id="asked">Requests for {headOf.map(p => p.department_name).join(" and ")}</h2>
+                  <p>{asked.length} {asked.length === 1 ? "is" : "are"} waiting for you to take or assign.</p>
+                </header>
+                {asked.map(t => <RequestCard key={t.id} task={t} from={nameOfTeam(t.requesting_department_id)} project={names.get(t.id)} people={teamPeople(t.responsible_department_id)} meId={me.id} />)}
+              </section>
+            ) : null}
 
-          <Section title="Needs you">
-            {items.length === 0 ? <p className="os-empty">You&apos;re all caught up. When someone gives you work or asks your team for something, it lands here.</p> : (
-              <ul className="os-needs">
-                {items.map(n => (
-                  <li key={n.key} className="os-need">
-                    <div>
-                      <Link className="os-need-title" href={n.href}>{n.title}</Link>
-                      <small>{n.why}</small>
-                    </div>
-                    {n.due && n.due !== "No date" ? <span className={`os-due os-due-${n.tone}`}>{n.due}</span> : null}
-                    <Link className="os-btn os-btn-primary" href={n.href} aria-label={`${n.cta}: ${n.title}`}>{n.cta}</Link>
-                  </li>
-                ))}
-              </ul>
+            {next ? (
+              <section className="os-next-up" aria-labelledby="next">
+                <div>
+                  <h2 id="next">Do this next</h2>
+                  <Link href={`/os/tasks/${next.id}`}>{next.title}</Link>
+                  <p>{names.get(next.id)}. <strong className={isLate(next) ? "os-overdue" : undefined}>{next.due_at ? (isLate(next) ? `Overdue since ${shortDue(next.due_at)}.` : `Due ${shortDue(next.due_at)}.`) : "No date."}</strong></p>
+                </div>
+                <div className="os-row os-wrap">
+                  {canTick(next) ? <ActionForm action={setTaskStatus}><Hidden name="id" value={next.id} /><Hidden name="status" value="done" /><Hidden name="expected" value={next.updated_at} /><SubmitButton>Mark done</SubmitButton></ActionForm> : null}
+                  <Link className="os-btn os-btn-ghost" href={`/os/tasks/${next.id}`}>Open task</Link>
+                </div>
+              </section>
+            ) : (
+              <p className="os-empty-big">{asked.length ? "Nothing else is on your list." : "You're all caught up. When someone gives you a task, it lands here."}</p>
             )}
-          </Section>
 
-          {later.length ? (
-            <Section title="Coming up for you" action={<Link className="os-link" href="/os/tasks">All tasks</Link>}>
-              <ul className="os-rows">
-                {later.slice(0, 6).map(t => <li key={t.id}><Link href={`/os/tasks/${t.id}`}>{t.title}</Link><Due value={t.due_at} /></li>)}
-              </ul>
-            </Section>
-          ) : null}
+            {week.length ? (
+              <section className="os-panel" aria-labelledby="week">
+                <h2 id="week">This week <em className="os-count-text">{week.length} left</em></h2>
+                <div>{week.map(t => <TaskRow key={t.id} task={t} sub={names.get(t.id)} canTick={canTick(t)} />)}</div>
+              </section>
+            ) : null}
+            {later.length ? (
+              <section className="os-panel" aria-labelledby="later">
+                <h2 id="later">Later</h2>
+                <div>{later.map(t => <TaskRow key={t.id} task={t} sub={names.get(t.id)} canTick={canTick(t)} />)}</div>
+              </section>
+            ) : null}
+            <p className="os-muted"><Link className="os-link" href="/os/tasks?show=closed">Finished tasks</Link></p>
+          </div>
+
+          <aside className="os-stack-lg">
+            <section className="os-panel" aria-labelledby="days">
+              <h2 id="days">Your week</h2>
+              <ol className="os-week">
+                {days.map(d => (
+                  <li key={d.key} className={d.key === today ? "is-today" : undefined} aria-label={`${d.long}, ${d.count} ${d.count === 1 ? "task" : "tasks"}`}>
+                    <span>{d.short}</span><strong>{d.num}</strong>
+                    <span className="os-dots" aria-hidden="true">{Array.from({ length: Math.min(d.count, 4) }, (_, i) => <i key={i} />)}</span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+
+            {load.length ? (
+              <section className="os-panel" aria-labelledby="load">
+                <h2 id="load">Who has what</h2>
+                <ul className="os-load">
+                  {load.map(p => (
+                    <li key={p.id}>
+                      <Avatar name={p.name === "You" ? seats.find(s => s.execId === me.id)?.name : p.name} />
+                      <div>
+                        <span><strong>{p.name}</strong><small className={p.late ? "os-overdue" : undefined}>{p.open} open{p.late ? `, ${p.late} late` : ""}</small></span>
+                        <Meter value={(p.open / most) * 100} tone={p.late ? "bad" : undefined} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
+            {lateOnTeam.length ? (
+              <section className="os-panel os-panel-bad" aria-labelledby="teamlate">
+                <h2 id="teamlate">{lateOnTeam.length} {lateOnTeam.length === 1 ? "task" : "tasks"} running late</h2>
+                <ul className="os-plain-list">
+                  {lateOnTeam.slice(0, 5).map(t => <li key={t.id}><Link href={`/os/tasks/${t.id}`}>{t.title}</Link><small>{seats.find(s => s.execId === t.assigned_to)?.name ?? "Unassigned"}. Due {shortDue(t.due_at)}</small></li>)}
+                </ul>
+              </section>
+            ) : null}
+
+            {waitingOnOthers.length ? (
+              <section className="os-panel" aria-labelledby="waiting">
+                <h2 id="waiting">Waiting on others</h2>
+                <ul className="os-plain-list">
+                  {waitingOnOthers.map(t => (
+                    <li key={t.id} className="os-with-tile">
+                      <TeamTile name={nameOfTeam(t.responsible_department_id)} size="small" />
+                      <span><Link href={`/os/tasks/${t.id}`}>{t.title}</Link><small>{nameOfTeam(t.responsible_department_id)}. {t.assigned_to ? `${seats.find(s => s.execId === t.assigned_to)?.name?.split(" ")[0] ?? "Someone"} is on it` : "Waiting for an answer"}{t.due_at ? `, due ${shortDue(t.due_at)}` : ""}</small></span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
+            {projects.length ? (
+              <section className="os-panel" aria-labelledby="myprojects">
+                <h2 id="myprojects">My projects</h2>
+                <ul className="os-plain-list">
+                  {projects.map(p => <li key={p.id} className="os-project-line"><Link href={`/os/projects/${p.id}`}>{p.name}</Link><small>{p.done_tasks} of {p.total_tasks}</small><Meter value={p.progress} /></li>)}
+                </ul>
+              </section>
+            ) : null}
+          </aside>
         </div>
-
-        <aside className="os-stack-lg">
-          {handover.data && !done.handover_read ? (
-            <section className="os-feature">
-              <p className="os-hand">From last year&apos;s team</p>
-              <h2>Start with {position?.department_name}&apos;s handover</h2>
-              <p>What&apos;s still open, how the team works, and where everything lives.</p>
-              <Link className="os-btn os-btn-invert" href={`/os/projects/${handover.data.id}`}>Read the handover</Link>
-            </section>
-          ) : null}
-          {team.length ? (
-            <Section title="Your team" action={position ? <Link className="os-link" href={`/os/teams/${position.department_slug}`}>Open {position.department_name}</Link> : null}>
-              <ul className="os-people-list">
-                {team.map(s => <li key={s.key}><Avatar name={s.name} lead={s.isHead} /><span><strong>{s.name ?? "Open seat"}{s.execId === me.id ? " (you)" : ""}</strong><small>{s.title}</small></span></li>)}
-              </ul>
-            </Section>
-          ) : null}
-          <Section title="Coming up at WEC" action={<Link className="os-link" href="/os/calendar/core">Calendar</Link>}>
-            {coming.length === 0 ? <p className="os-empty">Nothing on the Core Calendar yet. Approved events show up here.</p> : (
-              <ul className="os-rows">
-                {coming.map(c => {
-                  const href = c.can_open && c.item_type !== "milestone" ? entityHref(c.item_type, c.item_id) : null;
-                  return <li key={c.item_type + c.item_id}>{href ? <Link href={href}>{c.title}</Link> : <span>{c.title}</span>}<small className="os-muted">{formatDateTime(c.starts_at)}</small></li>;
-                })}
-              </ul>
-            )}
-          </Section>
-        </aside>
-      </div>
+      )}
     </div>
   );
 }

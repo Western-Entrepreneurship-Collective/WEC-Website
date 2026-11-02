@@ -9,7 +9,7 @@ import { getSeats } from "@/lib/os/org";
 export const metadata: Metadata = { title: "Welcome" };
 
 const ROLE_TEXT: Record<string, string> = {
-  president: "You see all of WEC's work, and you approve events and Global Projects.",
+  president: "You see all of WEC's work, and you approve events.",
   vp: "You run your team's work, assign it, and answer requests from other teams.",
   director: "You'll see your team's shared work and anything assigned to you.",
   coordinator: "You'll see your team's shared work and anything assigned to you.",
@@ -22,13 +22,13 @@ export default async function WelcomePage() {
   const position = me.positions[0];
   const team = position ? seats.filter(s => s.departmentId === position.department_id && s.execId !== me.id) : [];
   const places = [
-    { title: "My work", body: "What's on your plate: your tasks, projects, calendar and anything waiting for you.", items: "Home, Tasks, Projects, Calendar, Inbox" },
-    { title: position ? "My team" : "Your team", body: position ? `What ${position.department_name} is doing together: projects, requests, SOPs and meeting notes.` : "Once you hold a position, your team's work shows up here.", items: position?.department_name ?? "Assigned by an administrator" },
-    { title: "Organization", body: "What all of WEC is doing: events, organization-wide projects and every team.", items: "Events, Global Projects, All Teams, SOP Library" },
+    { title: "My tasks", body: "What's on your plate, in the order to do it. If you lead a team, what other teams are asking for lands here too.", items: "My tasks, Calendar, Inbox" },
+    { title: "Projects", body: "Every task lives in a project. A project is just your team's, or shared with the teams you choose.", items: "Projects, Events" },
+    { title: "Teams", body: position ? `Who does what at WEC. ${position.department_name}'s work is on its page, and you can send any other team a task.` : "Who does what at WEC, and how to send any team a task.", items: "Teams" },
   ];
   const chain = [
     { name: "Event", eg: "Founder Lab" }, { name: "Project", eg: "One for each team involved" },
-    { name: "Task", eg: "Who does what, by when" }, { name: "Subtask", eg: "Optional smaller steps" },
+    { name: "Task", eg: "Who does what, by when" }, { name: "Steps", eg: "Optional, if it helps" },
   ];
   return (
     <div className="os-welcome">

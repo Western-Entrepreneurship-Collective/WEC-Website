@@ -1,19 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ProjectTable } from "@/components/os/ProjectTable";
-import { Page } from "@/components/os/ui";
+import { Empty, Meter, TeamTile, ViewSwitch } from "@/components/os/ui";
 import { can, displayName, requireMe } from "@/lib/os/dal";
+import { shortDue } from "@/lib/os/format";
 import { createClient, rpc } from "@/lib/os/supabase";
 import type { ProjectSummary } from "@/lib/os/types";
 
 export const metadata: Metadata = { title: "Projects" };
 
-const FILTERS = [["mine", "Mine"], ["team", "My team"], ["event", "Events"], ["global", "Global"], ["archived", "Archived"]] as const;
+function tag(p: ProjectSummary) {
+  if (p.event_name) return { text: `Event: ${p.event_name}`, cls: "is-event" };
+  if (p.kind === "GLOBAL") return { text: "Shared", cls: "is-shared" };
+  return { text: `Private to ${p.department_name ?? "the team"}`, cls: "" };
+}
 
-export default async function ProjectsPage({ searchParams }: { searchParams: Promise<{ show?: string }> }) {
+export default async function ProjectsPage({ searchParams }: { searchParams: Promise<{ scope?: string }> }) {
   const me = await requireMe();
-  const { show } = await searchParams;
-  const current = FILTERS.some(([id]) => id === show) ? show! : "mine";
+  const { scope } = await searchParams;
+  const current = scope === "all" || scope === "archived" ? scope : "team";
   const supabase = await createClient();
   const [projects, { data: myTasks }, { data: myProjects }] = await Promise.all([
     rpc<ProjectSummary[]>("project_summaries", { p_include_archived: true }),
@@ -22,30 +26,43 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
   ]);
   const onIt = new Set([...(myTasks ?? []), ...(myProjects ?? [])].map(r => r.project_id));
   const teams = new Set(me.positions.map(p => p.department_name));
-  const live = projects.filter(p => !p.archived_at && p.approval_status !== "rejected");
-  const tests: Record<string, (p: ProjectSummary) => boolean> = {
-    mine: p => onIt.has(p.id) || p.lead_name === displayName(me),
-    team: p => Boolean(p.department_name && teams.has(p.department_name)),
-    event: p => p.kind === "EVENT",
-    global: p => p.kind === "GLOBAL",
-  };
-  const countOf = (id: string) => (id === "archived" ? projects.filter(p => p.archived_at).length : live.filter(tests[id]).length);
-  const rows = current === "archived" ? projects.filter(p => p.archived_at) : live.filter(tests[current]);
-  const empty: Record<string, string> = {
-    mine: "You're not on any projects yet. When you're given a task or added to a project, it shows up here.",
-    team: "Your team has no projects yet.",
-    event: "No event projects you can see yet. They're created when an event is approved.",
-    global: "No Global Projects have been published.",
-    archived: "Nothing archived that you can see.",
-  };
+  const live = projects.filter(p => !p.archived_at);
+  const mine = (p: ProjectSummary) => onIt.has(p.id) || p.lead_name === displayName(me) || Boolean(p.department_name && teams.has(p.department_name)) || p.other_teams.some(t => teams.has(t));
+  const rows = current === "archived" ? projects.filter(p => p.archived_at) : current === "all" ? live : live.filter(mine);
   const canCreate = can(me, "project.create_internal") && me.positions.length > 0;
   return (
-    <Page title="Projects" subtitle="Everything you can see, in one list. Pick a view to narrow it down." actions={canCreate ? <Link className="os-btn os-btn-primary" href="/os/projects/new?kind=INTERNAL">New project</Link> : null}>
-      <nav className="os-chips" aria-label="Filter projects">
-        {FILTERS.map(([id, name]) => <Link key={id} className="os-chip" href={id === "mine" ? "/os/projects" : `/os/projects?show=${id}`} aria-current={id === current ? "page" : undefined}>{name} <span>{countOf(id)}</span></Link>)}
-      </nav>
-      <ProjectTable projects={rows} empty={empty[current]} />
-      {rows.some(p => !p.can_open) ? <p className="os-muted">&quot;Progress only&quot; means you can see how a project is going. Its tasks stay with the people working on it.</p> : null}
-    </Page>
+    <div className="os-page">
+      <header className="os-page-head">
+        <h1>Projects</h1>
+        <div className="os-row os-wrap">
+          <ViewSwitch label="Show" items={[{ href: "/os/projects", label: "My team", on: current === "team" }, { href: "/os/projects?scope=all", label: "All of WEC", on: current === "all" }]} />
+          {canCreate ? <Link className="os-btn os-btn-primary" href="/os/projects/new">New project</Link> : null}
+        </div>
+      </header>
+      {rows.length === 0 ? <Empty>{current === "team" ? "Your team has no projects yet. Start one, or wait for an approved event to create them." : "Nothing here that you can see."}</Empty> : (
+        <ul className="os-project-grid">
+          {rows.map(p => {
+            const t = tag(p);
+            return (
+              <li key={p.id} className="os-project-card">
+                <div className="os-with-tile">
+                  <TeamTile name={p.department_name} />
+                  <span>
+                    <Link href={`/os/projects/${p.id}`}>{p.name}</Link>
+                    <small>{p.department_name ?? "Organization"}{p.other_teams.length ? `, with ${p.other_teams.join(" and ")}` : ""}</small>
+                  </span>
+                </div>
+                <span className={`os-project-tag ${t.cls}`}>{t.text}</span>
+                <div>
+                  <Meter value={p.progress} />
+                  <p className="os-between-line"><small>{p.done_tasks} of {p.total_tasks} done</small>{p.overdue_tasks ? <small className="os-overdue">{p.overdue_tasks} overdue</small> : <small>{p.due_on ? `Due ${shortDue(p.due_on).replace(/^\w+, /, "")}` : "No date"}</small>}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <p className="os-muted">{current === "archived" ? <Link className="os-link" href="/os/projects">Back to current projects</Link> : <Link className="os-link" href="/os/projects?scope=archived">Archived projects</Link>}</p>
+    </div>
   );
 }

@@ -2,60 +2,38 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 import { Logo } from "@/components/graphics/DraftGraphics";
 
-export type NavItem = { href: string; label: string; icon: string; badge?: number; exact?: boolean };
-export type NavGroup = { label: string; items: NavItem[] };
+export type NavItem = { href: string; label: string };
 
-const matches = (item: NavItem, pathname: string) => (item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`));
+// The address decides which link is lit. A task belongs to My tasks wherever it was opened from.
+const isCurrent = (href: string, pathname: string) => href === "/os" ? pathname === "/os" || pathname.startsWith("/os/tasks") : pathname === href || pathname.startsWith(`${href}/`);
 
-export function Shell({ nav, footer, children }: { nav: NavGroup[]; footer: React.ReactNode; children: React.ReactNode }) {
+export function Shell({ nav, inbox, me, children }: { nav: NavItem[]; inbox: number; me: React.ReactNode; children: React.ReactNode }) {
   const pathname = usePathname();
-  const [open, setOpen] = useState(false);
-
-  // eslint-disable-next-line react-hooks/set-state-in-effect -- closing the drawer follows navigation
-  useEffect(() => setOpen(false), [pathname]);
-
-  // The longest match wins, so a Global Project's list lights up Global Projects and not Projects.
-  const current = nav.flatMap(g => g.items).filter(i => matches(i, pathname)).sort((a, b) => b.href.length - a.href.length)[0]?.href;
-
   return (
     <div className="os-shell">
       <a className="os-skip" href="#os-main">Skip to content</a>
-      <div className="os-topbar">
-        <Link href="/os" aria-label="WEC OS home"><Logo reversed priority className="os-logo" /></Link>
-        <button type="button" className="os-menu-btn" aria-expanded={open} aria-controls="os-sidebar" onClick={() => setOpen(v => !v)}>{open ? "Close" : "Menu"}</button>
-      </div>
-      <aside id="os-sidebar" className={`os-sidebar${open ? " is-open" : ""}`}>
-        <Link className="os-brand" href="/os" aria-label="WEC OS home">
-          <Logo reversed priority className="os-logo" />
-          <span>OS</span>
-        </Link>
-        <form className="os-search" action="/os/search" role="search">
-          <label className="sr-only" htmlFor="os-search-input">Search</label>
-          <input id="os-search-input" name="q" type="search" placeholder="Search everything" />
-        </form>
-        <div className="os-nav-groups">
-          {nav.map(group => (
-            <nav key={group.label} aria-label={group.label}>
-              <p className="os-nav-label">{group.label}</p>
-              <ul>
-                {group.items.map(item => (
-                  <li key={item.href}>
-                    <Link href={item.href} aria-current={item.href === current ? "page" : undefined}>
-                      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={item.icon} /></svg>
-                      <span className="os-nav-text">{item.label}</span>
-                      {item.badge ? <span className="os-badge">{item.badge}<span className="sr-only"> waiting</span></span> : null}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          ))}
+      <header className="os-bar">
+        <Link href="/os" className="os-bar-logo" aria-label="WEC OS home"><Logo reversed priority className="os-logo" /></Link>
+        <nav aria-label="Main" className="os-bar-nav">
+          {nav.map(item => <Link key={item.href} href={item.href} aria-current={isCurrent(item.href, pathname) ? "page" : undefined}>{item.label}</Link>)}
+        </nav>
+        <div className="os-bar-tools">
+          <Link className="os-bar-icon" href="/os/search" aria-label="Search">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.5-3.5" /></svg>
+          </Link>
+          <Link className="os-bar-icon" href="/os/notifications" aria-label={inbox ? `Inbox, ${inbox} new` : "Inbox"}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 10a6 6 0 1112 0c0 5 2 6 2 7H4c0-1 2-2 2-7zM10 20a2 2 0 004 0" /></svg>
+            {inbox ? <span className="os-bar-count" aria-hidden="true">{inbox}</span> : null}
+          </Link>
+          <Link className="os-bar-new" href="/os/tasks/new">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
+            New task
+          </Link>
+          {me}
         </div>
-        <div className="os-sidebar-foot">{footer}</div>
-      </aside>
+      </header>
       <main id="os-main" className="os-main" tabIndex={-1}>{children}</main>
     </div>
   );

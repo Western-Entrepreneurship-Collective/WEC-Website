@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/os/ActionForm";
-import { Avatar, Due, Field, Hidden, Panel, Pill, Progress, Section, Status } from "@/components/os/ui";
+import { Field, Hidden, Meter, Panel, Pill, Section, Status, TeamTile } from "@/components/os/ui";
 import { archiveEvent, decideEvent, rescheduleEvent, setEventStatus, submitEvent } from "@/lib/os/actions/work";
 import { can, getDirectory, nameLookup, requireMe } from "@/lib/os/dal";
-import { daysUntil, decisionLabel, formatDateTime, toLocalInput } from "@/lib/os/format";
+import { daysUntil, decisionLabel, formatDateTime, shortDue, toLocalInput } from "@/lib/os/format";
 import { createClient, rpc } from "@/lib/os/supabase";
 
 export const metadata: Metadata = { title: "Event" };
@@ -42,7 +42,7 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
     rpc<number>("event_readiness", { p_event: id }),
   ]);
   const untilEvent = Math.max(Math.ceil(daysUntil(event.starts_at)), 0);
-  const eventDays = untilEvent === 0 ? "event day" : `${untilEvent} day${untilEvent === 1 ? "" : "s"} out`;
+  const eventDays = untilEvent === 0 ? "Today" : `${untilEvent} day${untilEvent === 1 ? "" : "s"} away`;
   const editable = ["draft", "changes_requested"].includes(event.status) && can(me, "event.submit");
   const live = ["approved", "in_progress"].includes(event.status);
   const leadTimeShort = daysUntil(event.starts_at) < WEEKS[event.tier] * 7;
@@ -51,17 +51,18 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
   const behind = rows.filter(r => r.overdue_tasks > 0);
   return (
     <div className="os-page">
-      <nav className="os-crumbs" aria-label="Breadcrumb"><Link href="/os/events">Events</Link></nav>
-      <header className="os-page-head">
+      <nav className="os-crumbs" aria-label="You are here"><Link href="/os/events">Events</Link></nav>
+      <header className="os-event-head">
+        <div className="os-date-block" aria-hidden="true"><span>{new Intl.DateTimeFormat("en-CA", { month: "short", timeZone: "America/Toronto" }).format(new Date(event.starts_at))}</span><strong>{new Intl.DateTimeFormat("en-CA", { day: "numeric", timeZone: "America/Toronto" }).format(new Date(event.starts_at))}</strong></div>
         <div>
           <h1>{event.name}</h1>
-          <p className="os-page-sub">{formatDateTime(event.starts_at)}{event.location ? ` · ${event.location}` : ""} · Tier {event.tier}, {WEEKS[event.tier]}-week plan{event.program ? ` · ${event.program}` : ""}</p>
+          <p>{[formatDateTime(event.starts_at), event.location, `Tier ${event.tier}`, live ? eventDays : null].filter(Boolean).join(" · ")}</p>
           <div className="os-row os-wrap os-head-meta"><Pill value={event.status} />{editable ? <Link className="os-btn os-btn-ghost" href={`/os/events/${id}/edit`}>Edit</Link> : null}</div>
         </div>
         {live || event.status === "completed" ? (
-          <div className="os-head-progress">
-            <div className="os-row os-between"><strong>{readiness}%</strong><span className="os-muted">ready, {eventDays}</span></div>
-            <Progress value={readiness} />
+          <div className="os-ring-wrap">
+            <svg width="72" height="72" viewBox="0 0 84 84" role="img" aria-label={`${readiness}% ready`}><circle cx="42" cy="42" r="36" fill="none" stroke="#EDE9F1" strokeWidth="10" /><circle cx="42" cy="42" r="36" fill="none" stroke="#034638" strokeWidth="10" strokeLinecap="round" strokeDasharray={`${(readiness / 100) * 226} 226`} transform="rotate(-90 42 42)" /></svg>
+            <span><strong>{readiness}%</strong><small>ready</small></span>
           </div>
         ) : null}
       </header>
@@ -91,28 +92,22 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
         </div>
       ) : null}
 
-      <Section title="Team by team" action={live && can(me, "project.create_event") ? <Link className="os-link" href={`/os/projects/new?kind=EVENT&event=${id}`}>Add a project</Link> : null}>
+      <Section title="Each team's project" action={live && can(me, "project.create_event") ? <Link className="os-link" href={`/os/projects/new?event=${id}`}>Add a project</Link> : null}>
         {rows.length === 0 ? (
           <p className="os-empty">{live || event.status === "completed" ? "You can see this event, and each team's progress is shared with the people working on it." : "Projects are generated when this event is approved."}</p>
         ) : (
-          <div className="os-table-wrap os-card-table" tabIndex={0} role="group" aria-label="Team progress">
-            <table className="os-table">
-              <thead><tr><th scope="col">Team</th><th scope="col">Lead</th><th scope="col">Progress</th><th scope="col">Next up</th><th scope="col">Status</th></tr></thead>
-              <tbody>
-                {rows.map(r => {
-                  const st = teamStatus(r);
-                  return (
-                    <tr key={r.project_id}>
-                      <td><Link className="os-row-title" href={`/os/projects/${r.project_id}`}>{r.department_name}</Link></td>
-                      <td>{r.lead_name ? <span className="os-row"><Avatar name={r.lead_name} />{r.lead_name}</span> : <span className="os-warn-text">Lead seat open</span>}</td>
-                      <td><div className="os-list-side"><Progress value={r.progress} /><span className="os-muted">{r.progress}%</span></div></td>
-                      <td>{r.next_title ?? <span className="os-muted">Private to the team</span>}{r.next_due ? <span className="os-block"><Due value={r.next_due} /></span> : null}</td>
-                      <td><Status tone={st.tone}>{st.text}</Status></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="os-event-teams" role="group" aria-label="Team progress">
+            {rows.map(r => {
+              const st = teamStatus(r);
+              return (
+                <article key={r.project_id} className="os-event-team">
+                  <div className="os-with-tile"><TeamTile name={r.department_name} /><Link href={`/os/projects/${r.project_id}`}>{r.department_name}</Link><Status tone={st.tone}>{r.overdue_tasks ? `${r.overdue_tasks} overdue` : st.text}</Status></div>
+                  <Meter value={r.progress} tone={r.overdue_tasks ? "bad" : undefined} />
+                  <p className="os-between-line"><small>{r.next_title ? <>Next: {r.next_title}{r.next_due ? `, ${shortDue(r.next_due)}` : ""}</> : r.can_open ? "Nothing left" : "Tasks stay with the team"}</small><small>{r.progress}% done</small></p>
+                  {!r.lead_name ? <small className="os-warn-text">Lead seat open</small> : null}
+                </article>
+              );
+            })}
           </div>
         )}
       </Section>

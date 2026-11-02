@@ -97,9 +97,6 @@ export type Database = {
 "decide_event":
 { Args: { "p_decision": string,"p_event": string,"p_note"?: string }; Returns: number
                            },
-"decide_global_project":
-{ Args: { "p_decision": string,"p_note"?: string,"p_project": string }; Returns: undefined
-                           },
 "delegate_request":
 { Args: { "p_delegate": string,"p_task": string }; Returns: undefined
                            },
@@ -150,6 +147,9 @@ export type Database = {
               "created_at": string,"entity_id": string,"entity_type": string,"id": string,"kind": string,"read_at": string,"title": string
             }[]
                            },
+"new_task":
+{ Args: { "p_fields": Json,"p_person": string,"p_project": string,"p_steps"?: (string)[],"p_team": string }; Returns: string
+                           },
 "prepare_attachment":
 { Args: { "p_content_type": string,"p_entity": string,"p_file_name": string,"p_size": number,"p_type": string }; Returns: {
               "attachment_id": string,"storage_path": string
@@ -157,7 +157,7 @@ export type Database = {
                            },
 "project_summaries":
 { Args: { "p_department"?: string,"p_event"?: string,"p_include_archived"?: boolean,"p_kind"?: string }; Returns: {
-              "approval_status": string,"archived_at": string,"can_open": boolean,"department_name": string,"due_on": string,"event_id": string,"event_name": string,"id": string,"kind": string,"lead_name": string,"name": string,"next_due": string,"overdue_tasks": number,"progress": number,"starts_on": string,"status": string
+              "approval_status": string,"archived_at": string,"can_open": boolean,"department_name": string,"done_tasks": number,"due_on": string,"event_id": string,"event_name": string,"id": string,"kind": string,"lead_name": string,"name": string,"next_due": string,"other_teams": (string)[],"overdue_tasks": number,"owning_department_id": string,"progress": number,"starts_on": string,"status": string,"total_tasks": number
             }[]
                            },
 "propose_deadline":
@@ -276,6 +276,9 @@ export type Database = {
 "set_project_status":
 { Args: { "p_project": string,"p_status": string }; Returns: undefined
                            },
+"set_project_teams":
+{ Args: { "p_departments": (string)[],"p_project": string }; Returns: undefined
+                           },
 "set_setting":
 { Args: { "p_key": string,"p_value": Json }; Returns: undefined
                            },
@@ -303,9 +306,6 @@ export type Database = {
 "submit_event":
 { Args: { "p_event": string }; Returns: undefined
                            },
-"submit_global_project":
-{ Args: { "p_project": string }; Returns: undefined
-                           },
 "submit_sop_version":
 { Args: { "p_version": string }; Returns: undefined
                            },
@@ -317,6 +317,11 @@ export type Database = {
 "task_dependencies":
 { Args: { "p_task": string }; Returns: {
               "can_open": boolean,"direction": string,"status": string,"task_id": string,"title": string
+            }[]
+                           },
+"task_project_names":
+{ Args: { "p_tasks": (string)[] }; Returns: {
+              "project_name": string,"task_id": string
             }[]
                            },
 "transition_departure":

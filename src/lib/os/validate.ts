@@ -46,6 +46,12 @@ export function dateTime(fd: FormData, key: string, opts: { required?: boolean; 
   return iso;
 }
 
+// A date with no time means the end of that day in Toronto.
+export function dueDate(fd: FormData, key: string) {
+  const raw = date(fd, key, "Due date");
+  return raw ? torontoToIso(`${raw}T23:59`) : null;
+}
+
 export function date(fd: FormData, key: string, label = key) {
   const raw = String(fd.get(key) ?? "");
   if (!raw) return null;

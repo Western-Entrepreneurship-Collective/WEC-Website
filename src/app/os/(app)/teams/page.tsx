@@ -1,47 +1,42 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Avatar, Page } from "@/components/os/ui";
-import { getDepartments, requireMe } from "@/lib/os/dal";
+import { Page, TeamTile } from "@/components/os/ui";
+import { can, getDepartments, requireMe } from "@/lib/os/dal";
 import { getSeats } from "@/lib/os/org";
 
-export const metadata: Metadata = { title: "All Teams" };
+export const metadata: Metadata = { title: "Teams" };
 
 export default async function TeamsPage() {
   const me = await requireMe();
   const [departments, seats] = await Promise.all([getDepartments(), getSeats()]);
-  const presidentFilled = seats.some(s => s.orgRole === "president" && s.name);
   const mine = departments.filter(d => me.positions.some(p => p.department_id === d.id));
   const others = departments.filter(d => !mine.includes(d));
-  const leadOf = (id: string) => seats.find(s => s.departmentId === id && s.isHead);
+  const canSend = can(me, "request.create") && mine.length > 0;
   return (
-    <Page title="All Teams" subtitle="Who does what at WEC, and who to ask. Each team's own work stays private to that team.">
+    <Page title="Teams">
       {mine.map(d => (
-        <Link key={d.id} href={`/os/teams/${d.slug}`} className="os-feature os-feature-row">
+        <Link key={d.id} href={`/os/teams/${d.slug}`} className="os-my-team">
           <span>
             <small>Your team</small>
             <strong>{d.name}</strong>
-            <span>{d.description}{leadOf(d.id)?.name ? ` Led by ${leadOf(d.id)?.name}.` : ""}</span>
+            <span>{d.description}</span>
           </span>
-          <span className="os-btn os-btn-invert">Open your team</span>
+          <b>Open your team</b>
         </Link>
       ))}
       <ul className="os-team-grid">
         {others.map(d => {
-          const lead = leadOf(d.id);
-          const open = seats.filter(s => s.departmentId === d.id && !s.name).length;
+          const lead = seats.find(s => s.departmentId === d.id && s.isHead)?.name;
           return (
-            <li key={d.id}>
-              <Link href={`/os/teams/${d.slug}`} className="os-team-card">
-                <h2>{d.name}</h2>
-                <p>{d.description}</p>
-                <span className="os-team-lead">
-                  <Avatar name={lead?.name} />
-                  <span>
-                    <strong className={lead?.name ? undefined : "os-warn-text"}>{lead?.name ?? "Lead seat open"}</strong>
-                    <small>{lead?.name ? (open ? `${open} open seat${open === 1 ? "" : "s"}` : "Full team") : presidentFilled ? "Requests go to the President" : "Requests wait for a lead"}</small>
-                  </span>
-                </span>
-              </Link>
+            <li key={d.id} className="os-team-card">
+              <div className="os-with-tile">
+                <TeamTile name={d.name} />
+                <span><Link href={`/os/teams/${d.slug}`}>{d.name}</Link><small>{d.description}</small></span>
+              </div>
+              <div className="os-team-foot">
+                <span className={lead ? undefined : "os-warn-text"}>{lead ?? "Lead seat open"}</span>
+                {canSend ? <Link className="os-btn os-btn-ghost" href={`/os/tasks/new?to=${d.id}`} aria-label={`Send ${d.name} a task`}>Send a task</Link> : null}
+              </div>
             </li>
           );
         })}

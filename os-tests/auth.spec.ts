@@ -3,16 +3,15 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, statSync, writeFileS
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { PEOPLE, apiAs, dbQuery, latestEmailLink, signIn } from "./support/helpers";
+import { PEOPLE, apiAs, dbQuery, latestEmailLink, signIn, signOut } from "./support/helpers";
 import { LOCAL } from "./support/local";
 
 test("signing in and out works, and pages need a session", async ({ page }) => {
   await page.goto("/os");
   await expect(page).toHaveURL(/\/os\/login$/);
   await signIn(page, PEOPLE.vpContent);
-  await expect(page.getByRole("heading", { name: /, Connie\./ })).toBeVisible();
-  await page.getByRole("button", { name: "Sign out" }).click();
-  await expect(page).toHaveURL(/\/os\/login$/);
+  await expect(page.getByRole("heading", { name: "My tasks" })).toBeVisible();
+  await signOut(page);
   await page.goto("/os/tasks");
   await expect(page).toHaveURL(/\/os\/login$/);
 });
@@ -77,13 +76,12 @@ test("invitation, activation and password recovery, end to end", async ({ page }
   await expect(page.getByRole("heading", { name: "Welcome to WEC OS, Nia." })).toBeVisible();
   await expect(page.getByText("Director of Engagement").first()).toBeVisible();
   await page.getByRole("button", { name: "Take me to my Home" }).click();
-  await expect(page.getByRole("heading", { name: /, Nia\./ })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Getting started" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "My tasks" })).toBeVisible();
   await page.goto("/os");
   await expect(page).toHaveURL(/\/os$/);
 
   // Recovery
-  await page.getByRole("button", { name: "Sign out" }).click();
+  await signOut(page);
   await page.goto("/os/forgot-password");
   await page.getByLabel("Email").fill(email);
   await page.getByRole("button", { name: "Send reset link" }).click();
@@ -93,7 +91,7 @@ test("invitation, activation and password recovery, end to end", async ({ page }
   await page.getByLabel("New password").fill("another-long-password");
   await page.getByLabel("Repeat it").fill("another-long-password");
   await page.getByRole("button", { name: "Save new password" }).click();
-  await expect(page.getByRole("heading", { name: /, Nia\./ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "My tasks" })).toBeVisible();
 
   // The password reset page says nothing different about an unknown address.
   await page.context().clearCookies();

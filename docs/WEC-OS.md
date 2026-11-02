@@ -54,10 +54,11 @@ Do these in order. Nothing here touches the public site until the Vercel step, a
 10. **Health check.** In the GitHub repository: variable `WEC_OS_URL` (`https://joinwec.ca`) and secret `WEC_OS_JOBS_SECRET`. Run "WEC OS health" once by hand.
 11. **Create the first administrator:** `node scripts/os-bootstrap-admin.mjs` (usage at the top of the file). It refuses to run a second time.
 
-**Creating everyone at once:** `node scripts/os-create-accounts.mjs <list.csv> --dry-run`, then again without `--dry-run` (the list's format is at the top of the file). This works instead of step 11 too: mark at least one person `admin`. The list and the passwords it writes stay outside this repository, which is public. Each person gets their temporary password from you, one at a time. Their account stays closed until they replace it, and anyone who loses theirs can use Forgot your password.
 12. **Function region.** Consider setting Vercel's function region to Montreal (`yul1`) to sit beside the database. It also moves the two public form routes, so it is a separate decision.
 
-Invite everyone else from `/os/admin/executives`. Have at least two administrators. With two or more, nobody can change their own access or reshape a seat, role or department they sit in, so each checks the other. A sole administrator is exempt from those limits because nobody else could act, which also means that person could give themselves any access, with only the audit log to show it.
+**Creating everyone at once:** `node scripts/os-create-accounts.mjs <list.csv> --dry-run`, then again without `--dry-run` (the list's format is at the top of the file). This works instead of step 11 too: mark at least one person `admin`. The list and the passwords it writes stay outside this repository, which is public. Each person gets their temporary password from you, one at a time. Their account stays closed until they replace it, and anyone who loses theirs can use Forgot your password.
+
+Or invite people one at a time from `/os/admin/executives`. Have at least two administrators. With two or more, nobody can change their own access or reshape a seat, role or department they sit in, so each checks the other. A sole administrator is exempt from those limits because nobody else could act, which also means that person could give themselves any access, with only the audit log to show it.
 
 ## Backups
 
@@ -90,20 +91,20 @@ Test a restore once, into a local stack, before trusting it.
 
 ## How the screens are organized
 
-The sidebar has three parts: **My work** (Home, Tasks, Projects, Calendar, Inbox), **My team**, and **Organization** (Events, Global Projects, All Teams, SOP Library). President and Administration appear under **Oversight** only for those roles. Meetings live inside each team.
+The top bar has **My tasks**, **Projects**, **Events**, **Teams** and **Calendar**, plus **All of WEC** for the President and **Admin** for administrators. SOPs and meeting notes open from each team's page and from the menu under your initials.
 
-A new executive lands on a welcome guide once, then Home shows a getting-started checklist that ticks itself off and can be hidden. If a team has a handover project from the last transition, Home points new people to it.
+A new executive lands on a welcome guide once, then on My tasks. Every task belongs to a project. A task is for a person, or for another team, whose VP takes it, assigns it or declines it. The team doing it marks it done, with no sign-off, and the team that asked can reopen it. A project is either just one team's, or shared with the teams its creator chooses, with no approval step.
 
 ## Who can see what
 
 Every rule below lives in the database, and `supabase/tests/01_access_matrix.sql` proves it.
 
-- **President:** every project and task. Approves events and Global Projects. No technical admin rights from the position.
+- **President:** every project and task. Approves events. No technical admin rights from the position.
 - **System Administrator:** accounts, structure, permissions, templates, automation, audit. Sees the schedule (names, dates, status), not task content. A person can be both.
 - **Vice President:** their department in full, and answers its cross-team requests.
 - **Director / Coordinator:** their department's shared work, except restricted tasks. A request reaches them only after their VP accepts it.
 - **Internal projects:** the owning team and the President. Linking to an event opens nothing. A team can choose to show an event lead a name and a percentage, never tasks.
-- **Global Projects:** every executive sees the summary once approved. Tasks stay with the people on them.
+- **Shared projects (kind `GLOBAL`):** every executive sees the name and progress. Tasks stay with the teams chosen.
 - **Cross-team tasks:** both teams see that one task and the name of the project it belongs to, and nothing else from it.
 - **Vacant seats:** a request goes to the next filled seat up the reporting line. With the President's seat vacant too, it waits on the admin overview, showing only which department it is for.
 
