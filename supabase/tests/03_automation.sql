@@ -32,20 +32,20 @@ select throws_ok($$select api.decide_event(current_setting('t.e')::uuid, 'approv
 select is((select status from os.events where id = current_setting('t.e')::uuid), 'submitted', 'the event stays submitted');
 select is((select count(*)::int from os.projects where event_id = current_setting('t.e')::uuid), 0, 'and no project exists, half made or otherwise');
 reset role;
-update os.templates set current_version_id = (select id from os.template_versions v where v.template_id = os.templates.id and v.version = 1) where key = 'event-content';
+update os.templates set current_version_id = (select id from os.template_versions v where v.template_id = os.templates.id and v.version = 2) where key = 'event-content';
 delete from os.notifications where entity_id = current_setting('t.e')::uuid and kind <> 'event.proposed';
 
 -- ─── Generation ────────────────────────────────────────────────────────────
 select tests.login(:'pres');
-select is(api.decide_event(current_setting('t.e')::uuid, 'approved', 'Go'), 5, 'approval generates five projects for this event');
+select is(api.decide_event(current_setting('t.e')::uuid, 'approved', 'Go'), 4, 'approval generates four projects for this event');
 select is((select count(*)::int from api.calendar_items(now(), now() + interval '90 days', 'core') where item_id = current_setting('t.e')::uuid), 1, 'on the Core Calendar now');
 select bag_eq(
   $$select d.slug from os.projects p join os.departments d on d.id = p.owning_department_id where p.event_id = current_setting('t.e')::uuid$$,
-  array['events', 'content', 'operations', 'outreach', 'community'],
-  'exactly the departments this event calls for, and none of sponsorship, finance, communications or venture'
+  array['events', 'content', 'outreach', 'community'],
+  'exactly the departments this event calls for, and none of operations, sponsorship, finance, communications or venture'
 );
-select is((select count(*)::int from os.tasks t join os.projects p on p.id = t.project_id join os.departments d on d.id = p.owning_department_id where p.event_id = current_setting('t.e')::uuid and d.slug = 'content'), 8, 'the Content project has its tasks, the media one included');
-select is((select count(*)::int from os.tasks t join os.projects p on p.id = t.project_id join os.departments d on d.id = p.owning_department_id where p.event_id = current_setting('t.e')::uuid and d.slug = 'operations' and t.template_task_key = 'logistics'), 0, 'a task whose condition is false is left out');
+select is((select count(*)::int from os.tasks t join os.projects p on p.id = t.project_id join os.departments d on d.id = p.owning_department_id where p.event_id = current_setting('t.e')::uuid and d.slug = 'content'), 9, 'the Content project has Tier B''s 3 posts and 3 stories, and the media task');
+select is((select count(*)::int from os.tasks t join os.projects p on p.id = t.project_id join os.departments d on d.id = p.owning_department_id where p.event_id = current_setting('t.e')::uuid and d.slug = 'operations' and t.template_task_key = 'logistics'), 0, 'no logistics task without logistics');
 select isnt((select template_version_id from os.projects where event_id = current_setting('t.e')::uuid limit 1), null, 'each project records its template version');
 select is((select count(*)::int from os.task_dependencies d join os.tasks t on t.id = d.task_id join os.projects p on p.id = t.project_id where p.event_id = current_setting('t.e')::uuid and t.template_task_key = 'run'), 1, 'template dependencies are wired up');
 select is((select t.status from os.tasks t join os.projects p on p.id = t.project_id where p.event_id = current_setting('t.e')::uuid and t.template_task_key = 'run' limit 1), 'blocked', 'and a task waiting on one starts blocked');
@@ -58,19 +58,19 @@ select throws_ok($$select api.decide_event(current_setting('t.e')::uuid, 'approv
 
 reset role;
 select lives_ok($$select private.generate_event_projects(current_setting('t.e')::uuid)$$, 'running generation again directly does not fail');
-select is((select count(*)::int from os.projects where event_id = current_setting('t.e')::uuid), 5, 'and makes no duplicate projects');
+select is((select count(*)::int from os.projects where event_id = current_setting('t.e')::uuid), 4, 'and makes no duplicate projects');
 
 -- ─── Tier offsets and clamping ─────────────────────────────────────────────
-select is((select extract(day from e.starts_at - t.due_at)::int from os.tasks t join os.projects p on p.id = t.project_id join os.events e on e.id = p.event_id where p.event_id = current_setting('t.e')::uuid and t.template_task_key = 'venue' limit 1), 21, 'Tier B venue confirmation lands 21 days out');
+select is((select extract(day from e.starts_at - t.due_at)::int from os.tasks t join os.projects p on p.id = t.project_id join os.events e on e.id = p.event_id where p.event_id = current_setting('t.e')::uuid and t.template_task_key = 'venue' limit 1), 21, 'Tier B venue booking lands 21 days out');
 insert into os.events (id, name, tier, starts_at, status) values ('e3000000-0000-0000-0000-000000000001', 'Tomorrow', 'A', now() + interval '1 day', 'approved');
 select private.generate_event_projects('e3000000-0000-0000-0000-000000000001');
 select ok((select bool_and(t.due_at >= now()) and bool_or(t.due_was_clamped) from os.tasks t join os.projects p on p.id = t.project_id where p.event_id = 'e3000000-0000-0000-0000-000000000001'), 'no date lands in the past, and clamped ones are flagged');
 
 -- ─── Rescheduling leaves manual dates alone ────────────────────────────────
 select tests.login(:'vpco');
-select set_config('t.mt', (select t.id from os.tasks t join os.projects p on p.id = t.project_id join os.departments d on d.id = p.owning_department_id where p.event_id = current_setting('t.e')::uuid and d.slug = 'content' and t.template_task_key = 'requirements')::text, true);
+select set_config('t.mt', (select t.id from os.tasks t join os.projects p on p.id = t.project_id join os.departments d on d.id = p.owning_department_id where p.event_id = current_setting('t.e')::uuid and d.slug = 'content' and t.template_task_key = 'post_b1')::text, true);
 select set_config('t.tt', (select t.id from os.tasks t join os.projects p on p.id = t.project_id join os.departments d on d.id = p.owning_department_id where p.event_id = current_setting('t.e')::uuid and d.slug = 'content' and t.template_task_key = 'graphics')::text, true);
-select api.update_task(current_setting('t.mt')::uuid, jsonb_build_object('title', 'Collect promotional requirements', 'due_at', '2027-06-01T12:00:00Z'));
+select api.update_task(current_setting('t.mt')::uuid, jsonb_build_object('title', 'Post 1 of 3', 'due_at', '2027-06-01T12:00:00Z'));
 select set_config('t.before', (select due_at::text from os.tasks where id = current_setting('t.tt')::uuid), true);
 select tests.login(:'vpev');
 select cmp_ok(api.reschedule_event(current_setting('t.e')::uuid, now() + interval '75 days', null), '>', 0, 'rescheduling moves template dates');
@@ -109,8 +109,8 @@ select is((select count(*)::int from os.notifications where kind = 'task.blocked
 select tests.login(:'pres');
 select is((select count(*)::int from api.escalations() e join os.tasks t on t.id = e.task_id where t.project_id in (select id from os.projects where event_id = current_setting('t.e')::uuid)), 0, 'and is not on the President''s list');
 reset role;
--- 'graphics' has been moved in the test above; its dependency being late is what counts.
-update os.tasks set due_at = now() - interval '1 day', due_source = 'manual', status = 'todo' where template_task_key = 'requirements' and project_id in (select id from os.projects where event_id = current_setting('t.e')::uuid);
+-- The posts wait on the graphics, so the graphics being late is what counts.
+update os.tasks set due_at = now() - interval '1 day', due_source = 'manual', status = 'todo' where template_task_key = 'graphics' and project_id in (select id from os.projects where event_id = current_setting('t.e')::uuid);
 select private.rule_blocked('{"days":0,"president_days":0}');
 select cmp_ok((select count(*)::int from os.notifications where kind = 'task.blocked_escalated'), '>', 0, 'once what it waits on is late, the head hears about it');
 select tests.login(:'pres');

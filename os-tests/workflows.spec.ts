@@ -46,7 +46,7 @@ test("event: proposal, approval, generated projects and tasks", async ({ page })
   await expect(page.getByText(`${EVENT} — Content`)).toBeVisible();
   await page.goto("/os/teams/content");
   await page.getByRole("link", { name: `${EVENT} — Content` }).click();
-  await expect(page.getByRole("link", { name: "Collect promotional requirements" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Post the recap" })).toBeVisible();
 
   await signIn(page, PEOPLE.dirFinance);
   await page.goto(`/os/calendar?scope=all&month=${futureLocal(45).slice(0, 7)}`);
@@ -57,7 +57,7 @@ test("task: assign, complete, and readiness moves", async ({ page }) => {
   await signIn(page, PEOPLE.vpContent);
   await page.goto("/os/teams/content");
   await page.getByRole("link", { name: `${EVENT} — Content` }).click();
-  await page.getByRole("link", { name: "Collect promotional requirements" }).click();
+  await page.getByRole("link", { name: "Post the recap" }).click();
   await page.waitForLoadState("networkidle");
   await page.getByLabel("Who").selectOption({ label: "Dana Director" });
   await page.getByRole("button", { name: "Change", exact: true }).click();
@@ -65,8 +65,8 @@ test("task: assign, complete, and readiness moves", async ({ page }) => {
 
   await signIn(page, PEOPLE.dirContent);
   await page.goto("/os");
-  const row = page.locator(".os-next-up", { hasText: "Collect promotional requirements" });
-  await row.getByRole("link", { name: "Collect promotional requirements" }).click();
+  const row = page.locator(".os-next-up", { hasText: "Post the recap" });
+  await row.getByRole("link", { name: "Post the recap" }).click();
   await page.getByRole("group", { name: "Status" }).getByRole("button", { name: "Done" }).click();
   await expect(statusOf(page)).toHaveText("Done");
 
@@ -83,7 +83,7 @@ test("projects: my team or all of WEC, grouped tasks, and editing kept apart", a
   await page.getByRole("link", { name: "All of WEC" }).click();
   await expect(page.getByRole("link", { name: `${EVENT} — Outreach` })).toHaveCount(0);
   await page.getByRole("link", { name: `${EVENT} — Content` }).click();
-  await expect(page.getByRole("region", { name: "To do" }).getByRole("link", { name: "Prepare graphics" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "To do" }).getByRole("link", { name: "Make the event graphics" })).toBeVisible();
   await page.getByRole("link", { name: "Edit", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Edit project" })).toBeVisible();
   await expect(page.locator("summary", { hasText: "Add individual people" })).toBeVisible();
@@ -220,8 +220,8 @@ test("kanban: a card moves with the keyboard-reachable control", async ({ page }
   // A task waiting on an earlier one isn't anyone being stuck.
   await signIn(page, PEOPLE.vpContent);
   await page.goto("/os?view=board");
-  const waiting = page.locator(".os-card", { hasText: "Publish event announcement" });
-  await expect(page.getByRole("region", { name: "To do" }).locator(".os-card", { hasText: "Publish event announcement" })).toContainText("Waiting on an earlier task");
+  const waiting = page.locator(".os-card", { hasText: "Post 1 of 3" });
+  await expect(page.getByRole("region", { name: "To do" }).locator(".os-card", { hasText: "Post 1 of 3" })).toContainText("Waiting on an earlier task");
   await expect(waiting.getByRole("combobox")).toBeDisabled();
 });
 
@@ -488,7 +488,7 @@ test("administration: structure, permissions, templates, year transition", async
   await definition.fill(original);
   await page.getByRole("button", { name: "Save as a new version" }).click();
   await expect(page.getByText("Saved as a new version.")).toBeVisible();
-  await expect(page.getByText("Version 2 (current)")).toBeVisible();
+  await expect(page.getByText("Version 3 (current)")).toBeVisible();
 
   await page.goto("/os/admin/automation");
   await expect(page.locator("strong", { hasText: "Monthly finance reporting" })).toBeVisible();
