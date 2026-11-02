@@ -3,11 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/os/ActionForm";
 import { Kanban } from "@/components/os/Kanban";
-import { Check, Empty, Field, Hidden, Page, Panel, Progress, TaskRow, TeamTile, ViewSwitch } from "@/components/os/ui";
+import { Check, Empty, Field, Hidden, Page, Panel, Person, Progress, TaskRow, ViewSwitch } from "@/components/os/ui";
 import { QuickTask } from "@/components/os/TaskComposer";
 import { saveMilestone, setMilestoneDone } from "@/lib/os/actions/work";
 import { linkProjectSop } from "@/lib/os/actions/knowledge";
 import { can, getDepartments, getDirectory, inDepartment, nameLookup, requireMe } from "@/lib/os/dal";
+import { getSeats, teamLead } from "@/lib/os/org";
 import { daysUntil, formatDate, shortDue } from "@/lib/os/format";
 import { createClient, rpc } from "@/lib/os/supabase";
 import { getWho } from "@/lib/os/who";
@@ -45,7 +46,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
     );
   }
 
-  const [directory, departments, who] = await Promise.all([getDirectory(), getDepartments(), getWho(me)]);
+  const [directory, departments, who, seats] = await Promise.all([getDirectory(), getDepartments(), getWho(me), getSeats()]);
   const nameOf = nameLookup(directory);
   const [tasks, milestones, teams, sopRefs, event, publishedSops] = await Promise.all([
     supabase.from("tasks").select("*").eq("project_id", id).order("due_at", { nullsFirst: false }),
@@ -127,8 +128,8 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
             <section className="os-panel" aria-labelledby="teams">
               <h2 id="teams">Teams</h2>
               <ul className="os-plain-list">
-                {owner ? <li className="os-with-tile"><TeamTile name={owner} size="small" /><span>{owner}<small>Owns this project</small></span></li> : null}
-                {otherTeams.map(t => <li key={t.id} className="os-with-tile"><TeamTile name={t.name} size="small" /><span>{t.name}<small>Working on it too</small></span></li>)}
+                {owner ? <li><Person name={(project.lead_executive_id ? nameOf(project.lead_executive_id) : teamLead(seats, project.owning_department_id)) ?? "Lead seat open"} title={`${owner}. Owns this project`} /></li> : null}
+                {otherTeams.map(t => <li key={t.id}><Person name={teamLead(seats, t.id) ?? "Lead seat open"} title={`${t.name}. Working on it too`} /></li>)}
               </ul>
             </section>
             <details className="os-more os-panel">

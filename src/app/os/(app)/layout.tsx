@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { logout } from "@/lib/os/actions/auth";
 import { Shell, type NavItem } from "@/components/os/Shell";
-import { initials } from "@/lib/os/initials";
+import { Person } from "@/components/os/ui";
 import { supabaseEnv } from "@/lib/os/config";
 import { displayName, requireMe } from "@/lib/os/dal";
 import { createClient } from "@/lib/os/supabase";
@@ -27,9 +27,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       inbox={count ?? 0}
       me={(
         <details className="os-me-menu">
-          <summary aria-label={`Signed in as ${displayName(me)}`}>{initials(displayName(me))}</summary>
+          <summary><Person name={displayName(me)} title={me.positions.map(p => p.title).join(", ") || (me.is_admin ? "System Administrator" : "No position yet")} /></summary>
           <div>
-            <p><strong>{displayName(me)}</strong><small>{me.positions.map(p => p.title).join(", ") || (me.is_admin ? "System Administrator" : "No position yet")}</small></p>
             <Link href="/os/profile">Your profile</Link>
             <Link href="/os/sops">SOP library</Link>
             <Link href="/os/meetings">Meeting notes</Link>

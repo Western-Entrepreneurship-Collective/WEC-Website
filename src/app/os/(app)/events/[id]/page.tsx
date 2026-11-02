@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/os/ActionForm";
-import { Field, Hidden, Meter, Panel, Pill, Section, Status, TeamTile } from "@/components/os/ui";
+import { Field, Hidden, Meter, Panel, Pill, Person, Section, Status } from "@/components/os/ui";
 import { archiveEvent, decideEvent, rescheduleEvent, setEventStatus, submitEvent } from "@/lib/os/actions/work";
 import { can, getDirectory, nameLookup, requireMe } from "@/lib/os/dal";
 import { daysUntil, decisionLabel, formatDateTime, shortDue, toLocalInput } from "@/lib/os/format";
@@ -101,10 +101,9 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
               const st = teamStatus(r);
               return (
                 <article key={r.project_id} className="os-event-team">
-                  <div className="os-with-tile"><TeamTile name={r.department_name} /><Link href={`/os/projects/${r.project_id}`}>{r.department_name}</Link><Status tone={st.tone}>{r.overdue_tasks ? `${r.overdue_tasks} overdue` : st.text}</Status></div>
+                  <div className="os-named"><Link href={`/os/projects/${r.project_id}`}><Person name={r.lead_name ?? "Lead seat open"} title={r.department_name} /></Link><Status tone={st.tone}>{r.overdue_tasks ? `${r.overdue_tasks} overdue` : st.text}</Status></div>
                   <Meter value={r.progress} tone={r.overdue_tasks ? "bad" : undefined} />
                   <p className="os-between-line"><small>{r.next_title ? <>Next: {r.next_title}{r.next_due ? `, ${shortDue(r.next_due)}` : ""}</> : r.can_open ? "Nothing left" : "Tasks stay with the team"}</small><small>{r.progress}% done</small></p>
-                  {!r.lead_name ? <small className="os-warn-text">Lead seat open</small> : null}
                 </article>
               );
             })}

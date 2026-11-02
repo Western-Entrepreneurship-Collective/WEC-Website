@@ -1,7 +1,7 @@
 -- SOPs, meetings, calendars, search, deactivation, the year transition, archives.
 begin;
 \ir helpers.psql
-select plan(68);
+select plan(74);
 
 -- ─── SOP versions ──────────────────────────────────────────────────────────
 select tests.login(:'dirco');
@@ -104,6 +104,16 @@ select throws_ok($$select api.convert_action_item(current_setting('t.ai')::uuid,
 -- ─── Calendars and search ──────────────────────────────────────────────────
 select is((select count(*)::int from api.calendar_items('2027-01-01', '2027-02-01', 'personal') where item_id = current_setting('t.ct')::uuid), 1, 'a task shows on the assignee''s personal calendar');
 select is((select count(*)::int from api.calendar_items('2027-01-01', '2027-02-01', 'team', tests.dept('content')) where item_id = current_setting('t.ct')::uuid), 1, 'and the team calendar');
+select tests.login(:'pres');
+select is((select count(*)::int from api.calendar_items('2027-01-01', '2027-02-01', 'org') where item_id = current_setting('t.ct')::uuid), 1, 'and the organization calendar');
+select tests.login(:'dirco');
+select lives_ok($$select api.set_task_status(current_setting('t.ct')::uuid, 'cancelled')$$, 'the task is cancelled');
+select is((select count(*)::int from api.calendar_items('2027-01-01', '2027-02-01', 'personal') where item_id = current_setting('t.ct')::uuid), 0, 'a cancelled task leaves the personal calendar');
+select is((select count(*)::int from api.calendar_items('2027-01-01', '2027-02-01', 'team', tests.dept('content')) where item_id = current_setting('t.ct')::uuid), 0, 'and the team calendar');
+select tests.login(:'pres');
+select is((select count(*)::int from api.calendar_items('2027-01-01', '2027-02-01', 'org') where item_id = current_setting('t.ct')::uuid), 0, 'and the organization calendar');
+select tests.login(:'dirco');
+select lives_ok($$select api.set_task_status(current_setting('t.ct')::uuid, 'todo')$$, 'reopened, it comes back');
 select is((select count(*)::int from api.calendar_items('2027-01-01', '2027-02-01', 'core') where item_type = 'task'), 0, 'internal tasks never reach the Core Calendar');
 select tests.login(:'dirfi');
 select is((select count(*)::int from api.calendar_items('2027-01-01', '2027-02-01', 'team', tests.dept('content'))), 0, 'another team''s calendar returns nothing');

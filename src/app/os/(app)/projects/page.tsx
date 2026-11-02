@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Empty, Meter, TeamTile, ViewSwitch } from "@/components/os/ui";
+import { Empty, Meter, ViewSwitch } from "@/components/os/ui";
 import { can, displayName, requireMe } from "@/lib/os/dal";
 import { shortDue } from "@/lib/os/format";
 import { createClient, rpc } from "@/lib/os/supabase";
@@ -45,11 +45,10 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Pro
             const t = tag(p);
             return (
               <li key={p.id} className="os-project-card">
-                <div className="os-with-tile">
-                  <TeamTile name={p.department_name} />
+                <div className="os-named">
                   <span>
                     <Link href={`/os/projects/${p.id}`}>{p.name}</Link>
-                    <small>{p.department_name ?? "Organization"}{p.other_teams.length ? `, with ${p.other_teams.join(" and ")}` : ""}</small>
+                    <small>{p.lead_name ? `${p.lead_name}, ` : ""}{p.department_name ?? "Organization"}{p.other_teams.length ? `, with ${p.other_teams.join(" and ")}` : ""}</small>
                   </span>
                 </div>
                 <span className={`os-project-tag ${t.cls}`}>{t.text}</span>

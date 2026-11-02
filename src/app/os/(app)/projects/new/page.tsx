@@ -6,10 +6,10 @@ import { createClient } from "@/lib/os/supabase";
 
 export const metadata: Metadata = { title: "New project" };
 
-export default async function NewProjectPage({ searchParams }: { searchParams: Promise<{ event?: string; teams?: string }> }) {
+export default async function NewProjectPage({ searchParams }: { searchParams: Promise<{ event?: string; teams?: string; then?: string }> }) {
   const me = await requireMe();
   if (!can(me, "project.create_internal") || me.positions.length === 0) notFound();
-  const { event, teams } = await searchParams;
+  const { event, teams, then } = await searchParams;
   const supabase = await createClient();
   const [departments, directory, { data: templates }, { data: events }] = await Promise.all([
     getDepartments(),
@@ -27,6 +27,7 @@ export default async function NewProjectPage({ searchParams }: { searchParams: P
       people={directory.filter(p => p.status === "active").map(p => ({ id: p.id, name: displayName(p) }))}
       startEvent={event}
       startMulti={teams === "multi" || Boolean(event)}
+      thenTask={then === "task"}
     />
   );
 }

@@ -37,7 +37,7 @@ Do these in order. Nothing here touches the public site until the Vercel step, a
 1. **Create a Supabase project** on the free plan. The club's project is in `us-west-2`, and the privacy policy says the data is in the United States, so a move has to change both.
 2. **Auth settings.**
    - Authentication → Sign In / Providers → Email: keep the provider **on**, turn **"Allow new users to sign up" off**. Turning the email provider itself off also stops password logins.
-   - URL Configuration: Site URL `https://joinwec.ca/os`.
+   - URL Configuration: Site URL `https://www.joinwec.ca/os`.
    - Passwords: minimum length 10.
 3. **Email.** Verify a sending subdomain in Resend (for example `mail.joinwec.ca`), which needs a few DNS records. Under Authentication → SMTP, enter Resend's SMTP details. The built-in sender only reaches your Supabase team, at two emails an hour, so invitations do not work without this.
 4. **Email templates.** Copy `supabase/templates/invite.html` and `recovery.html` into Authentication → Email Templates. These send people to a page with a button, so a mail scanner opening the link cannot use it up. The default templates will not work.
@@ -48,10 +48,10 @@ Do these in order. Nothing here touches the public site until the Vercel step, a
 9. **Let the database wake the email worker.** In the SQL editor, with your values:
    ```sql
    insert into private.config (key, value) values
-     ('jobs_url', 'https://joinwec.ca/api/os/jobs/email'),
+     ('jobs_url', 'https://www.joinwec.ca/api/os/jobs/email'),
      ('jobs_secret', '<the same value as WEC_OS_JOBS_SECRET>');
    ```
-10. **Health check.** In the GitHub repository: variable `WEC_OS_URL` (`https://joinwec.ca`) and secret `WEC_OS_JOBS_SECRET`. Run "WEC OS health" once by hand.
+10. **Health check.** In the GitHub repository: variable `WEC_OS_URL` (`https://www.joinwec.ca`) and secret `WEC_OS_JOBS_SECRET`. Run "WEC OS health" once by hand.
 11. **Create the first administrator:** `node scripts/os-bootstrap-admin.mjs` (usage at the top of the file). It refuses to run a second time.
 
 12. **Function region.** Consider setting Vercel's function region to Oregon (`pdx1`) to sit beside the database. It also moves the two public form routes, so it is a separate decision.

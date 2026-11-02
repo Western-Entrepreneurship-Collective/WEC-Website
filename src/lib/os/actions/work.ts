@@ -83,6 +83,8 @@ export async function saveProject(_: ActionResult, fd: FormData): Promise<Action
     }
   });
   if (!r.ok) return r;
+  // Started from the task form: back to the task that was being written, in this project.
+  if (!fd.get("id") && fd.get("then") === "task") redirect(`/os/tasks/new?project=${id}&restore=1`);
   redirect(`/os/projects/${id}`);
 }
 

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Logo } from "@/components/graphics/DraftGraphics";
 import { SubmitButton } from "@/components/os/ActionForm";
-import { Avatar } from "@/components/os/ui";
 import { finishWelcome } from "@/lib/os/actions/work";
 import { displayName, requireMe } from "@/lib/os/dal";
 import { getSeats } from "@/lib/os/org";
@@ -47,7 +46,7 @@ export default async function WelcomePage() {
           {team.length ? (
             <ul className="os-people-list">
               {team.map(s => (
-                <li key={s.key}><Avatar name={s.name} lead={s.isHead} /><span><strong>{s.name ?? "Open seat"}</strong><small>{s.title}{s.isHead ? ". Leads the team" : ""}</small></span></li>
+                <li key={s.key}><span><strong>{s.name ?? "Open seat"}</strong><small>{s.title}{s.isHead ? ". Leads the team" : ""}</small></span></li>
               ))}
             </ul>
           ) : null}
