@@ -6,11 +6,13 @@ Everyone who joins through the site lives in `members.members` in the WEC OS Sup
 
 With `WEC_MEMBERS_DB=on`, `/api/join` checks the answers and the privacy box as it always has, then:
 
-1. Saves them with `api.service_join_member`. If the database cannot be reached, the student sees the usual "something went wrong" and nothing is saved anywhere, so they can simply try again.
+1. Saves them with `api.service_join_member`. If the database cannot be reached (an outage, or the `SUPABASE_` keys missing), Google alone decides, exactly as before the member list existed, and Vercel's logs show `MEMBER LIST SAVE FAILED`. Run the Sheet import afterwards to bring those people in; it skips everyone already on the list.
 2. If the email is already a member, says "You're in" and stops. Nothing goes to Google, so the Sheet gets no duplicate.
 3. Sends the answers to the Google Form. If Google refuses, it is logged (`[join]` in Vercel's logs) and the student is still told they're in, because they are.
 
 With it unset, `/api/join` is Google only, exactly as before. `GET /api/join` shows `"membersDb": true` or `false`.
+
+Keep the Google Form connected. The sign up page decides whether to use the in-site form from `NEXT_PUBLIC_WEC_GOOGLE_FORM_URL`, and without it falls back to opening an email, so the database alone cannot run the form yet. Dropping Google later needs that page changed too.
 
 ## Who can see it
 
@@ -31,7 +33,7 @@ To turn it off: set `WEC_MEMBERS_DB` to empty and redeploy. Nothing is lost; row
 
 1. Sheet → File → Download → Comma separated values. Save it **outside this repository**.
 2. `node scripts/members-import.mjs <that file>`. Check the column mapping it prints.
-3. Read `members-rejected.csv` if it wrote one: every row it did not use, and why.
+3. Read `members-rejected.csv` if it wrote one: every row it did not use, and why, by its line in the CSV. If the Sheet also has Google's own "Email Address" column, check the mapping picked the Western email one; rename a header to steer it.
 4. Paste `members-import.sql` into the SQL Editor and run it. It is one transaction, and it skips any email already on the list, so it is safe to run after people have started joining through the new path, and safe to run twice.
 5. Check: `members_now` should equal the Sheet's rows minus the duplicates and rejects. Spot check a few rows.
 6. Delete the CSV and the two files it wrote.

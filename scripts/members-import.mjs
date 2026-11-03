@@ -20,9 +20,12 @@
  * Duplicate emails keep the earliest sign up. Timestamps are read as Toronto time.
  */
 import { readFileSync, writeFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const YEARS = ["Year 1", "Year 2", "Year 3", "Year 4", "Graduate", "Alumni"];
+// The table's limits (supabase/migrations/20261103000100_members.sql). Longer is rejected, not cut.
+const MAX = { name: 200, email: 200, building: 2000, signature: 200, evidence: 2000, favourite: 2000 };
 const FIELDS = {
   when: /timestamp/i,
   name: /^(?!.*signature).*\bname\b/i,
@@ -39,14 +42,19 @@ const stop = message => { console.error(message); process.exit(1); };
 const csvPath = process.argv[2];
 if (!csvPath) stop("Usage: node scripts/members-import.mjs <sheet.csv>");
 const inPath = resolve(csvPath);
-if (inPath.startsWith(resolve("."))) stop("Keep the CSV outside this repository: it is public.");
+// Measured from where this script lives, not from where it is run.
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const fromRepo = relative(repoRoot.toLowerCase(), inPath.toLowerCase());
+if (!fromRepo.startsWith("..") && !isAbsolute(fromRepo)) stop("Keep the CSV outside this repository: it is public.");
 
-// RFC 4180: quoted cells may hold commas, quotes ("") and line breaks.
+// RFC 4180: quoted cells may hold commas, quotes ("") and line breaks. Each row
+// remembers the file line it starts on, so a reject points at the right place.
 function parseCsv(text) {
   const rows = [];
-  let row = [], cell = "", quoted = false;
+  let row = [], cell = "", quoted = false, line = 1, start = 1;
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
+    if (c === "\n" || (c === "\r" && text[i + 1] !== "\n")) line++;
     if (quoted) {
       if (c === '"' && text[i + 1] === '"') { cell += '"'; i++; }
       else if (c === '"') quoted = false;
@@ -54,16 +62,17 @@ function parseCsv(text) {
     } else if (c === '"') quoted = true;
     else if (c === ",") { row.push(cell); cell = ""; }
     else if (c === "\n" || c === "\r") {
-      if (c === "\r" && text[i + 1] === "\n") i++;
-      row.push(cell); rows.push(row); row = []; cell = "";
+      if (c === "\r" && text[i + 1] === "\n") { i++; line++; }
+      row.push(cell); rows.push({ cells: row, line: start }); row = []; cell = ""; start = line;
     } else cell += c;
   }
-  if (cell || row.length) { row.push(cell); rows.push(row); }
-  return rows.filter(r => r.some(v => v.trim()));
+  if (cell || row.length) { row.push(cell); rows.push({ cells: row, line: start }); }
+  return rows.filter(r => r.cells.some(v => v.trim()));
 }
 
-const [header, ...rows] = parseCsv(readFileSync(inPath, "utf8").replace(/^﻿/, ""));
-if (!header) stop("The CSV is empty.");
+const [headerRow, ...rows] = parseCsv(readFileSync(inPath, "utf8").replace(/^﻿/, ""));
+if (!headerRow) stop("The CSV is empty.");
+const header = headerRow.cells;
 
 const column = {};
 for (const [field, pattern] of Object.entries(FIELDS)) {
@@ -85,18 +94,30 @@ function torontoInstant(text) {
   const [y, mo, d, h, mi, s] = us
     ? [us[3], us[1], us[2], us[4], us[5], us[6] ?? 0].map(Number)
     : [iso[1], iso[2], iso[3], iso[4], iso[5], iso[6] ?? 0].map(Number);
-  const asUtc = Date.UTC(y, mo - 1, d, h, mi, s);
-  // Toronto's offset at that moment, from the platform's time zone data.
-  const local = new Date(new Date(asUtc).toLocaleString("en-US", { timeZone: "America/Toronto" }));
-  const utc = new Date(new Date(asUtc).toLocaleString("en-US", { timeZone: "UTC" }));
-  return new Date(asUtc + (utc - local)).toISOString();
+  const wall = Date.UTC(y, mo - 1, d, h, mi, s);
+  // Toronto's offset is looked up at the real instant, not at the wall time read
+  // as UTC, and twice, because the first guess can sit on the other side of a
+  // daylight saving change. Independent of the computer's own time zone.
+  let instant = wall - torontoOffset(wall);
+  instant = wall - torontoOffset(instant);
+  return new Date(instant).toISOString();
 }
 
-const get = (row, field) => (column[field] === undefined ? "" : (row[column[field]] ?? "")).trim();
+const toronto = new Intl.DateTimeFormat("en-US", {
+  timeZone: "America/Toronto", hourCycle: "h23",
+  year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric",
+});
+/** Milliseconds Toronto's clock is ahead of UTC at this instant (negative: behind). */
+function torontoOffset(ms) {
+  const p = Object.fromEntries(toronto.formatToParts(new Date(ms)).map(x => [x.type, Number(x.value)]));
+  return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second) - Math.floor(ms / 1000) * 1000;
+}
+
+// Postgres text cannot hold a NUL byte, so it is removed rather than failing the import.
+const get = (row, field) => (column[field] === undefined ? "" : (row[column[field]] ?? "")).replaceAll("\0", "").trim();
 const byEmail = new Map();
 const rejected = [];
-for (const [index, row] of rows.entries()) {
-  const line = index + 2;
+for (const { cells: row, line } of rows) {
   const r = Object.fromEntries(Object.keys(FIELDS).map(f => [f, get(row, f)]));
   r.email = r.email.toLowerCase();
   r.year = YEARS.find(y => y.toLowerCase() === r.year.toLowerCase()) ?? r.year;
@@ -106,7 +127,7 @@ for (const [index, row] of rows.entries()) {
     : !r.name ? "no name"
     : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(r.email) ? "email does not look like an email"
     : !YEARS.includes(r.year) ? `year "${r.year}" is not one of ${YEARS.join(", ")}`
-    : null;
+    : Object.entries(MAX).filter(([f, n]) => r[f].length > n).map(([f, n]) => `${f} is over ${n} characters`)[0] ?? null;
   if (reason) { rejected.push([line, reason]); continue; }
   const earlier = byEmail.get(r.email);
   if (earlier && earlier.joined <= joined) { rejected.push([line, `duplicate of line ${earlier.line}`]); continue; }
@@ -117,8 +138,7 @@ for (const [index, row] of rows.entries()) {
 const sql = value => `'${String(value).replaceAll("'", "''")}'`;
 const values = [...byEmail.values()]
   .sort((a, b) => a.joined.localeCompare(b.joined))
-  .map(r => `  (${[r.name.slice(0, 200), r.email, r.year, r.building.slice(0, 2000), r.signature.slice(0, 200),
-    r.evidence.slice(0, 2000), r.favourite.slice(0, 2000)].map(sql).join(", ")}, 'sheet_import', ${sql(r.joined)})`);
+  .map(r => `  (${[r.name, r.email, r.year, r.building, r.signature, r.evidence, r.favourite].map(sql).join(", ")}, 'sheet_import', ${sql(r.joined)})`);
 
 if (!values.length) stop(`No usable rows. ${rejected.length} rows were rejected; fix the CSV and run again.`);
 const outDir = dirname(inPath);

@@ -13,11 +13,12 @@
  *
  * THE MEMBER LIST IN SUPABASE (WEC_MEMBERS_DB=on, src/lib/members.ts)
  *
- * On: the sign up is saved to members.members first, and that save is what
- * decides "you're in". Then it goes to the Google Form as well, as a second copy;
- * a Google failure is logged and the student is not told, because they are
- * already on the list. An email already on the list is told they're in and
- * nothing is sent, so the Sheet gets no duplicate. Off: Google only, as before.
+ * On: the sign up is saved to members.members first, then sent to the Google
+ * Form as well, as a second copy; a Google failure is logged and the student is
+ * not told, because they are already on the list. An email already on the list
+ * is told they're in and nothing is sent, so the Sheet gets no duplicate. If the
+ * database cannot be reached, Google alone decides, as it did before, and the
+ * Sheet import catches the list up later. Off: Google only, as before.
  *
  * ⛔ No answers are logged.
  *
@@ -82,8 +83,13 @@ export async function POST(request: Request) {
     try {
       saved = await saveMember(answers);
     } catch (error) {
-      console.error("[join] Member list unreachable:", (error as Error).message);
-      return Response.json({ error: "unreachable" }, { status: 502 });
+      // A database outage must not stop sign ups. Google takes it alone, and the
+      // next run of scripts/members-import.mjs brings it into the list.
+      console.error("[join] MEMBER LIST SAVE FAILED, falling back to Google only. Run the Sheet import to catch up:",
+        (error as Error).message);
+      if (!form) return Response.json({ error: "unreachable" }, { status: 502 });
+      const sent = await sendToGoogle(form, answers);
+      return sent.ok ? Response.json({ ok: true }) : Response.json({ error: sent.error }, { status: 502 });
     }
     if (saved === "existing") return Response.json({ ok: true });
     // They are on the list. Google is the second copy from here on.
