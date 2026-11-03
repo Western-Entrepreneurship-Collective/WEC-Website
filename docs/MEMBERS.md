@@ -25,7 +25,7 @@ Nobody through the API. The `members` schema is not exposed, the table has row l
 3. Open `https://www.joinwec.ca/api/join`: `"membersDb": true`.
 4. Sign up with your own address. The row should be in Supabase and in the Sheet.
 5. Import everyone from before (below).
-6. Update the privacy policy page: sign ups are now also kept in Supabase, in the United States.
+6. The privacy policy (`src/app/privacy/page.tsx`) says sign ups are kept in Supabase, in the United States, with a copy in Google Sheets, and that every executive is on the member list. Keep it true if any of this changes.
 
 To turn it off: set `WEC_MEMBERS_DB` to empty and redeploy. Nothing is lost; rows already saved stay.
 

@@ -5,7 +5,8 @@ import { PRIVACY_EMAIL, PRIVACY_PATH } from "@/lib/privacy";
 
 /**
  * The privacy policy, word for word as the club approved it on 21 Sept 2026,
- * plus the executive accounts lines for WEC OS, confirmed 2 Nov 2026.
+ * plus the executive accounts lines for WEC OS, confirmed 2 Nov 2026, and the
+ * member list in Supabase (docs/MEMBERS.md), 3 Nov 2026.
  *
  * ⛔ Change the wording only with the club's say-so, and update LAST_UPDATED
  * whenever it changes: the policy itself promises that date moves.
@@ -16,7 +17,7 @@ import { PRIVACY_EMAIL, PRIVACY_PATH } from "@/lib/privacy";
  * under /os is scoped to that path and is the one the policy names), and both forms refuse to
  * send anything until the visitor ticks the box that links here.
  */
-const LAST_UPDATED = "2 November 2026";
+const LAST_UPDATED = "3 November 2026";
 
 export const metadata: Metadata = {
   title: "Privacy Policy — WEC",
@@ -70,6 +71,7 @@ export default function PrivacyPage() {
           <li>The work and records you add to WEC OS, such as tasks, comments, meeting notes and files</li>
           <li>A record of important changes you make</li>
           <li>A sign-in cookie, used only inside WEC OS, to keep you signed in</li>
+          <li>Every executive is also a member, so your name, Western email and year are on the member list</li>
         </ul>
         <h3>When you visit the site</h3>
         <ul>
@@ -95,7 +97,8 @@ export default function PrivacyPage() {
 
         <h2>Where it is stored</h2>
         <ul>
-          <li>Your answers are sent to Google Forms and stored in Google Sheets.</li>
+          <li>When you join, your answers are stored in our member list with Supabase, in the United States, and a copy is kept in Google Sheets.</li>
+          <li>Executive applications are sent to Google Forms and stored in Google Sheets.</li>
           <li>Google may store this information outside Canada.</li>
           <li>WEC OS data is stored with Supabase, in the United States.</li>
           <li>WEC OS notification and account emails, such as password resets, are sent through Resend, which may process your email address outside Canada.</li>
