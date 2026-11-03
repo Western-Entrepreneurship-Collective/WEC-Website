@@ -126,9 +126,9 @@ test("a project for one team, then shared with another", async ({ page }) => {
 test("several teams at once, with no approval, and outsiders see progress only", async ({ page }) => {
   // Deactivating this person in auth.spec ended their position, so they get it back first.
   await dbQuery(`insert into os.position_assignments (executive_id, position_id, seat_no, academic_year_id, during)
-    select e.id, p.id, 1, y.id, daterange(current_date, null) from os.executives e, os.positions p, os.academic_years y
+    select e.id, p.id, 1, y.id, daterange((now() at time zone 'America/Toronto')::date, null) from os.executives e, os.positions p, os.academic_years y
     where e.email = '${PEOPLE.coordOutreach}' and p.title = 'Speaker Acquisition Coordinator' and y.is_current
-    and not exists (select 1 from os.position_assignments a where a.executive_id = e.id and a.during @> current_date);`);
+    and not exists (select 1 from os.position_assignments a where a.executive_id = e.id and a.during @> (now() at time zone 'America/Toronto')::date);`);
   await signIn(page, PEOPLE.coordOutreach);
   await page.goto("/os/projects");
   await page.getByRole("link", { name: "New project" }).click();
@@ -358,8 +358,8 @@ test("SOP: only a VP writes it, and only the President approves it", async ({ pa
   await signIn(page, PEOPLE.president);
   await page.goto("/os/sops");
   await page.getByRole("link", { name: "New SOP" }).click();
-  await page.getByLabel("Title").fill("How the President's Office works");
-  await page.getByLabel("Owning department").selectOption({ label: "President's Office" });
+  await page.getByLabel("Title").fill("How Administration works");
+  await page.getByLabel("Owning department").selectOption({ label: "Administration" });
   await page.getByLabel("Procedure").fill("One line");
   await page.getByRole("button", { name: "Create draft" }).click();
   await expect(page.getByRole("button", { name: "Send to the President" })).toHaveCount(0);
@@ -530,7 +530,7 @@ test("administration: structure, permissions, templates, year transition", async
   await definition.fill(original);
   await page.getByRole("button", { name: "Save as a new version" }).click();
   await expect(page.getByText("Saved as a new version.")).toBeVisible();
-  await expect(page.getByText("Version 3 (current)")).toBeVisible();
+  await expect(page.getByText("Version 4 (current)")).toBeVisible();
 
   await page.goto("/os/admin/automation");
   await expect(page.locator("strong", { hasText: "Monthly finance reporting" })).toBeVisible();

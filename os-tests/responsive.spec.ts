@@ -36,6 +36,14 @@ test("administration passes the same audit", async ({ page }) => {
   }
 });
 
+test("the team overview passes the same audit", async ({ page }) => {
+  await signIn(page, PEOPLE.dirAdmin);
+  await page.goto("/os/overview");
+  const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+  expect(results.violations.map(v => `${v.id}: ${v.nodes[0]?.target}`)).toEqual([]);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+});
+
 test("sign-in passes the audit too", async ({ page }) => {
   await page.goto("/os/login");
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();

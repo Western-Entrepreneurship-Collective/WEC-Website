@@ -15,7 +15,8 @@ from (values
   ('a0000000-0000-0000-0000-000000000007', 'vp.finance@wec.test'),
   ('a0000000-0000-0000-0000-000000000008', 'dir.finance@wec.test'),
   ('a0000000-0000-0000-0000-000000000009', 'admin@wec.test'),
-  ('a0000000-0000-0000-0000-00000000000a', 'former@wec.test')
+  ('a0000000-0000-0000-0000-00000000000a', 'former@wec.test'),
+  ('a0000000-0000-0000-0000-00000000000b', 'dir.admin@wec.test')
 ) as v (id, email);
 
 insert into auth.identities (id, user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
@@ -34,7 +35,8 @@ from auth.users u join (values
   ('vp.finance@wec.test', 'Fay Finance'),
   ('dir.finance@wec.test', 'Finn Finance'),
   ('admin@wec.test', 'Ada Admin'),
-  ('former@wec.test', 'Fran Former')
+  ('former@wec.test', 'Fran Former'),
+  ('dir.admin@wec.test', 'Dee Administrator')
 ) as v (email, name) on v.email = u.email;
 
 insert into os.position_assignments (executive_id, position_id, seat_no, academic_year_id, during)
@@ -48,7 +50,8 @@ from (values
   ('coord.outreach@wec.test', 'Speaker Acquisition Coordinator'),
   ('vp.finance@wec.test', 'VP Finance'),
   ('dir.finance@wec.test', 'Director of Financial Operations'),
-  ('former@wec.test', 'Director of Sponsorship')
+  ('former@wec.test', 'Director of Sponsorship'),
+  ('dir.admin@wec.test', 'Director of Administration')
 ) as v (email, title)
 join os.executives e on e.email = v.email
 join os.positions p on p.title = v.title;

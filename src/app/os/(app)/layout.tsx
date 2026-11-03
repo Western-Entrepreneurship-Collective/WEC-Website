@@ -4,7 +4,7 @@ import { logout } from "@/lib/os/actions/auth";
 import { Shell, type NavItem } from "@/components/os/Shell";
 import { Person } from "@/components/os/ui";
 import { supabaseEnv } from "@/lib/os/config";
-import { displayName, requireMe } from "@/lib/os/dal";
+import { can, displayName, requireMe } from "@/lib/os/dal";
 import { createClient } from "@/lib/os/supabase";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -18,6 +18,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     { href: "/os/events", label: "Events" },
     { href: "/os/teams", label: "Teams" },
     { href: "/os/calendar", label: "Calendar" },
+    ...(can(me, "overview.view") ? [{ href: "/os/overview", label: "Team overview" }] : []),
     ...(me.is_president ? [{ href: "/os/president", label: "All of WEC" }] : []),
     ...(me.is_admin ? [{ href: "/os/admin", label: "Admin" }] : []),
   ];
