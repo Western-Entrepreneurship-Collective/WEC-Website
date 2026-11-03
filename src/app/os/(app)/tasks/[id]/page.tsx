@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/os/ActionForm";
 import { RequestCard } from "@/components/os/RequestCard";
 import { Upload } from "@/components/os/Upload";
@@ -28,6 +28,10 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
   const supabase = await createClient();
   const { data: task } = await supabase.from("tasks").select("*").eq("id", id).maybeSingle();
   if (!task) notFound();
+  if (task.assigned_to === me.id) {
+    const { data: summary } = await supabase.from("weekly_summaries").select("task_id").eq("task_id", id).maybeSingle();
+    if (summary) redirect(`/os/summaries/${id}`);
+  }
 
   const directory = await getDirectory();
   const nameOf = nameLookup(directory);

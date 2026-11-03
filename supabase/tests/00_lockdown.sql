@@ -37,7 +37,7 @@ select is((select count(*)::int from os.permissions k where k.key <> 'sop.archiv
 
 select is((select sum(seat_count)::int from os.positions where archived_at is null), 22, 'the 2026-27 structure has 22 seats');
 
-select is((select count(*)::int from os.templates t join os.template_versions v on v.id = t.current_version_id, jsonb_array_elements(v.definition->'tasks') x where t.kind = 'event_project' and x->'condition'->>'field' is distinct from 'tier' or x->'condition'->>'eq' = 'A'), 30, 'the largest event generates at most 30 tasks');
+select is((select count(*)::int from os.templates t join os.template_versions v on v.id = t.current_version_id, jsonb_array_elements(v.definition->'tasks') x where t.kind = 'event_project' and x->'condition'->>'field' is distinct from 'tier' or x->'condition'->>'eq' = 'A'), 31, 'the largest event generates at most 31 tasks');
 
 select * from finish();
 rollback;

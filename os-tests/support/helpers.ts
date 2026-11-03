@@ -13,6 +13,7 @@ export const PEOPLE = {
   dirFinance: "dir.finance@wec.test",
   admin: "admin@wec.test",
   former: "former@wec.test",
+  dirAdmin: "dir.admin@wec.test",
 };
 
 export async function signIn(page: Page, email: string) {

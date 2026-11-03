@@ -43,6 +43,15 @@ export function toLocalInput(v: string | null | undefined) {
   return `${get("year")}-${get("month")}-${get("day")}T${get("hour")}:${get("minute")}`;
 }
 
+// The whole deadline, for a page about one thing: "Sunday, Nov 8 at 11:59 p.m."
+export function dueLong(v: string | null | undefined) {
+  if (!v) return "date not set";
+  const d = new Date(v);
+  const day = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, weekday: "long", month: "short", day: "numeric" }).format(d);
+  const time = new Intl.DateTimeFormat("en-CA", { timeZone: TZ, hour: "numeric", minute: "2-digit" }).format(d);
+  return `${day} at ${time}`;
+}
+
 export const torontoDateKey = (d: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(d);
 
 // Short enough for a task row: "Thu, Nov 5", or "Oct 30" once it has passed.

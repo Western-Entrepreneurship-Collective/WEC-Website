@@ -139,6 +139,9 @@ export type Database = {
 "mark_onboarding":
 { Args: { "p_step": string }; Returns: undefined
                            },
+"mark_weekly_summary_sent":
+{ Args: { "p_task": string }; Returns: undefined
+                           },
 "me":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
@@ -174,6 +177,9 @@ export type Database = {
                            },
 "remove_task_dependency":
 { Args: { "p_depends_on": string,"p_task": string }; Returns: undefined
+                           },
+"remove_weekly_summary_photo":
+{ Args: { "p_id": string }; Returns: string
                            },
 "reschedule_event":
 { Args: { "p_ends_at": string,"p_event": string,"p_expected"?: string,"p_starts_at": string }; Returns: number
@@ -219,6 +225,9 @@ export type Database = {
                            },
 "save_template":
 { Args: { "p_definition": Json,"p_department": string,"p_description": string,"p_id": string,"p_key": string,"p_kind": string,"p_name": string }; Returns: string
+                           },
+"save_weekly_summary":
+{ Args: { "p_events": string,"p_results": string,"p_task": string,"p_teams": string }; Returns: undefined
                            },
 "search":
 { Args: { "p_query": string }; Returns: {
@@ -322,6 +331,11 @@ export type Database = {
 "task_project_names":
 { Args: { "p_tasks": (string)[] }; Returns: {
               "project_name": string,"task_id": string
+            }[]
+                           },
+"team_overview":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "assignee_name": string,"department_id": string,"department_name": string,"department_slug": string,"due_at": string,"project_id": string,"project_name": string,"task_status": string,"task_title": string
             }[]
                            },
 "transition_departure":
@@ -1627,6 +1641,32 @@ isOneToOne: false
       columns: ["department_id"]
 isOneToOne: false
       referencedRelation: "departments"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"weekly_summaries": {
+                  Row: {
+                    "created_at": string,"events_meetings": string,"results_feedback": string,"sent_at": string | null,"sent_by": string | null,"task_id": string,"team_progress": string,"updated_at": string,"week_start": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"events_meetings"?: string,"results_feedback"?: string,"sent_at"?: string | null,"sent_by"?: string | null,"task_id": string,"team_progress"?: string,"updated_at"?: string,"week_start": string
+                  }
+                  Update: {
+                    "created_at"?: string,"events_meetings"?: string,"results_feedback"?: string,"sent_at"?: string | null,"sent_by"?: string | null,"task_id"?: string,"team_progress"?: string,"updated_at"?: string,"week_start"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "weekly_summaries_sent_by_fkey"
+      columns: ["sent_by"]
+isOneToOne: false
+      referencedRelation: "executives"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "weekly_summaries_task_id_fkey"
+      columns: ["task_id"]
+isOneToOne: true
+      referencedRelation: "tasks"
       referencedColumns: ["id"]
     }
                   ]

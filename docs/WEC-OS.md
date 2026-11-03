@@ -91,7 +91,7 @@ Test a restore once, into a local stack, before trusting it.
 
 ## How the screens are organized
 
-The top bar has **My tasks**, **Projects**, **Events**, **Teams** and **Calendar**, plus **All of WEC** for the President and **Admin** for administrators. SOPs and meeting notes open from each team's page and from the menu under your initials.
+The top bar has **My tasks**, **Projects**, **Events**, **Teams** and **Calendar**, plus **Team overview** for the Director of Administration, **All of WEC** for the President and **Admin** for administrators. SOPs and meeting notes open from each team's page and from the menu under your initials.
 
 A new executive lands on a welcome guide once, then on My tasks. Every task belongs to a project. A task is for a person, or for another team, whose VP takes it, assigns it or declines it. The team doing it marks it done, with no sign-off, and the team that asked can reopen it. A project is either just one team's, or shared with the teams its creator chooses, with no approval step.
 
@@ -120,6 +120,14 @@ Everything else runs in a sweep every 15 minutes. It is safe to run twice: uniqu
 Dates set by hand are never moved by a reschedule. A template date that has already passed becomes the day of generation, and the task says so.
 
 Emails say how many notifications are waiting and link to the app. They never carry titles or content, so a forwarded email reveals nothing.
+
+## The weekly summary
+
+Every Monday the sweep gives the Director of Administration a task, due Sunday at 11:59 pm. It opens a form with three sections and a place for photos. Review draft lays it out, with buttons to copy the addresses, subject and email and to download the photos. They send it from their own email, because the site's email is often sent to Junk at Western and carries no content, then press Mark as sent. A sent summary can't be changed.
+
+## The team overview
+
+Team overview lists each team's active projects, tasks, assignees, dates, status and completion. It uses `api.team_overview`, which returns those columns and nothing else, so task and project pages still return 404. It includes team-only projects. The `overview.view` permission gives access, and it is granted to the Director of Administration's position.
 
 ## The year-end transition
 

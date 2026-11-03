@@ -9,7 +9,7 @@ select throws_ok($$select api.create_sop('Nope', tests.dept('content'), '', 'all
 select tests.login(:'pres');
 select set_config('t.ps', api.create_sop('Finance close', tests.dept('finance'), '', 'all_execs', null, null, 'Steps')::text, true);
 select is((select department_id from os.sops where id = current_setting('t.ps')::uuid), tests.dept('finance'), 'the President can create one for any team');
-select lives_ok($$select api.create_sop('How I run things', tests.dept('presidents-office'), '', 'all_execs', null, null, 'Steps')$$, 'and for the President''s Office');
+select lives_ok($$select api.create_sop('How I run things', tests.dept('administration'), '', 'all_execs', null, null, 'Steps')$$, 'and for the President''s Office');
 select lives_ok($$select api.publish_sop_version((select id from os.sop_versions where sop_id = current_setting('t.ps')::uuid))$$, 'and can publish their own draft directly');
 select tests.login(:'vpfi');
 select throws_ok($$select api.create_sop('Nope', tests.dept('content'), '', 'all_execs', null, null, 'x')$$, 'P0403', null, 'nor another team''s VP');

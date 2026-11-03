@@ -9,6 +9,7 @@
 \set dirfi 'a0000000-0000-0000-0000-000000000008'
 \set adm   'a0000000-0000-0000-0000-000000000009'
 \set frm   'a0000000-0000-0000-0000-00000000000a'
+\set dirad 'a0000000-0000-0000-0000-00000000000b'
 create extension if not exists pgtap with schema extensions;
 set search_path = extensions, public;
 create schema tests;
