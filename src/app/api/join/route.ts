@@ -11,14 +11,23 @@
  * "you're in" on faith. Sent from here, Google's reply is readable, and the
  * student is only told they're in after Google accepted it.
  *
- * ⛔ No answers are stored here or logged. The Sheet is the only copy.
+ * THE MEMBER LIST IN SUPABASE (WEC_MEMBERS_DB=on, src/lib/members.ts)
+ *
+ * On: the sign up is saved to members.members first, and that save is what
+ * decides "you're in". Then it goes to the Google Form as well, as a second copy;
+ * a Google failure is logged and the student is not told, because they are
+ * already on the list. An email already on the list is told they're in and
+ * nothing is sent, so the Sheet gets no duplicate. Off: Google only, as before.
+ *
+ * ⛔ No answers are logged.
  *
  * ⛔ NOTHING IS SENT WITHOUT CONSENT. A submission without privacyAgreed set to
  * true is refused before any answer is read, so nothing reaches Google unless
  * the person ticked the box that links to /privacy (src/lib/privacy.ts).
  */
-import { cleanAnswers, parseEmailRule, parseGoogleForm, validateAnswers } from "@/lib/googleForm";
+import { type Answers, cleanAnswers, parseEmailRule, parseGoogleForm, validateAnswers } from "@/lib/googleForm";
 import { checkGoogleForm } from "@/lib/googleFormCheck";
+import { membersDbOn, saveMember } from "@/lib/members";
 import { hasConsent } from "@/lib/privacy";
 
 // Only Google may receive the answers. WEC_GOOGLE_FORM_TEST_HOST is server-only
@@ -38,14 +47,16 @@ function connectedForm() {
 export async function GET() {
   const { form, reason } = connectedForm();
   const emailRule = parseEmailRule(process.env.NEXT_PUBLIC_WEC_EMAIL_RULE);
-  if (!form) return Response.json({ connected: false, emailRule, problems: [reason] });
+  const membersDb = membersDbOn();
+  if (!form) return Response.json({ connected: false, emailRule, membersDb, problems: [reason] });
   const check = await checkGoogleForm(form);
-  return Response.json({ connected: true, emailRule, ready: check.ok, problems: check.problems });
+  return Response.json({ connected: true, emailRule, membersDb, ready: check.ok, problems: check.problems });
 }
 
 export async function POST(request: Request) {
+  const membersDb = membersDbOn();
   const { form, reason } = connectedForm();
-  if (!form) {
+  if (!form && !membersDb) {
     console.error("[join] Google Form not connected:", reason);
     return Response.json({ error: "not_connected" }, { status: 503 });
   }
@@ -66,6 +77,29 @@ export async function POST(request: Request) {
   const errors = validateAnswers(answers, parseEmailRule(process.env.NEXT_PUBLIC_WEC_EMAIL_RULE));
   if (Object.keys(errors).length) return Response.json({ error: "invalid", errors }, { status: 400 });
 
+  if (membersDb) {
+    let saved: "new" | "existing";
+    try {
+      saved = await saveMember(answers);
+    } catch (error) {
+      console.error("[join] Member list unreachable:", (error as Error).message);
+      return Response.json({ error: "unreachable" }, { status: 502 });
+    }
+    if (saved === "existing") return Response.json({ ok: true });
+    // They are on the list. Google is the second copy from here on.
+    if (!form) console.error("[join] Saved to the member list; Google Form not connected:", reason);
+    else await sendToGoogle(form, answers);
+    return Response.json({ ok: true });
+  }
+
+  const sent = await sendToGoogle(form!, answers);
+  return sent.ok ? Response.json({ ok: true }) : Response.json({ error: sent.error }, { status: 502 });
+}
+
+type ConnectedForm = NonNullable<ReturnType<typeof connectedForm>["form"]>;
+
+/** Sends the answers to the Google Form. Logs why when it fails; never logs the answers. */
+async function sendToGoogle(form: ConnectedForm, answers: Answers): Promise<{ ok: true } | { ok: false; error: "refused" | "unreachable" }> {
   const params = new URLSearchParams();
   for (const [field, entry] of Object.entries(form.entries)) {
     const value = answers[field as keyof typeof answers];
@@ -90,11 +124,11 @@ export async function POST(request: Request) {
       console.error(`[join] Google Form refused the answers (status ${response.status}).`,
         check.problems.length ? `Likely why: ${check.problems.join(" | ")}` : "The Form itself looks fine.",
         "Full check: open /api/join");
-      return Response.json({ error: "refused" }, { status: 502 });
+      return { ok: false, error: "refused" };
     }
-    return Response.json({ ok: true });
+    return { ok: true };
   } catch (error) {
     console.error("[join] Google Form unreachable:", (error as Error).name);
-    return Response.json({ error: "unreachable" }, { status: 502 });
+    return { ok: false, error: "unreachable" };
   }
 }
