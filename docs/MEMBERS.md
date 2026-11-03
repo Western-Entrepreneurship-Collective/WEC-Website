@@ -38,6 +38,10 @@ To turn it off: set `WEC_MEMBERS_DB` to empty and redeploy. Nothing is lost; row
 5. Check: `members_now` should equal the Sheet's rows minus the duplicates and rejects. Spot check a few rows.
 6. Delete the CSV and the two files it wrote.
 
+## Executives
+
+Every executive is a member by being one. Anyone on the roster who never used the form goes in through the import: add them as rows to the CSV (name, Western email, year, today as the timestamp) and run it again; everyone already on the list is skipped. Besides the form's six years, the table takes `Year 5+` and `Unknown` for these rows. Replace `Unknown` once the year is confirmed. A row with no signature or an `Unknown` year does not count toward the USC's member list.
+
 ## Someone leaves
 
 Set their `status` to `left` in the Table Editor rather than deleting the row, so the count of who ever joined stays true. A person who asks to have their data removed is deleted outright, from here and from the Sheet.

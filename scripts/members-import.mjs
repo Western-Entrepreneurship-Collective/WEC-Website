@@ -23,7 +23,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const YEARS = ["Year 1", "Year 2", "Year 3", "Year 4", "Graduate", "Alumni"];
+// The form's six, plus the two the table allows for rows added by hand (20261103000200_members_more_years.sql).
+const YEARS = ["Year 1", "Year 2", "Year 3", "Year 4", "Year 5+", "Graduate", "Alumni", "Unknown"];
 // The table's limits (supabase/migrations/20261103000100_members.sql). Longer is rejected, not cut.
 const MAX = { name: 200, email: 200, building: 2000, signature: 200, evidence: 2000, favourite: 2000 };
 const FIELDS = {

@@ -1,7 +1,7 @@
 -- The member list: who can add to it, who can read it, and what it accepts.
 begin;
 \ir helpers.psql
-select plan(14);
+select plan(16);
 
 -- Locked down.
 select ok((select relrowsecurity from pg_class where oid = 'members.members'::regclass), 'members has RLS enabled');
@@ -32,6 +32,14 @@ select ok((select privacy_agreed_at is not null and source = 'website' and statu
 insert into members.members (name, email, year, source, joined_at)
   values ('From the Sheet', 'sheet@uwo.ca', 'Year 3', 'sheet_import', '2026-09-15 12:00-04');
 select is((select count(*)::int from members.members), 2, 'an imported row without a consent date is accepted');
+
+-- Rows added by hand may say 'Year 5+' or 'Unknown'; anything else is still refused.
+insert into members.members (name, email, year, source) values
+  ('Fifth Year', 'fifth@uwo.ca', 'Year 5+', 'sheet_import'),
+  ('No Year Yet', 'noyear@uwo.ca', 'Unknown', 'sheet_import');
+select is((select count(*)::int from members.members), 4, 'Year 5+ and Unknown are accepted');
+select throws_ok($$insert into members.members (name, email, year, source) values ('X', 'x5@uwo.ca', '5th year', 'sheet_import')$$,
+  '23514', null, 'other spellings are still refused');
 
 select * from finish();
 rollback;
