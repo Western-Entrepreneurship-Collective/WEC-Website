@@ -119,7 +119,7 @@ Everything else runs in a sweep every 15 minutes. It is safe to run twice: uniqu
 
 Dates set by hand are never moved by a reschedule. A template date that has already passed becomes the day of generation, and the task says so.
 
-Emails say how many notifications are waiting and link to the app. They never carry titles or content, so a forwarded email reveals nothing.
+There are two kinds of email. The daily digest says how many notifications are waiting. When a team is added to a project, whether chosen for a shared project, added later or given a project by an approved event, everyone on that team gets an email naming the team and the project, sent within about 15 minutes. Neither carries task titles, details or comments. Turning off email in a profile stops both.
 
 ## The weekly summary
 

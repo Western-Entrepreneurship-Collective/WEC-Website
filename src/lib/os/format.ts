@@ -92,7 +92,7 @@ const NOTIFICATION_TEXT: Record<string, string> = {
   "review.requested": "Ready for your review", "review.accepted": "Your deliverable was accepted", "review.revisions": "Revisions requested",
   "deadline.upcoming": "Due soon", "deadline.overdue": "Overdue", "deadline.proposed": "New date proposed", "deadline.decided": "Date proposal answered",
   "event.proposed": "Event proposal to review", "event.decided": "Decision on your event", "event.closed": "Event closed", "global.proposed": "Global Project to review", "global.decided": "Decision on your Global Project", "approval.pending": "Still waiting for your decision",
-  "project.generated": "New project for your team", "project.deadline": "Project due soon",
+  "project.generated": "New project for your team", "project.team_added": "Your team was added to a project", "project.deadline": "Project due soon",
   "sop.submitted": "SOP to approve", "sop.returned": "SOP revision returned", "sop.published": "SOP revision published", "sop.review_due": "SOP due for review", "announcement.published": "New announcement",
 };
 export const notificationText = (kind: string) => NOTIFICATION_TEXT[kind] ?? kind;
