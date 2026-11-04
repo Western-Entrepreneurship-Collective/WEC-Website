@@ -4,6 +4,10 @@ begin;
 \ir helpers.psql
 select plan(58);
 
+-- The sweep's own work (the weekly summary) isn't part of this fixture.
+delete from os.tasks where project_id in (select id from os.projects where system_key is not null);
+delete from os.projects where system_key is not null;
+
 insert into os.events (id, name, tier, starts_at, status, submitted_by) values
   ('e0000000-0000-0000-0000-000000000001', 'Approved Lab', 'B', now() + interval '30 days', 'approved', :'vpev'),
   ('e0000000-0000-0000-0000-000000000002', 'Secret Proposal', 'A', now() + interval '60 days', 'submitted', :'vpev');

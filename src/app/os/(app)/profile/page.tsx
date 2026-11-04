@@ -29,7 +29,7 @@ export default async function ProfilePage() {
         </Panel>
         <Panel title="Notifications">
           <ActionForm action={updatePreferences} className="os-stack">
-            <Check name="email_digest" label="Email me a daily digest when I have unread notifications" defaultChecked={prefs?.email_digest ?? true} />
+            <Check name="email_digest" label="Email me when my team is added to a project, and a daily digest when I have unread notifications" defaultChecked={prefs?.email_digest ?? true} />
             <fieldset className="os-fieldset">
               <legend>Do not notify me about</legend>
               {[["deadline.upcoming", "Upcoming deadlines"], ["task.commented", "New comments"], ["announcement.published", "Announcements"]].map(([k, l]) => (
