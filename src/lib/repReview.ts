@@ -8,10 +8,13 @@
 export const REVIEW_AREAS = ["Gets things done", "Reliability", "Startup curiosity", "Fit for the role"] as const;
 export const SHORTLIST_SIZE = 10;
 export const NOTE_MAX = 300;
+/** From the hiring plan. Text only: the form's open or closed switch is WEC_REP_APPLICATIONS. */
+export const ROUND_CLOSES = "Nov 22";
 
+// average, scored_by and shortlisted are null until you have scored that applicant.
 export type RepListRow = {
   id: string; name: string; year: string; program: string; submitted_at: string;
-  my_total: number | null; average: number | null; scored_by: number | null; shortlisted: boolean;
+  my_total: number | null; average: number | null; scored_by: number | null; shortlisted: boolean | null;
 };
 export type RepList = { shortlist_count: number; rows: RepListRow[] };
 
@@ -23,8 +26,11 @@ export type RepApplicationFull = {
 export type RepReview = {
   application: RepApplicationFull;
   mine: { areas: number[]; total: number; note: string } | null;
+  /** Your score can no longer change: someone else has scored too, so theirs are open to you. */
+  locked: boolean;
   others: { name: string; total: number; note: string }[];
-  shortlisted: boolean;
+  shortlisted: boolean | null;
   shortlist_count: number;
+  prev_id: string | null;
   next_id: string | null;
 };

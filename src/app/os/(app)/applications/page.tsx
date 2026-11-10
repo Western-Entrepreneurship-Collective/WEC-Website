@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ApplicationsList } from "@/components/os/ApplicationsBoard";
-import { Page, Stat } from "@/components/os/ui";
+import { ApplicationsList, CloseRoundForm } from "@/components/os/ApplicationsBoard";
+import { Page, Panel, Stat } from "@/components/os/ui";
 import { requireMe } from "@/lib/os/dal";
 import { RpcError, rpc } from "@/lib/os/supabase";
-import { SHORTLIST_SIZE, type RepList } from "@/lib/repReview";
+import { ROUND_CLOSES, SHORTLIST_SIZE, type RepList } from "@/lib/repReview";
 
 export const metadata: Metadata = { title: "Applications" };
 
@@ -28,9 +28,14 @@ export default async function ApplicationsPage() {
           <Stat label="Applications" value={list.rows.length} />
           <Stat label="Scored by you" value={`${scored} of ${list.rows.length}`} />
           <Stat label="Shortlisted for interview" value={`${list.shortlist_count} of ${SHORTLIST_SIZE}`} />
-          <Stat label="Applications close" value="Nov 22" />
+          <Stat label="Applications close" value={ROUND_CLOSES} />
         </div>
         <ApplicationsList rows={list.rows} />
+        {list.rows.length > 0 ? (
+          <Panel title="Close the round">
+            <CloseRoundForm count={list.rows.length} />
+          </Panel>
+        ) : null}
       </div>
     </Page>
   );

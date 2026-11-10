@@ -5,7 +5,7 @@ import { Shell, type NavItem } from "@/components/os/Shell";
 import { Person } from "@/components/os/ui";
 import { supabaseEnv } from "@/lib/os/config";
 import { can, displayName, requireMe } from "@/lib/os/dal";
-import { createClient, rpc } from "@/lib/os/supabase";
+import { RpcError, createClient, rpc } from "@/lib/os/supabase";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   if (!supabaseEnv()) redirect("/os/login");
@@ -16,7 +16,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     // Only the First Year Rep hiring reviewers get the Applications tab. If the
     // reviews migration is not in the database yet, the tab stays hidden rather
     // than taking every WEC OS page down with it.
-    rpc<boolean>("rep_is_reviewer").catch(() => false),
+    rpc<boolean>("rep_is_reviewer").catch((error: unknown) => {
+      // PGRST202: the function is not in the database yet. Anything else is a real
+      // failure and is logged, though the tab still just hides.
+      if (!(error instanceof RpcError && error.code === "PGRST202")) console.error("[os] rep_is_reviewer failed", (error as RpcError)?.code);
+      return false;
+    }),
   ]);
   const nav: NavItem[] = [
     { href: "/os", label: "My tasks" },

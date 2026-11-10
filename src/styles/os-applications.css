@@ -22,5 +22,16 @@
 }
 .os-score input[type="range"]::-moz-range-track { background: transparent; }
 
-.os-score-ticks { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); padding: 0 4px; }
-.os-score-ticks span.is-on { color: var(--purple); font-weight: 600; }
+/* The numbers under each slider are buttons too: one click sets that score. */
+.os-score-ticks { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+.os-score-ticks button {
+  font: inherit; color: inherit; background: none; border: 0; padding: 4px 6px; min-width: 28px; cursor: pointer;
+}
+.os-score-ticks button:hover { color: var(--purple); }
+.os-score-ticks button:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; }
+.os-score-ticks button.is-on { color: var(--purple); font-weight: 600; }
+
+/* Not scored yet: no fill and a faint thumb, so nothing looks chosen. */
+.os-score.is-unset input[type="range"]::-webkit-slider-thumb { opacity: 0.35; }
+.os-score.is-unset input[type="range"]::-moz-range-thumb { opacity: 0.35; }
+.os-score.is-unset .os-score-value { color: var(--muted); }

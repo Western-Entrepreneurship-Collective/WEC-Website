@@ -12,7 +12,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ActionForm, SubmitButton } from "@/components/os/ActionForm";
 import { Panel } from "@/components/os/ui";
-import { saveRepScore, setRepShortlist } from "@/lib/os/actions/hiring";
+import { closeRepRound, saveRepScore, setRepShortlist } from "@/lib/os/actions/hiring";
 import { NOTE_MAX, REVIEW_AREAS, type RepListRow } from "@/lib/repReview";
 import "@/styles/os-applications.css";
 
@@ -61,7 +61,7 @@ export function ApplicationsList({ rows }: { rows: RepListRow[] }) {
                     <td className="os-wide-only">{a.program}</td>
                     <td>{a.my_total !== null ? `${a.my_total} / 20` : <span className="os-muted">Not scored</span>}</td>
                     <td>{a.average !== null ? `${Number(a.average).toFixed(1)} / 20 (${a.scored_by})` : <span className="os-muted">Hidden</span>}</td>
-                    <td>{a.shortlisted ? <span className="os-pill os-tone-good">Shortlisted</span> : null}</td>
+                    <td>{a.shortlisted === true ? <span className="os-pill os-tone-good">Shortlisted</span> : null}</td>
                   </tr>
                 ))}
               </tbody>
@@ -73,33 +73,59 @@ export function ApplicationsList({ rows }: { rows: RepListRow[] }) {
   );
 }
 
-export function RepScoreForm({ id, mine }: { id: string; mine: { areas: number[]; note: string } | null }) {
+export function RepScoreForm({ id, mine, locked }: { id: string; mine: { areas: number[]; note: string } | null; locked: boolean }) {
+  // Every area starts unset, so a careless Save cannot record a score nobody chose.
   // Controlled, so React's reset after a form action never wipes what was typed.
-  const [values, setValues] = useState<number[]>(mine?.areas ?? [3, 3, 3, 3]);
+  const [values, setValues] = useState<(number | null)[]>(mine?.areas ?? [null, null, null, null]);
   const [note, setNote] = useState(mine?.note ?? "");
+  const allSet = values.every(v => v !== null);
+
+  if (locked && mine) {
+    return (
+      <fieldset className="os-fieldset">
+        <legend>Your score: {mine.areas.reduce((s, v) => s + v, 0)} / 20</legend>
+        <ul className="os-stack">
+          {REVIEW_AREAS.map((area, i) => <li key={area}>{area}: {mine.areas[i]} / 5</li>)}
+        </ul>
+        <p>{mine.note}</p>
+        <p className="os-muted">Locked. Other reviewers have scored this applicant too, so you can see their scores and yours can no longer change.</p>
+      </fieldset>
+    );
+  }
+
   return (
     <ActionForm action={saveRepScore} ariaLabel="Your score">
       <input type="hidden" name="id" value={id} />
       <fieldset className="os-fieldset">
         <legend>Your score</legend>
         <div className="os-stack">
-          {REVIEW_AREAS.map((area, i) => (
-            <div key={area} className="os-score">
-              <label className="os-score-head" htmlFor={`area-${i}`}>
-                <span>{area}</span><span className="os-score-value">{values[i]} / 5</span>
-              </label>
-              <input id={`area-${i}`} name={`area-${i}`} type="range" min={1} max={5} step={1} value={values[i]}
-                     style={{ "--fill": `${(values[i] - 1) * 25}%` } as React.CSSProperties}
-                     onChange={e => setValues(prev => prev.map((v, j) => j === i ? +e.target.value : v))} />
-              <div className="os-score-ticks" aria-hidden="true">
-                {[1, 2, 3, 4, 5].map(n => <span key={n} className={n === values[i] ? "is-on" : undefined}>{n}</span>)}
+          {REVIEW_AREAS.map((area, i) => {
+            const v = values[i];
+            return (
+              <div key={area} className={`os-score${v === null ? " is-unset" : ""}`}>
+                <label className="os-score-head" htmlFor={`area-${i}`}>
+                  <span>{area}</span><span className="os-score-value">{v === null ? "Pick 1 to 5" : `${v} / 5`}</span>
+                </label>
+                <input type="hidden" name={`area-${i}`} value={v ?? ""} />
+                <input id={`area-${i}`} type="range" min={1} max={5} step={1} value={v ?? 3}
+                       aria-valuetext={v === null ? "Not scored yet" : `${v} out of 5`}
+                       style={{ "--fill": v === null ? "0%" : `${(v - 1) * 25}%` } as React.CSSProperties}
+                       onChange={e => setValues(prev => prev.map((x, j) => j === i ? +e.target.value : x))}
+                       onClick={e => setValues(prev => prev.map((x, j) => j === i ? +(e.target as HTMLInputElement).value : x))} />
+                <div className="os-score-ticks">
+                  {[1, 2, 3, 4, 5].map(n => (
+                    <button key={n} type="button" className={n === v ? "is-on" : undefined} aria-label={`${area}: ${n}`}
+                            onClick={() => setValues(prev => prev.map((x, j) => j === i ? n : x))}>{n}</button>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-          <p className="os-muted">Total {values.reduce((s, v) => s + v, 0)} / 20</p>
+            );
+          })}
+          <p className="os-muted">{allSet ? `Total ${values.reduce<number>((s, x) => s + (x ?? 0), 0)} / 20` : "Score all four areas to save."}</p>
           <label className="os-field">Why this score (one line)
             <input name="note" value={note} onChange={e => setNote(e.target.value)} maxLength={NOTE_MAX} placeholder="Strong story, unsure about hours" />
           </label>
+          <p className="os-muted">Once another reviewer has scored this applicant too, your score locks.</p>
           <div className="os-row">
             <SubmitButton>{mine ? "Update score" : "Save score"}</SubmitButton>
           </div>
@@ -109,7 +135,8 @@ export function RepScoreForm({ id, mine }: { id: string; mine: { areas: number[]
   );
 }
 
-export function ShortlistButton({ id, shortlisted, full }: { id: string; shortlisted: boolean; full: boolean }) {
+export function ShortlistButton({ id, shortlisted, full }: { id: string; shortlisted: boolean | null; full: boolean }) {
+  if (shortlisted === null) return <p className="os-muted">Score this applicant to see or change the interview shortlist.</p>;
   return (
     <ActionForm action={setRepShortlist} ariaLabel="Interview shortlist">
       <input type="hidden" name="id" value={id} />
@@ -117,6 +144,19 @@ export function ShortlistButton({ id, shortlisted, full }: { id: string; shortli
       {!shortlisted && full
         ? <p className="os-muted">The shortlist is full (10). Remove someone to add this applicant.</p>
         : <SubmitButton variant="ghost">{shortlisted ? "Remove from shortlist" : "Shortlist for interview"}</SubmitButton>}
+    </ActionForm>
+  );
+}
+
+export function CloseRoundForm({ count }: { count: number }) {
+  return (
+    <ActionForm action={closeRepRound} ariaLabel="Close the round"
+                confirm={`This deletes all ${count} applications, every score and the shortlist. It cannot be undone. Continue?`}>
+      <p>When the reps have accepted their offers, close the round. Every application, score and shortlist place is deleted, as the privacy policy promises.</p>
+      <label className="os-field">Type DELETE to confirm
+        <input name="confirm" autoComplete="off" />
+      </label>
+      <div className="os-row"><SubmitButton variant="danger">Close the round and delete everything</SubmitButton></div>
     </ActionForm>
   );
 }

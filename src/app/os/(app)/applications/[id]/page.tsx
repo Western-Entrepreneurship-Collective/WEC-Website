@@ -37,6 +37,7 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
       <div className="os-stack-lg">
         <div className="os-row">
           <Link className="os-btn os-btn-ghost" href="/os/applications">Back to applications</Link>
+          {r.prev_id ? <Link className="os-btn os-btn-ghost" href={`/os/applications/${r.prev_id}`}>Previous applicant</Link> : null}
           {r.next_id ? <Link className="os-btn os-btn-ghost" href={`/os/applications/${r.next_id}`}>Next applicant</Link> : null}
         </div>
         <Panel title="Application">
@@ -47,7 +48,8 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
               ))}
             </dl>
             <div className="os-stack">
-              <RepScoreForm id={a.id} mine={r.mine} />
+              {/* key: a fresh form per applicant, so values never carry over between pages */}
+              <RepScoreForm key={a.id} id={a.id} mine={r.mine} locked={r.locked} />
               <ShortlistButton id={a.id} shortlisted={r.shortlisted} full={r.shortlist_count >= SHORTLIST_SIZE} />
               <p className="os-muted">
                 {r.mine
