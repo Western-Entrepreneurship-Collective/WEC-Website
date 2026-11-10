@@ -134,7 +134,7 @@ begin
     'locked', private.rep_score_locked(p_id),
     'others', case when not scored then '[]'::jsonb else coalesce((
       select jsonb_agg(jsonb_build_object(
-        'name', coalesce(e.preferred_name, e.full_name), 'total', s.total, 'note', s.note
+        'name', coalesce(e.preferred_name, e.full_name), 'areas', s.areas, 'total', s.total, 'note', s.note
       ) order by s.updated_at)
       from hiring.rep_scores s join os.executives e on e.id = s.reviewer_id
       where s.application_id = p_id and s.reviewer_id <> auth.uid()

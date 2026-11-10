@@ -29,7 +29,7 @@ export type RepReview = {
   mine: { areas: number[]; total: number; note: string } | null;
   /** Your score can no longer change: someone else has scored too, so theirs are open to you. */
   locked: boolean;
-  others: { name: string; total: number; note: string }[];
+  others: { name: string; areas: number[]; total: number; note: string }[];
   shortlisted: boolean | null;
   shortlist_count: number;
   prev_id: string | null;

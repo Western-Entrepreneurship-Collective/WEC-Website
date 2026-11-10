@@ -6,9 +6,40 @@ import { Page, Panel } from "@/components/os/ui";
 import { requireMe } from "@/lib/os/dal";
 import { RpcError, rpc } from "@/lib/os/supabase";
 import { REP_STAGES, type RepFieldId } from "@/lib/repApplications";
-import { SHORTLIST_SIZE, type RepApplicationFull, type RepReview } from "@/lib/repReview";
+import { REVIEW_AREAS, SHORTLIST_SIZE, type RepApplicationFull, type RepReview } from "@/lib/repReview";
 
 export const metadata: Metadata = { title: "Application" };
+
+// Every score side by side, once you have saved yours: one row per reviewer, each
+// area, the total, the note, and the average underneath.
+function ScoresTable({ mine, others }: { mine: NonNullable<RepReview["mine"]>; others: RepReview["others"] }) {
+  const rows = [{ name: "You", ...mine }, ...others];
+  const avg = rows.reduce((s, x) => s + x.total, 0) / rows.length;
+  return (
+    <Panel title="Scores">
+      <div className="os-table-wrap" tabIndex={0} role="group" aria-label="Scores">
+        <table className="os-table">
+          <thead>
+            <tr><th scope="col">Reviewer</th>{REVIEW_AREAS.map(a => <th key={a} scope="col">{a}</th>)}<th scope="col">Total</th><th scope="col">Why</th></tr>
+          </thead>
+          <tbody>
+            {rows.map(x => (
+              <tr key={x.name}>
+                <th scope="row">{x.name}</th>
+                {x.areas.map((v, i) => <td key={i}>{v} / 5</td>)}
+                <td><strong>{x.total} / 20</strong></td>
+                <td>{x.note}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr><th scope="row">Average</th>{REVIEW_AREAS.map((a, i) => <td key={a}>{(rows.reduce((s, x) => s + x.areas[i], 0) / rows.length).toFixed(1)}</td>)}<td><strong>{avg.toFixed(1)} / 20</strong></td><td className="os-muted">{rows.length} scored</td></tr>
+          </tfoot>
+        </table>
+      </div>
+    </Panel>
+  );
+}
 
 // Form field id → database column, where they differ.
 const COLUMN: Partial<Record<RepFieldId, keyof RepApplicationFull>> = {
@@ -53,14 +84,13 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
               <ShortlistButton id={a.id} shortlisted={r.shortlisted} full={r.shortlist_count >= SHORTLIST_SIZE} />
               <p className="os-muted">
                 {r.mine
-                  ? r.others.length
-                    ? `Other reviewers: ${r.others.map(o => `${o.name} ${o.total}/20 (${o.note})`).join(" · ")}`
-                    : "No one else has scored this yet."
+                  ? r.others.length ? "Everyone's scores are in the table below." : "No one else has scored this yet."
                   : "Other reviewers' scores stay hidden until you save yours."}
               </p>
             </div>
           </div>
         </Panel>
+        {r.mine && r.others.length ? <ScoresTable mine={r.mine} others={r.others} /> : null}
       </div>
     </Page>
   );
