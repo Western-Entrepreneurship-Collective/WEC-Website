@@ -154,6 +154,7 @@ export function JoinFormBody({ headingTag: Heading = "h2" }: { headingTag?: "h1"
   const [website, setWebsite] = useState("");
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [status, setStatus] = useState<Status>("idle");
+  const [busy, setBusy] = useState(false);
   // ⛔ Unticked on purpose. Nothing leaves the page, by any route, until it is
   // ticked, and /api/join refuses a submission without it. See src/lib/privacy.ts.
   const [agreed, setAgreed] = useState(false);
@@ -208,9 +209,11 @@ export function JoinFormBody({ headingTag: Heading = "h2" }: { headingTag?: "h1"
       const data = await response.json().catch(() => ({}));
       if (data?.error === "invalid" && data.errors) { setErrors(data.errors); setStatus("idle"); return; }
       if (data?.error === "consent_required") { setConsentError(true); setStatus("idle"); return; }
-      // rate_limited and everything else: "That didn't go through", answers kept.
+      // Too many sign ups from this network just now: say so, answers kept.
+      setBusy(data?.error === "rate_limited");
       setStatus("failed");
     } catch {
+      setBusy(false);
       setStatus("failed");
     }
   }
@@ -318,8 +321,10 @@ export function JoinFormBody({ headingTag: Heading = "h2" }: { headingTag?: "h1"
 
                 {status === "failed" && (
                   <p className="field-error join-failed" role="alert">
-                    That didn&rsquo;t go through. Your answers are still here, so
-                    please try again{EMAIL ? <> or email <strong>{EMAIL}</strong></> : null}.
+                    {busy
+                      ? <>A lot of people just joined from this network. Your answers are still here, so wait a few minutes and try again.</>
+                      : <>That didn&rsquo;t go through. Your answers are still here, so
+                    please try again{EMAIL ? <> or email <strong>{EMAIL}</strong></> : null}.</>}
                   </p>
                 )}
 

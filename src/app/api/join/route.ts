@@ -32,9 +32,10 @@ import { membersDbOn, saveMember } from "@/lib/members";
 import { hasConsent } from "@/lib/privacy";
 import { ipFrom, limiter } from "@/lib/rateLimit";
 
-// 5 sign ups per address per 10 minutes, the same allowance as the rep form. A
-// whole residence floor signing up on one Wi-Fi gets a short wait, not a block.
-const signups = limiter(5, 10 * 60 * 1000);
+// 30 sign ups per network address per 10 minutes. Generous on purpose: a booth on
+// campus Wi-Fi can have many students behind one address, and a script still hits
+// the ceiling fast. Over it, the form says to wait a few minutes.
+const signups = limiter(30, 10 * 60 * 1000);
 // A sign up is a few short answers. Anything this long is not a person.
 const MAX_BODY_CHARS = 20_000;
 

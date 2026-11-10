@@ -11,17 +11,27 @@
  */
 export function limiter(max: number, windowMs: number) {
   const hits = new Map<string, number[]>();
+  const recent = (key: string, now: number) => (hits.get(key) ?? []).filter(t => now - t < windowMs);
   return {
     windowMs,
-    /** Records a hit; true when this key is now over the limit. */
+    /** True when this key has used its allowance. Records nothing. */
+    over(key: string) {
+      return recent(key, Date.now()).length >= max;
+    },
+    /**
+     * Records a hit; true when this key is over the limit. A blocked try is not
+     * recorded, so "wait 15 minutes" means 15 minutes from the last allowed try,
+     * however often someone keeps trying meanwhile.
+     */
     hit(key: string) {
       const now = Date.now();
-      const recent = (hits.get(key) ?? []).filter(t => now - t < windowMs);
-      recent.push(now);
-      hits.set(key, recent);
+      const list = recent(key, now);
+      if (list.length >= max) { hits.set(key, list); return true; }
+      list.push(now);
+      hits.set(key, list);
       // Keep the map from growing without bound on a long-lived instance.
       if (hits.size > 5000) for (const [k, v] of hits) if (v.every(t => now - t >= windowMs)) hits.delete(k);
-      return recent.length > max;
+      return false;
     },
     /** Forgets a key, for example after a successful login. */
     clear(key: string) {
