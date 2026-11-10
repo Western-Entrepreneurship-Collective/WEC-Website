@@ -3,42 +3,38 @@ import { connection } from "next/server";
 import Link from "next/link";
 import { PRIVACY_PATH } from "@/lib/privacy";
 import { Arrow, Logo } from "@/components/graphics/DraftGraphics";
-import { APPLY_PATH, EXEC_APPLICATIONS_PATH, MEMBER_APPLY_PATH } from "@/lib/execApplications";
-import { connectedForm } from "@/lib/execApplicationsServer";
+import { APPLY_PATH, MEMBER_APPLY_PATH, REP_APPLICATIONS_PATH } from "@/lib/applyRoutes";
 
 /**
  * /apply: the one door, with a choice behind it.
  *
  * There are two unrelated applications — membership, which anyone can fill in
- * in a minute, and the executive team, which takes half an hour — and one
- * address people remember and print. So this page asks which, and nothing
- * else: no scroll journey, no WebGL, two links and a way back to the site.
+ * in a minute, and First Year Rep, which takes about ten — and one address
+ * people remember and print. So this page asks which, and nothing else: no
+ * scroll journey, no WebGL, two links and a way back to the site. (Until
+ * 10 Nov 2026 the second card was the exec application, now closed.)
  *
  * ⛔ It is NOT where a "Join WEC" button should point. Those go straight to
  * MEMBER_APPLY_PATH, because someone tapping Join has already chosen. This
  * page is for the people who arrive without having chosen: a typed address, a
  * printed QR code from before the split, a link passed along by a friend.
  *
- * The exec card reads the same setting the exec page and its route read, so a
- * closed application says so here instead of sending someone to a page that
- * turns them away. connectedForm() only reads the setting and never calls
- * Google, so this costs a render, not a fetch.
+ * The First Year Rep page says for itself whether applications are open, so
+ * this card always links to it.
  *
- * ⛔ THE connection() IS LOAD-BEARING. Without it this route is prerendered and
- * process.env is read once, at build time, when WEC_APPLY_GOOGLE_FORM_URL is
- * not set — so the page would be frozen saying applications are closed no
- * matter what Vercel is later told. connection() opts the route into
- * per-request rendering, which is what makes the setting a runtime setting.
+ * connection() keeps this route rendered per request, as it was when the exec
+ * card read a runtime setting; it is cheap and keeps the page from going stale
+ * if a card here reads a setting again.
  */
 export const metadata: Metadata = {
   title: "Apply — WEC",
   description:
-    "Apply to the Western Entrepreneurship Collective: become a member, or apply for the executive team.",
+    "Apply to the Western Entrepreneurship Collective: become a member, or apply to be a First Year Rep.",
   ...(process.env.NEXT_PUBLIC_SITE_URL ? { alternates: { canonical: APPLY_PATH } } : {}),
   openGraph: {
     title: "Apply — WEC",
     description:
-      "Apply to the Western Entrepreneurship Collective: become a member, or apply for the executive team.",
+      "Apply to the Western Entrepreneurship Collective: become a member, or apply to be a First Year Rep.",
     type: "website",
     locale: "en_CA",
   },
@@ -46,7 +42,6 @@ export const metadata: Metadata = {
 
 export default async function ApplyPage() {
   await connection();
-  const execOpen = connectedForm().form !== null;
 
   return (
     <main className="apply-page">
@@ -72,24 +67,13 @@ export default async function ApplyPage() {
             </Link>
           </li>
           <li>
-            {execOpen ? (
-              <Link href={EXEC_APPLICATIONS_PATH} className="apply-choice">
-                <span className="micro" aria-hidden="true">02</span>
-                <span className="apply-choice-title">Apply for the exec team<Arrow diagonal /></span>
-                <span className="apply-choice-note">
-                  Executive, director and coordinator roles for 2026-27. Set aside half an hour.
-                </span>
-              </Link>
-            ) : (
-              <div className="apply-choice is-closed">
-                <span className="micro" aria-hidden="true">02</span>
-                <span className="apply-choice-title">Apply for the exec team</span>
-                <span className="apply-choice-note">
-                  Executive, director and coordinator applications for 2026-27 are not open yet.
-                  Become a member and we will let you know when they are.
-                </span>
-              </div>
-            )}
+            <Link href={REP_APPLICATIONS_PATH} className="apply-choice">
+              <span className="micro" aria-hidden="true">02</span>
+              <span className="apply-choice-title">Become a First Year Rep<Arrow diagonal /></span>
+              <span className="apply-choice-note">
+                For first-year Western students. 5 spots. Takes about 10 minutes.
+              </span>
+            </Link>
           </li>
         </ul>
       </div>

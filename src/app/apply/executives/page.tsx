@@ -1,51 +1,15 @@
-import type { Metadata } from "next";
-import Link from "next/link";
-import { PRIVACY_PATH } from "@/lib/privacy";
-import { Logo } from "@/components/graphics/DraftGraphics";
-import { ExecApplicationsForm } from "@/components/sections/ExecApplicationsForm";
-import { EXEC_APPLICATIONS_PATH } from "@/lib/execApplications";
-import "@/styles/exec-applications.css";
+import { redirect } from "next/navigation";
+import { APPLY_PATH } from "@/lib/applyRoutes";
 
 /**
- * WEC Executive Applications 2026-27, one of the two doors off the /apply
- * chooser (the other is /apply/member, the membership sign up).
+ * ⛔ CLOSED. Exec hiring for 2026-27 ended on 18 Oct 2026, so this address now
+ * sends anyone who still has the old link to the /apply chooser.
  *
- * ⛔ This folder's name IS the URL and must match EXEC_APPLICATIONS_PATH in
- * src/lib/execApplications.ts. It must stay off /apply/member and /api/join,
- * which belong to the member sign up.
- *
- * It opens straight on the form. There is no landing page and no hero on
- * purpose: the club designs its own. Above the questions there is only the WEC
- * mark (the way back to the site) and one line saying what this is.
- *
- * The form itself stays closed ("applications are not open yet") until
- * /api/exec-applications says the club's Google Form is connected AND ready.
+ * The exec form itself is untouched (src/components/sections/ExecApplicationsForm.tsx,
+ * src/lib/execApplications.ts, /api/exec-applications) for the next exec
+ * round. To reopen it, restore this page from git history (the version before
+ * the First Year Rep change) and put the exec card back on /apply.
  */
-export const metadata: Metadata = {
-  title: "Executive applications 2026-27 — WEC",
-  description: "Applications for the WEC executive team, 2026-27. By founders, for founders.",
-  ...(process.env.NEXT_PUBLIC_SITE_URL ? { alternates: { canonical: EXEC_APPLICATIONS_PATH } } : {}),
-  openGraph: {
-    title: "Executive applications 2026-27 — WEC",
-    description: "Applications for the WEC executive team, 2026-27. By founders, for founders.",
-    type: "website",
-    locale: "en_CA",
-  },
-};
-
 export default function ExecApplicationsPage() {
-  return (
-    <main className="exec-page">
-      <header className="exec-head">
-        <Link href="/" className="exec-brand" aria-label="Western Entrepreneurship Collective — home">
-          <Logo reversed priority />
-        </Link>
-        <span className="micro">WEC Executive Applications 2026-27</span>
-      </header>
-      <ExecApplicationsForm />
-      <footer className="exec-foot">
-        <Link href={PRIVACY_PATH} className="apply-privacy">Privacy policy</Link>
-      </footer>
-    </main>
-  );
+  redirect(APPLY_PATH);
 }

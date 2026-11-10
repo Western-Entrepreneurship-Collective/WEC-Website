@@ -7,7 +7,7 @@ import { contactEmail, destinations, googleForm, siteContent as c } from "@/data
 import { JoinFragments } from "@/components/graphics/StoryLayers";
 import { Spark } from "@/components/graphics/StudioGraphics";
 import Link from "next/link";
-import { APPLY_PATH, EXEC_APPLICATIONS_PATH } from "@/lib/applyRoutes";
+import { APPLY_PATH, REP_APPLICATIONS_PATH } from "@/lib/applyRoutes";
 import { PRIVACY_PATH } from "@/lib/privacy";
 
 function DestinationAction({ kind }: { kind: "join" | "events" }) {
@@ -51,7 +51,7 @@ function DestinationAction({ kind }: { kind: "join" | "events" }) {
 }
 
 export function Join() {
-  return <section className="join brand-section section-pad" id="join" aria-labelledby="join-heading"><SectionHeading id="join-heading">{c.join.label}</SectionHeading><div className="join-composition"><DraftFrame className="join-frame" /><JoinFragments /><div className="join-sticker"><Spark /><span>Come as<br />you are.</span></div><RevealHeading as="p" lines={c.join.headline} /><div className="join-lower"><p className="section-lead">{c.join.description}</p><div className="join-actions"><DestinationAction kind="join" /><DestinationAction kind="events" /></div></div><p className="join-exec"><Link className="text-link" href={EXEC_APPLICATIONS_PATH}>Exec team applications<Arrow /></Link></p><div className="join-signoff"><span className="micro">{c.join.annotation}</span><Logo reversed /></div></div></section>;
+  return <section className="join brand-section section-pad" id="join" aria-labelledby="join-heading"><SectionHeading id="join-heading">{c.join.label}</SectionHeading><div className="join-composition"><DraftFrame className="join-frame" /><JoinFragments /><div className="join-sticker"><Spark /><span>Come as<br />you are.</span></div><RevealHeading as="p" lines={c.join.headline} /><div className="join-lower"><p className="section-lead">{c.join.description}</p><div className="join-actions"><DestinationAction kind="join" /><DestinationAction kind="events" /></div></div><p className="join-exec"><Link className="text-link" href={REP_APPLICATIONS_PATH}>First Year Rep applications<Arrow /></Link></p><div className="join-signoff"><span className="micro">{c.join.annotation}</span><Logo reversed /></div></div></section>;
 }
 
 export function Footer({ motionEnabled, toggleMotion }: { motionEnabled: boolean; toggleMotion: () => void }) {

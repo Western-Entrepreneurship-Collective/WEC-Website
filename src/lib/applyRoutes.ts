@@ -12,8 +12,10 @@
  * its folder:
  *   APPLY_PATH             → src/app/apply/             (the chooser)
  *   MEMBER_APPLY_PATH      → src/app/apply/member/      (the member sign up)
- *   EXEC_APPLICATIONS_PATH → src/app/apply/executives/  (the exec application)
+ *   EXEC_APPLICATIONS_PATH → src/app/apply/executives/  (closed: redirects to /apply)
  *   EXEC_APPLICATIONS_API  → src/app/api/exec-applications/
+ *   REP_APPLICATIONS_PATH  → src/app/apply/first-year-rep/ (the First Year Rep application)
+ *   REP_APPLICATIONS_API   → src/app/api/rep-applications/
  *
  * ⛔ MEMBER_APPLY_PATH and /api/join belong to the member sign up. The exec
  * flow never reads, posts to or changes either of them.
@@ -27,3 +29,5 @@ export const APPLY_PATH = "/apply";
 export const MEMBER_APPLY_PATH = "/apply/member";
 export const EXEC_APPLICATIONS_PATH = "/apply/executives";
 export const EXEC_APPLICATIONS_API = "/api/exec-applications";
+export const REP_APPLICATIONS_PATH = "/apply/first-year-rep";
+export const REP_APPLICATIONS_API = "/api/rep-applications";
