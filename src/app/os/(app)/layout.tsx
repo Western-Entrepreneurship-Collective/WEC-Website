@@ -5,19 +5,26 @@ import { Shell, type NavItem } from "@/components/os/Shell";
 import { Person } from "@/components/os/ui";
 import { supabaseEnv } from "@/lib/os/config";
 import { can, displayName, requireMe } from "@/lib/os/dal";
-import { createClient } from "@/lib/os/supabase";
+import { createClient, rpc } from "@/lib/os/supabase";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   if (!supabaseEnv()) redirect("/os/login");
   const me = await requireMe();
   const supabase = await createClient();
-  const { count } = await supabase.from("notifications").select("id", { count: "exact", head: true }).is("read_at", null);
+  const [{ count }, reviewsApplications] = await Promise.all([
+    supabase.from("notifications").select("id", { count: "exact", head: true }).is("read_at", null),
+    // Only the First Year Rep hiring reviewers get the Applications tab. If the
+    // reviews migration is not in the database yet, the tab stays hidden rather
+    // than taking every WEC OS page down with it.
+    rpc<boolean>("rep_is_reviewer").catch(() => false),
+  ]);
   const nav: NavItem[] = [
     { href: "/os", label: "My tasks" },
     { href: "/os/projects", label: "Projects" },
     { href: "/os/events", label: "Events" },
     { href: "/os/teams", label: "Teams" },
     { href: "/os/calendar", label: "Calendar" },
+    ...(reviewsApplications ? [{ href: "/os/applications", label: "Applications" }] : []),
     ...(can(me, "overview.view") ? [{ href: "/os/overview", label: "Team overview" }] : []),
     ...(me.is_president ? [{ href: "/os/president", label: "All of WEC" }] : []),
     ...(me.is_admin ? [{ href: "/os/admin", label: "Admin" }] : []),
