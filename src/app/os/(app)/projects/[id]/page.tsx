@@ -24,8 +24,14 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
   const { view } = await searchParams;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const supabase = await createClient();
-  const { data: project } = await supabase.from("projects").select("*").eq("id", id).maybeSingle();
-  const summaries = await rpc<ProjectSummary[]>("project_summaries", { p_include_archived: true });
+  // Together, not one after another. The last four are only used when the project
+  // opens in full, but they are cached per request and cheap, and starting them now
+  // saves a whole round trip.
+  const [{ data: project }, summaries, directory, departments, who, seats] = await Promise.all([
+    supabase.from("projects").select("*").eq("id", id).maybeSingle(),
+    rpc<ProjectSummary[]>("project_summaries", { p_include_archived: true }),
+    getDirectory(), getDepartments(), getWho(me), getSeats(),
+  ]);
   const summary = summaries.find(s => s.id === id);
 
   // Summary-level access: name, status, dates and progress, and nothing more.
@@ -46,7 +52,6 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
     );
   }
 
-  const [directory, departments, who, seats] = await Promise.all([getDirectory(), getDepartments(), getWho(me), getSeats()]);
   const nameOf = nameLookup(directory);
   const [tasks, milestones, teams, sopRefs, event, publishedSops] = await Promise.all([
     supabase.from("tasks").select("*").eq("project_id", id).order("due_at", { nullsFirst: false }),

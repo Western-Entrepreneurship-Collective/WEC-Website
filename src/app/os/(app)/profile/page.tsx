@@ -41,6 +41,7 @@ export default async function ProfilePage() {
         </Panel>
         <Panel title="Change password">
           <ActionForm action={changePassword} className="os-stack" resetOnSuccess>
+            <Field label="Current password"><input name="current" type="password" autoComplete="current-password" required /></Field>
             <Field label="New password" hint="At least 10 characters."><input name="password" type="password" autoComplete="new-password" minLength={10} required /></Field>
             <Field label="Repeat it"><input name="confirm" type="password" autoComplete="new-password" minLength={10} required /></Field>
             <div><SubmitButton variant="ghost">Change password</SubmitButton></div>

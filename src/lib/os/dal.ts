@@ -10,9 +10,15 @@ import type { Me } from "./types";
 export const getMe = cache(async (): Promise<Me | null> => {
   if (!supabaseEnv()) return null;
   const supabase = await createClient();
+  // Both start together to save a round trip, but the answer from "me" is only
+  // used once Supabase Auth has confirmed the session, exactly as before. A failed
+  // "me" for a confirmed user still throws, as it always did.
+  const mePromise = rpc<Me | null>("me").then(v => ({ ok: true as const, v }), (e: unknown) => ({ ok: false as const, e }));
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  return rpc<Me | null>("me");
+  const me = await mePromise;
+  if (!me.ok) throw me.e;
+  return me.v;
 });
 
 export async function requireMe(): Promise<Me> {

@@ -208,6 +208,7 @@ export function JoinFormBody({ headingTag: Heading = "h2" }: { headingTag?: "h1"
       const data = await response.json().catch(() => ({}));
       if (data?.error === "invalid" && data.errors) { setErrors(data.errors); setStatus("idle"); return; }
       if (data?.error === "consent_required") { setConsentError(true); setStatus("idle"); return; }
+      // rate_limited and everything else: "That didn't go through", answers kept.
       setStatus("failed");
     } catch {
       setStatus("failed");

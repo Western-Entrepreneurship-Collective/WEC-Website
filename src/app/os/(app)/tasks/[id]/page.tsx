@@ -26,16 +26,17 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
   const supabase = await createClient();
-  const { data: task } = await supabase.from("tasks").select("*").eq("id", id).maybeSingle();
+  // Together, not one after another: none of these needs another's answer.
+  const [{ data: task }, { data: summary }, directory, seats] = await Promise.all([
+    supabase.from("tasks").select("*").eq("id", id).maybeSingle(),
+    supabase.from("weekly_summaries").select("task_id").eq("task_id", id).maybeSingle(),
+    getDirectory(),
+    getSeats(),
+  ]);
   if (!task) notFound();
-  if (task.assigned_to === me.id) {
-    const { data: summary } = await supabase.from("weekly_summaries").select("task_id").eq("task_id", id).maybeSingle();
-    if (summary) redirect(`/os/summaries/${id}`);
-  }
+  if (task.assigned_to === me.id && summary) redirect(`/os/summaries/${id}`);
 
-  const directory = await getDirectory();
   const nameOf = nameLookup(directory);
-  const seats = await getSeats();
   const titleOf = titleLookup(seats);
   const [context, deps, subtasks, checklist, comments, reviews, proposals, attachments, history, assignments, project, siblings] = await Promise.all([
     rpc<Context[]>("task_context", { p_task: id }),
