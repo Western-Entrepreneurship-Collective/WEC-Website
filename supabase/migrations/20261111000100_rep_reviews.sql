@@ -23,13 +23,17 @@ create table hiring.rep_reviewers (
 
 create table hiring.rep_scores (
   application_id uuid not null references hiring.rep_applications(id) on delete cascade,
-  reviewer_id uuid not null references hiring.rep_reviewers(executive_id) on delete cascade,
+  -- restrict, not cascade: removing a reviewer mid-round must not delete scores
+  -- other reviewers have already seen (which would also unlock theirs).
+  reviewer_id uuid not null references hiring.rep_reviewers(executive_id) on delete restrict,
   -- Four areas, 1 to 5 each, in this order: gets things done, reliability,
   -- startup curiosity, fit for the role (src/lib/repReview.ts REVIEW_AREAS).
-  areas smallint[] not null check (
-    array_length(areas, 1) = 4 and array_ndims(areas) = 1 and 1 <= all(areas) and 5 >= all(areas)
-  ),
-  total smallint generated always as (areas[1] + areas[2] + areas[3] + areas[4]) stored,
+  -- coalesce: a CHECK that comes out null passes, so an empty array or one holding
+  -- a null must be made to fail explicitly.
+  areas smallint[] not null check (coalesce(
+    cardinality(areas) = 4 and array_ndims(areas) = 1 and array_position(areas, null) is null
+      and 1 <= all(areas) and 5 >= all(areas), false)),
+  total smallint not null generated always as (areas[1] + areas[2] + areas[3] + areas[4]) stored,
   note text not null check (length(trim(note)) between 1 and 300),
   updated_at timestamptz not null default now(),
   primary key (application_id, reviewer_id)
