@@ -31,11 +31,11 @@ export default async function ApplicationsPage() {
           <Stat label="Applications close" value={ROUND_CLOSES} />
         </div>
         <ApplicationsList rows={list.rows} />
-        {list.rows.length > 0 ? (
-          <Panel title="Close the round">
-            <CloseRoundForm count={list.rows.length} />
-          </Panel>
-        ) : null}
+        {/* Always shown, even when empty, so the "Round closed" message is still on
+            screen after the list empties. */}
+        <Panel title="Close the round">
+          <CloseRoundForm count={list.rows.length} />
+        </Panel>
       </div>
     </Page>
   );
