@@ -14,7 +14,7 @@
 --
 -- ⛔ Applications are deleted when the round closes (the club's privacy rule).
 -- api.rep_close_round deletes every application; scores and the shortlist go with
--- them (ON DELETE CASCADE).
+-- them (ON DELETE CASCADE). Only VP Operations can run it.
 
 create table hiring.rep_reviewers (
   executive_id uuid primary key references os.executives(id) on delete cascade,
@@ -95,6 +95,7 @@ begin
   perform private.require_rep_reviewer();
   return jsonb_build_object(
     'shortlist_count', (select count(*) from hiring.rep_shortlist),
+    'can_close_round', private.can_close_rep_round(),
     'rows', coalesce((
       select jsonb_agg(jsonb_build_object(
         'id', r.id, 'name', r.name, 'year', r.year, 'program', r.program, 'submitted_at', r.submitted_at,
@@ -199,15 +200,30 @@ begin
   insert into hiring.rep_shortlist (application_id, added_by) values (p_id, auth.uid());
 end $$;
 
+-- Only whoever holds VP Operations today may close the round: it deletes
+-- everything and cannot be undone. Tied to the seat, not a person, so it passes to
+-- the next VP Operations with the job.
+create function private.can_close_rep_round() returns boolean
+language sql stable security definer set search_path = '' as $$
+  select private.is_rep_reviewer() and exists (
+    select 1 from private.exec_positions(auth.uid()) s
+    join os.positions p on p.id = s.position_id
+    where p.title = 'VP Operations'
+  )
+$$;
+
 -- Closing the round: deletes every application of the round, and with them every
 -- score and shortlist place. Returns how many applications were deleted. The page
--- asks for confirmation first; this cannot be undone.
+-- asks for a typed DELETE and a confirmation first; this cannot be undone.
 create function api.rep_close_round() returns int
 language plpgsql security definer set search_path = '' as $$
 declare
   n int;
 begin
   perform private.require_rep_reviewer();
+  if private.can_close_rep_round() is not true then
+    raise exception 'Only VP Operations can close the round.' using errcode = 'P0403';
+  end if;
   delete from hiring.rep_applications where round = 'first-year-rep-2026-27';
   get diagnostics n = row_count;
   return n;

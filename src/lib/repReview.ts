@@ -16,7 +16,8 @@ export type RepListRow = {
   id: string; name: string; year: string; program: string; submitted_at: string;
   my_total: number | null; average: number | null; scored_by: number | null; shortlisted: boolean | null;
 };
-export type RepList = { shortlist_count: number; rows: RepListRow[] };
+/** can_close_round: true only for whoever holds VP Operations (the database decides). */
+export type RepList = { shortlist_count: number; can_close_round: boolean; rows: RepListRow[] };
 
 export type RepApplicationFull = {
   id: string; name: string; western_email: string; program: string; year: string; residence: string; social: string;

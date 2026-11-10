@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { ApplicationsList, CloseRoundForm } from "@/components/os/ApplicationsBoard";
-import { Page, Panel, Stat } from "@/components/os/ui";
+import { ApplicationsList, DangerZone } from "@/components/os/ApplicationsBoard";
+import { Page, Stat } from "@/components/os/ui";
 import { requireMe } from "@/lib/os/dal";
 import { RpcError, rpc } from "@/lib/os/supabase";
 import { ROUND_CLOSES, SHORTLIST_SIZE, type RepList } from "@/lib/repReview";
@@ -31,11 +31,9 @@ export default async function ApplicationsPage() {
           <Stat label="Applications close" value={ROUND_CLOSES} />
         </div>
         <ApplicationsList rows={list.rows} />
-        {/* Always shown, even when empty, so the "Round closed" message is still on
-            screen after the list empties. */}
-        <Panel title="Close the round">
-          <CloseRoundForm count={list.rows.length} />
-        </Panel>
+        {/* VP Operations only (the database refuses anyone else too). Shown even when
+            the list is empty, so the "Round closed" message stays on screen after. */}
+        {list.can_close_round ? <DangerZone count={list.rows.length} /> : null}
       </div>
     </Page>
   );

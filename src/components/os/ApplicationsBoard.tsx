@@ -148,15 +148,26 @@ export function ShortlistButton({ id, shortlisted, full }: { id: string; shortli
   );
 }
 
-export function CloseRoundForm({ count }: { count: number }) {
+// VP Operations only. Folded shut by default and set apart in red at the bottom of
+// the page, so nothing in it can be pressed by accident: it has to be opened, the
+// word DELETE typed, and then a second confirmation accepted.
+export function DangerZone({ count }: { count: number }) {
   return (
-    <ActionForm action={closeRepRound} ariaLabel="Close the round"
-                confirm={`This deletes all ${count} applications, every score and the shortlist. It cannot be undone. Continue?`}>
-      <p>When the reps have accepted their offers, close the round. Every application, score and shortlist place is deleted, as the privacy policy promises.</p>
-      <label className="os-field">Type DELETE to confirm
-        <input name="confirm" autoComplete="off" />
-      </label>
-      <div className="os-row"><SubmitButton variant="danger">Close the round and delete everything</SubmitButton></div>
-    </ActionForm>
+    <details className="os-danger-zone">
+      <summary>Danger zone <span className="os-muted">VP Operations only</span></summary>
+      <div className="os-stack">
+        <h3>Close the round</h3>
+        <p>Do this only after the reps have accepted their offers. It deletes all {count} applications, every score and the shortlist, as the privacy policy promises. It cannot be undone.</p>
+        <ActionForm action={closeRepRound} ariaLabel="Close the round"
+                    confirm={`Delete all ${count} applications, every score and the shortlist? This cannot be undone.`}>
+          <div className="os-stack">
+            <label className="os-field">Type DELETE to confirm
+              <input name="confirm" autoComplete="off" spellCheck={false} />
+            </label>
+            <div className="os-row"><SubmitButton variant="danger">Close the round and delete everything</SubmitButton></div>
+          </div>
+        </ActionForm>
+      </div>
+    </details>
   );
 }
