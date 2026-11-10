@@ -1,18 +1,29 @@
 import "server-only";
 import { cache } from "react";
+import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { supabaseEnv } from "./config";
 import { createClient, rpc } from "./supabase";
 import type { Me } from "./types";
+
+const settle = <T,>(p: Promise<T>) => p.then(v => ({ ok: true as const, v }), (e: unknown) => ({ ok: false as const, e }));
 
 // Once per request, however many components ask. api.me reads status live, so a
 // deactivated person is turned away on their very next page.
 export const getMe = cache(async (): Promise<Me | null> => {
   if (!supabaseEnv()) return null;
   const supabase = await createClient();
+  // With a login cookie, both start together to save a round trip, but the answer
+  // from "me" is only used once Supabase Auth has confirmed the session, exactly as
+  // before. A failed "me" for a confirmed user still throws, as it always did.
+  // Without one, nothing is started early, so a signed-out visit costs no extra call.
+  const hasSession = (await cookies()).getAll().some(c => c.name.startsWith("sb-") && c.name.includes("-auth-token"));
+  const early = hasSession ? settle(rpc<Me | null>("me")) : null;
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  return rpc<Me | null>("me");
+  const me = await (early ?? settle(rpc<Me | null>("me")));
+  if (!me.ok) throw me.e;
+  return me.v;
 });
 
 export async function requireMe(): Promise<Me> {

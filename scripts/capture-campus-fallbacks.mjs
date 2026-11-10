@@ -13,3 +13,6 @@ await page.locator('.campus-render-room[data-ready] canvas').waitFor();
 await page.waitForTimeout(300);
 await page.locator('.campus-render-room canvas').screenshot({path:'public/images/classroom-fallback.png'});
 await browser.close();
+// The site shows the WebP copies (about a seventh of the size); the PNGs stay as the masters.
+const sharp=(await import('sharp')).default;
+for(const n of ['campus','classroom']) await sharp(`public/images/${n}-fallback.png`).webp({quality:82}).toFile(`public/images/${n}-fallback.webp`);

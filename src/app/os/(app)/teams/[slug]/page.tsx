@@ -12,9 +12,9 @@ export const metadata: Metadata = { title: "Team" };
 
 export default async function TeamPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const { me, department, canOpen } = await getTeam(slug);
+  const [{ me, department, canOpen }, allSeats] = await Promise.all([getTeam(slug), getSeats()]);
   const supabase = await createClient();
-  const seats = (await getSeats()).filter(s => s.departmentId === department.id);
+  const seats = allSeats.filter(s => s.departmentId === department.id);
   const lead = seats.find(s => s.isHead);
   const people = (
     <ul className="os-team-people" aria-label="People">
@@ -73,15 +73,15 @@ export default async function TeamPage({ params }: { params: Promise<{ slug: str
     );
   }
 
-  const [projects, incoming, open, sopCount, meetingCount, handover] = await Promise.all([
+  const [projects, incoming, open, sopCount, meetingCount, handover, { data: unclaimed }] = await Promise.all([
     rpc<ProjectSummary[]>("project_summaries", { p_department: department.id }),
     supabase.from("tasks").select("id, requesting_department_id").eq("responsible_department_id", department.id).in("request_state", ["pending", "clarification_requested"]),
     supabase.from("tasks").select("*").eq("responsible_department_id", department.id).not("status", "in", "(done,cancelled)").neq("status", "unassigned").order("due_at", { nullsFirst: false }).limit(200),
     supabase.from("sops").select("id", { count: "exact", head: true }).eq("department_id", department.id).is("archived_at", null),
     supabase.from("meetings").select("id", { count: "exact", head: true }).eq("department_id", department.id),
     supabase.from("projects").select("id, name").eq("owning_department_id", department.id).like("system_key", "handover:%").is("archived_at", null).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+    supabase.from("tasks").select("*").eq("responsible_department_id", department.id).eq("status", "unassigned").is("request_state", null).order("due_at", { nullsFirst: false }).limit(50),
   ]);
-  const { data: unclaimed } = await supabase.from("tasks").select("*").eq("responsible_department_id", department.id).eq("status", "unassigned").is("request_state", null).order("due_at", { nullsFirst: false }).limit(50);
   const tasks = open.data ?? [];
   const names = await projectNames([...tasks, ...(unclaimed ?? [])].map(t => t.id));
   const waiting = incoming.data ?? [];

@@ -46,7 +46,14 @@ function send(body: unknown, status = 200, headers: Record<string, string> = {})
   return Response.json(body, { status, headers: { "Cache-Control": "no-store", ...headers } });
 }
 
+// Exec hiring closed on 18 Oct 2026 and /apply/executives redirects away, so this
+// route is CLOSED unless WEC_EXEC_APPLICATIONS=on. Closed: GET says not ready and
+// POST refuses, whatever the Google Form link is set to. Turn it back on for next
+// year's round (and the local tests turn it on in playwright.config.ts).
+const execApplicationsOpen = () => process.env.WEC_EXEC_APPLICATIONS === "on";
+
 export async function GET(request: Request) {
+  if (!execApplicationsOpen()) return send({ connected: false, ready: false, closed: true });
   const url = new URL(request.url);
   const { form, reason } = connectedForm();
   if (url.searchParams.get("detail") === "1") {
@@ -64,6 +71,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (!execApplicationsOpen()) return send({ error: "closed" }, 410);
   if (overLimit(clientIp(request))) {
     return send({ error: "rate_limited" }, 429, { "Retry-After": String(Math.ceil(RATE_WINDOW_MS / 1000)) });
   }

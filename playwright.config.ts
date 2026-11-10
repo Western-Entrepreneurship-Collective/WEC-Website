@@ -20,5 +20,5 @@ export default defineConfig({
   ],
   webServer: { command: "npm run start -- --port 3001", url: "http://localhost:3001", reuseExistingServer: !process.env.CI, timeout: 60000,
     // Server-side only, and only for the exec applications page. The member sign up settings are untouched.
-    env: { WEC_APPLY_GOOGLE_FORM_URL: prefilledUrl(E2E_FAKE_ORIGIN), WEC_GOOGLE_FORM_TEST_HOST: new URL(E2E_FAKE_ORIGIN).host } },
+    env: { WEC_EXEC_APPLICATIONS: "on", WEC_APPLY_GOOGLE_FORM_URL: prefilledUrl(E2E_FAKE_ORIGIN), WEC_GOOGLE_FORM_TEST_HOST: new URL(E2E_FAKE_ORIGIN).host } },
 });

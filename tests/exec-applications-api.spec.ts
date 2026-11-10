@@ -51,7 +51,7 @@ import { ENTRY, prefilledUrl, questions, startFakeGoogle, type FakeGoogle } from
 test.describe.configure({ mode: "serial" });
 
 const BASE = "http://localhost/api/exec-applications";
-const ENV_KEYS = ["WEC_APPLY_GOOGLE_FORM_URL", "WEC_GOOGLE_FORM_TEST_HOST", "WEC_SETUP_CHECK_KEY", "VERCEL_ENV"] as const;
+const ENV_KEYS = ["WEC_APPLY_GOOGLE_FORM_URL", "WEC_GOOGLE_FORM_TEST_HOST", "WEC_SETUP_CHECK_KEY", "VERCEL_ENV", "WEC_EXEC_APPLICATIONS"] as const;
 
 let google: FakeGoogle;
 let gPort = 0;
@@ -142,6 +142,9 @@ test.beforeEach(() => {
   resetExecApplicationsState();
   delete process.env.VERCEL_ENV;
   delete process.env.WEC_SETUP_CHECK_KEY;
+  // These tests are about the form while it is open. "closed by default" below
+  // turns it off itself.
+  process.env.WEC_EXEC_APPLICATIONS = "on";
   google.mode = "ok";
   google.received = [];
 });
@@ -612,4 +615,17 @@ test("24  without privacy consent nothing is sent to Google, and consent must be
   expect(ok.body).toEqual({ ok: true });
   expect(google.received).toHaveLength(1);
   expect(Object.values(google.received[0]), "the consent flag itself is never sent to Google").not.toContain("true");
+});
+
+test("25  closed by default: without WEC_EXEC_APPLICATIONS=on nothing is accepted, even with the Form connected", async () => {
+  connect();
+  delete process.env.WEC_EXEC_APPLICATIONS;
+  const status = await get();
+  expect(status.body).toEqual({ connected: false, ready: false, closed: true });
+  const out = await post(application("vp-content"));
+  expect(out.status).toBe(410);
+  expect(out.body).toEqual({ error: "closed" });
+  expect(google.received, "nothing may reach Google while closed").toHaveLength(0);
+  process.env.WEC_EXEC_APPLICATIONS = "off";
+  expect((await post(application("vp-content"))).status, "only the exact value on opens it").toBe(410);
 });

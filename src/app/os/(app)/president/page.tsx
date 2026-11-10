@@ -19,7 +19,7 @@ type DepartmentRow = { department_id: string; department_name: string; open_task
 export default async function PresidentPage() {
   const me = await requirePresident();
   const supabase = await createClient();
-  const [pendingEvents, upcoming, announcements, escalations, progress, seats, departments, directory, pending] = await Promise.all([
+  const [pendingEvents, upcoming, announcements, escalations, progress, seats, departments, directory, pending, sopVersionsResult] = await Promise.all([
     supabase.from("events").select("*").eq("status", "submitted").order("submitted_at"),
     supabase.from("events").select("*").in("status", ["approved", "in_progress"]).order("starts_at").limit(1),
     supabase.from("announcements").select("*").is("archived_at", null).order("published_at", { ascending: false }).limit(5),
@@ -29,17 +29,19 @@ export default async function PresidentPage() {
     getDepartments(),
     getDirectory(),
     supabase.from("tasks").select("*").in("request_state", ["pending", "clarification_requested"]).order("created_at").limit(50),
+    supabase.from("sop_versions").select("id, major, minor, author_id, sops!sop_versions_sop_id_fkey(id, title, department_id)").eq("status", "submitted").order("updated_at"),
   ]);
-  const { data: sopVersions } = await supabase.from("sop_versions").select("id, major, minor, author_id, sops!sop_versions_sop_id_fkey(id, title, department_id)").eq("status", "submitted").order("updated_at");
-  const sopsWaiting = sopVersions ?? [];
+  const sopsWaiting = sopVersionsResult.data ?? [];
   const hasLead = (departmentId: string) => seats.some(s => s.departmentId === departmentId && s.isHead && s.name);
   const nameOfTeam = (id: string) => departments.find(d => d.id === id)?.name ?? "A team";
   // Requests reach the President only for a team with nobody in its lead seat.
   const routed = (pending.data ?? []).filter(t => !hasLead(t.responsible_department_id));
-  const names = await projectNames(routed.map(t => t.id));
   const peopleIn = (departmentId: string) => [...new Map(seats.filter(s => s.departmentId === departmentId && s.execId && s.execId !== me.id).map(s => [s.execId!, s.name!])).entries()].map(([id, name]) => ({ id, name }));
   const event = (upcoming.data ?? [])[0];
-  const readiness = event ? await rpc<number>("event_readiness", { p_event: event.id }) : 0;
+  const [names, readiness] = await Promise.all([
+    projectNames(routed.map(t => t.id)),
+    event ? rpc<number>("event_readiness", { p_event: event.id }) : Promise.resolve(0),
+  ]);
   const nameOf = (id: string) => { const p = directory.find(x => x.id === id); return p ? displayName(p) : "Someone"; };
 
   return (

@@ -702,3 +702,14 @@ body:has(.os-welcome) { background: var(--paper); }
 .os-overview-tasks { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 14px; }
 .os-overview-tasks th { text-align: left; color: var(--muted); font-size: 12.5px; font-weight: 500; padding: 4px 12px 4px 0; }
 .os-overview-tasks td { padding: 6px 12px 6px 0; border-top: 1px solid #f0edf3; }
+
+/* ─── Loading (src/app/os/(app)/loading.tsx) ───
+   Grey bars in the shape of a page, shown the instant a link is clicked. A slow
+   shimmer only; reduced motion turns it off with the rule above. */
+.os-loading { display: grid; gap: 14px; }
+.os-loading-bar { height: 14px; border-radius: 8px; background: linear-gradient(90deg, var(--line) 0%, var(--paper) 50%, var(--line) 100%); background-size: 200% 100%; animation: os-shimmer 1.4s ease-in-out infinite; }
+.os-loading-title { height: 32px; width: min(320px, 70%); }
+.os-loading-line { width: min(520px, 90%); }
+.os-loading-short { width: 40%; }
+.os-loading-panel { display: grid; gap: 12px; background: var(--white); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; margin-top: 8px; }
+@keyframes os-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }

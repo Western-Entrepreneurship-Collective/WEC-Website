@@ -30,6 +30,14 @@ import { type Answers, cleanAnswers, parseEmailRule, parseGoogleForm, validateAn
 import { checkGoogleForm } from "@/lib/googleFormCheck";
 import { membersDbOn, saveMember } from "@/lib/members";
 import { hasConsent } from "@/lib/privacy";
+import { ipFrom, limiter } from "@/lib/rateLimit";
+
+// 30 sign ups per network address per 10 minutes. Generous on purpose: a booth on
+// campus Wi-Fi can have many students behind one address, and a script still hits
+// the ceiling fast. Over it, the form says to wait a few minutes.
+const signups = limiter(30, 10 * 60 * 1000);
+// A sign up is a few short answers. Anything this long is not a person.
+const MAX_BODY_CHARS = 20_000;
 
 // Only Google may receive the answers. WEC_GOOGLE_FORM_TEST_HOST is server-only
 // and exists so the whole path can be tested against a local stand-in for Google.
@@ -55,6 +63,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  if (signups.hit(ipFrom(request.headers))) {
+    return Response.json({ error: "rate_limited" }, { status: 429, headers: { "Retry-After": String(signups.windowMs / 1000) } });
+  }
   const membersDb = membersDbOn();
   const { form, reason } = connectedForm();
   if (!form && !membersDb) {
@@ -64,7 +75,9 @@ export async function POST(request: Request) {
 
   let body: unknown;
   try {
-    body = await request.json();
+    const raw = await request.text();
+    if (raw.length > MAX_BODY_CHARS) return Response.json({ error: "bad_request" }, { status: 400 });
+    body = JSON.parse(raw);
   } catch {
     return Response.json({ error: "bad_request" }, { status: 400 });
   }
