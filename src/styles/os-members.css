@@ -1,0 +1,38 @@
+/* The member list page (MembersBoard). Year buttons reuse .os-overview-filter. */
+.os-members { display: grid; gap: 16px; }
+
+
+.os-members-tools { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; }
+.os-members-tools .os-input { min-height: 44px; box-sizing: border-box; padding: 0 12px; border: 1px solid #a89fb4; border-radius: 8px; background: var(--white); color: inherit; font-size: 14px; }
+.os-members-tools input.os-input { flex: 1 1 260px; }
+.os-members-size { display: grid; gap: 4px; font-size: 13px; color: var(--muted); }
+
+.os-overview-filter button { min-height: 44px; box-sizing: border-box; display: inline-flex; align-items: center; padding: 0 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--white); color: var(--ink); font: inherit; font-size: 14px; cursor: pointer; }
+.os-overview-filter button[aria-current="page"] { background: #3d1d5c; border-color: #3d1d5c; color: var(--white); font-weight: 500; }
+
+.os-members-summary { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px; }
+.os-members-summary p { margin: 0; font-size: 14px; }
+.os-members-ok { color: #1f6b3a; font-size: 13px; margin: 0; }
+
+.os-members-batch { gap: 8px; }
+.os-members-batch h2 small { color: var(--muted); font-size: 13px; font-weight: 400; margin-left: 8px; }
+.os-members-copy { display: inline-flex; align-items: center; gap: 10px; }
+.os-members-copy small { color: #1f6b3a; font-size: 13px; }
+
+.os-members-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.os-members-table th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12.5px; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+.os-members-table td { padding: 8px; border-bottom: 1px solid #f0edf3; overflow-wrap: anywhere; }
+
+@media (max-width: 640px) {
+  .os-members-table th:nth-child(4), .os-members-table td:nth-child(4) { display: none; }
+  .os-members-batch .os-panel-head { flex-wrap: wrap; gap: 8px; }
+}
+
+/* The one-time agreement (MemberPolicyGate). */
+.os-members-gate { gap: 12px; max-width: 760px; border-color: #3d1d5c; }
+.os-members-gate h2 { margin: 0; font-size: 18px; }
+.os-members-gate p { margin: 0; font-size: 14px; }
+.os-shell .os-members-gate ol { list-style: decimal; padding-left: 22px; display: grid; gap: 8px; font-size: 14px; line-height: 1.5; margin: 0; }
+.os-members-gate form { display: grid; gap: 12px; }
+.os-members-gate-agree { display: flex; gap: 12px; align-items: flex-start; font-size: 14px; line-height: 1.5; cursor: pointer; padding: 12px; background: #f6f4f8; border-radius: 8px; }
+.os-members-gate-agree input { width: 20px; height: 20px; margin-top: 2px; flex: none; accent-color: #3d1d5c; }
