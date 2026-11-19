@@ -31,6 +31,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     { href: "/os/calendar", label: "Calendar" },
     ...(reviewsApplications ? [{ href: "/os/applications", label: "Applications" }] : []),
     ...(can(me, "overview.view") ? [{ href: "/os/overview", label: "Team overview" }] : []),
+    ...(can(me, "members.view") ? [{ href: "/os/members", label: "Members" }] : []),
     ...(me.is_president ? [{ href: "/os/president", label: "All of WEC" }] : []),
     ...(me.is_admin ? [{ href: "/os/admin", label: "Admin" }] : []),
   ];

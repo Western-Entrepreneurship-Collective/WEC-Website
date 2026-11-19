@@ -16,7 +16,14 @@ Keep the Google Form connected. The sign up page decides whether to use the in-s
 
 ## Who can see it
 
-Nobody through the API. The `members` schema is not exposed, the table has row level security with no policies, and the one function that writes to it is callable only with the service key, which only the server holds. Read it in the dashboard: Table Editor, schema `members`.
+The table itself, nobody through the API. The `members` schema is not exposed, the table has row level security with no policies, and the one function that writes to it is callable only with the service key, which only the server holds. The full rows are read in the dashboard: Table Editor, schema `members`.
+
+One way in from WEC OS: the **Members** page (`/os/members`), for positions holding `members.view`, which is the VP Community seat to start (migration `20261119000100_os_members_page.sql`). It gets name, email, year and date joined for active members, through `api.member_list`, and nothing else on the row.
+
+- **The agreement first.** The list stays closed until the person agrees to the member data rules (`src/lib/os/memberPolicy.ts`), once per version. To ask everyone again, change the rules, raise `MEMBER_POLICY_VERSION` there and `private.member_policy_version()` in a new migration.
+- **What is logged.** Every opening of the list (`members.viewed`, with the row count) and every copy or CSV download (`members.export`: kind, count, year filter, whether a search was on, batch). Never an address, a name or search text. Copy and download counts are what the page reports; the opening is recorded by the database.
+- **Sending.** The site sends nothing to members. People copy a batch into the BCC line of their own email.
+- **More people.** Give `members.view` to another position under Administration, Permissions. That is recorded in the audit log.
 
 ## Going live
 
