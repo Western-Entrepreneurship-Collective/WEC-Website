@@ -8,12 +8,12 @@ const PHOTO = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQ
 const finance = "(select id from os.departments where slug = 'finance')";
 const vp = "(select id from os.executives where email = 'vp.finance@wec.test')";
 
-test("the team overview shows every team's work, and opens none of it", async ({ page }) => {
+test("the team overview shows every team's work, and opens it to read", async ({ page }) => {
   const projectId = await dbQuery(`insert into os.projects (kind, owning_department_id, name, approval_status) values ('INTERNAL', ${finance}, 'Overview sample', 'not_required') returning id`);
   const project = projectId.split("\n")[0];
-  const taskId = await dbQuery(`insert into os.tasks (project_id, title, requesting_department_id, responsible_department_id, assigned_by, assigned_to, status) values
+  await dbQuery(`insert into os.tasks (project_id, title, requesting_department_id, responsible_department_id, assigned_by, assigned_to, status) values
     ('${project}', 'Overview task done', ${finance}, ${finance}, ${vp}, ${vp}, 'done'),
-    ('${project}', 'Overview task open', ${finance}, ${finance}, ${vp}, ${vp}, 'todo') returning id`);
+    ('${project}', 'Overview task open', ${finance}, ${finance}, ${vp}, ${vp}, 'todo')`);
 
   await signIn(page, PEOPLE.dirAdmin);
   await page.getByRole("link", { name: "Team overview" }).click();
@@ -22,13 +22,22 @@ test("the team overview shows every team's work, and opens none of it", async ({
   await expect(team.getByRole("heading", { name: "Overview sample" })).toBeVisible();
   await expect(team.getByText("1 of 2 done, 50%")).toBeVisible();
   await expect(team.getByRole("cell", { name: "Overview task open" })).toBeVisible();
-  await expect(team.getByRole("link")).toHaveCount(0);
-  expect((await page.goto(`/os/tasks/${taskId.split("\n")[0]}`))?.status()).toBe(404);
-  expect((await page.goto(`/os/projects/${project}`))?.status()).toBe(404);
+
+  await team.getByRole("link", { name: "Overview task open" }).click();
+  await expect(page.getByRole("heading", { name: "Overview task open" })).toBeVisible();
+  await expect(page.getByText("You can see this through the team overview.")).toBeVisible();
+  await expect(page.getByLabel("Comment", { exact: true })).toHaveCount(0);
+  await expect(page.getByRole("group", { name: "Status" })).toHaveCount(0);
+  expect((await page.goto(`/os/projects/${project}`))?.status()).toBe(200);
+  await expect(page.getByRole("heading", { name: "Overview sample" })).toBeVisible();
 
   await page.goto("/os/overview?team=finance");
   await expect(page.getByRole("region", { name: "Finance" })).toBeVisible();
   await expect(page.locator(".os-overview-team")).toHaveCount(1);
+
+  await signIn(page, PEOPLE.president);
+  await page.getByRole("link", { name: "Team overview" }).click();
+  await expect(page.getByRole("region", { name: "Finance" }).getByRole("link", { name: "Overview sample" })).toBeVisible();
 
   await signIn(page, PEOPLE.vpContent);
   await expect(page.getByRole("link", { name: "Team overview" })).toHaveCount(0);

@@ -1,4 +1,4 @@
--- The weekly summary task, who can write it, and the read-only team overview.
+-- The weekly summary task, who can write it, and the team overview.
 begin;
 \ir helpers.psql
 select plan(24);
@@ -33,12 +33,12 @@ select lives_ok(format($$select api.mark_weekly_summary_sent(%L)$$, current_sett
 select is((select status from os.tasks where id = current_setting('t.s')::uuid), 'done', 'which finishes the task');
 select throws_ok(format($$select api.save_weekly_summary(%L, 'Changed', 'Teams', 'Results')$$, current_setting('t.s')), 'P0409', null, 'A sent summary stays as it was sent');
 
--- The overview: names and status, and nothing that opens.
+-- The overview: every team's work, which it can open.
 select is((select count(*)::int from api.team_overview() where project_name = 'Finance Private' and task_title = 'Finance task'), 1, 'The overview shows another team''s private task by name');
 select is((select count(*)::int from api.team_overview() where task_title = 'Withdrawn task'), 0, 'but not withdrawn tasks');
 select is((select count(*)::int from api.team_overview() where project_name = 'Weekly summaries'), 0, 'or the summary''s own project');
-select is((select count(*)::int from os.tasks where id = 'c0000000-0000-0000-0000-0000000000f1'), 0, 'The task itself stays closed to them');
-select is((select count(*)::int from os.projects where id = 'b0000000-0000-0000-0000-0000000000f1'), 0, 'and so does its project');
+select is((select count(*)::int from os.tasks where id = 'c0000000-0000-0000-0000-0000000000f1'), 1, 'and opens the task, to read');
+select is((select count(*)::int from os.projects where id = 'b0000000-0000-0000-0000-0000000000f1'), 1, 'and its project');
 
 -- Sponsorship and Operations' event tasks.
 reset role;

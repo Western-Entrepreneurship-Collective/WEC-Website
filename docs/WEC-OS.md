@@ -91,7 +91,7 @@ Test a restore once, into a local stack, before trusting it.
 
 ## How the screens are organized
 
-The top bar has **My tasks**, **Projects**, **Events**, **Teams** and **Calendar**, plus **Team overview** for the Director of Administration, **All of WEC** for the President and **Admin** for administrators. SOPs and meeting notes open from each team's page and from the menu under your initials.
+The top bar has **My tasks**, **Projects**, **Events**, **Teams** and **Calendar**, plus **Team overview** for the Director of Administration and the President, **All of WEC** for the President and **Admin** for administrators. SOPs and meeting notes open from each team's page and from the menu under your initials.
 
 A new executive lands on a welcome guide once, then on My tasks. Every task belongs to a project. A task is for a person, or for another team, whose VP takes it, assigns it or declines it. The team doing it marks it done, with no sign-off, and the team that asked can reopen it. A project is either just one team's, or shared with the teams its creator chooses, with no approval step.
 
@@ -127,7 +127,11 @@ Every Monday the sweep gives the Director of Administration a task, due Sunday a
 
 ## The team overview
 
-Team overview lists each team's active projects, tasks, assignees, dates, status and completion. It uses `api.team_overview`, which returns those columns and nothing else, so task and project pages still return 404. It includes team-only projects. The `overview.view` permission gives access, and it is granted to the Director of Administration's position.
+Team overview lists each team's active projects, tasks, assignees, dates, status, completion and deliverables. The `overview.view` permission gives access, and it is granted to the President and to the Director of Administration's position. Everything it lists opens, to read only: `private.can_view_project` and `private.can_view_task` add the overview to the read rules, while every function that changes something still checks `can_read_project` and `can_read_task`, so an overview reader can't comment, tick, upload or hand in. Restricted tasks stay hidden from everyone but the President. The system's own projects (handovers, weekly summaries) stay out.
+
+## Deliverables
+
+Some event tasks hand something to the other teams: the venue, the run-of-show, the budget, sponsor commitments, guest bios and so on. A template task names it with `deliverable` (`kind` is `document`, `link` or `text`), and the task gets a row in `os.task_deliverables` when it is made. Whoever can edit the task hands it in from the task page, with `api.hand_in_deliverable`. A required deliverable has to be handed in before the task can be done; a trigger on `os.tasks` enforces that whichever function marks it done. Everyone on a team working on the same event, and the event's leads, can see what was handed in, on the event page (`api.event_deliverables`), including a handed-in file, without being able to open the task itself.
 
 ## The year-end transition
 

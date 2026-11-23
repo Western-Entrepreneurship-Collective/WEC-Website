@@ -4,10 +4,10 @@ import { notFound, redirect } from "next/navigation";
 import { ActionForm, SubmitButton } from "@/components/os/ActionForm";
 import { RequestCard } from "@/components/os/RequestCard";
 import { Upload } from "@/components/os/Upload";
-import { Field, Hidden, Meter, Person, TaskRow } from "@/components/os/ui";
+import { Field, Hidden, Meter, Person, Status, TaskRow } from "@/components/os/ui";
 import {
-  addComment, addDependency, assignTask, decideDeadline, delegateRequest, deleteChecklistItem, proposeDeadline, removeDependency,
-  saveChecklistItem, setTaskStatus, updateTask,
+  addComment, addDependency, assignTask, decideDeadline, delegateRequest, deleteChecklistItem, handInDeliverable, proposeDeadline,
+  removeDependency, saveChecklistItem, setTaskStatus, updateTask,
 } from "@/lib/os/actions/work";
 import { can, displayName, getDirectory, inDepartment, nameLookup, requireMe } from "@/lib/os/dal";
 import { formatDate, formatDateTime, label, torontoDateKey } from "@/lib/os/format";
@@ -16,7 +16,7 @@ import { createClient, rpc } from "@/lib/os/supabase";
 
 export const metadata: Metadata = { title: "Task" };
 
-type Context = { project_id: string; project_name: string; project_kind: string; can_open_project: boolean; event_id: string | null; requesting_department: string; responsible_department: string };
+type Context = { project_id: string; project_name: string; project_kind: string; can_open_project: boolean; event_id: string | null; requesting_department: string; responsible_department: string; can_take_part: boolean };
 type Dep = { task_id: string; title: string; status: string; can_open: boolean; direction: "blocked_by" | "blocks" };
 
 const STATUSES = ["todo", "in_progress", "blocked", "done"] as const;
@@ -38,7 +38,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
 
   const nameOf = nameLookup(directory);
   const titleOf = titleLookup(seats);
-  const [context, deps, subtasks, checklist, comments, reviews, proposals, attachments, history, assignments, project, siblings] = await Promise.all([
+  const [context, deps, subtasks, checklist, comments, reviews, proposals, attachments, history, assignments, project, siblings, handIn] = await Promise.all([
     rpc<Context[]>("task_context", { p_task: id }),
     rpc<Dep[]>("task_dependencies", { p_task: id }),
     supabase.from("tasks").select("*").eq("parent_task_id", id).order("due_at", { nullsFirst: false }),
@@ -51,17 +51,22 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
     supabase.from("position_assignments").select("executive_id, positions!inner(department_id)").eq("positions.department_id", task.responsible_department_id),
     supabase.from("projects").select("archived_at").eq("id", task.project_id).maybeSingle(),
     supabase.from("tasks").select("id, title").eq("project_id", task.project_id).neq("id", id).not("status", "eq", "cancelled").order("title").limit(200),
+    supabase.from("task_deliverables").select("*").eq("task_id", id).maybeSingle(),
   ]);
   const ctx = context[0];
   const teamIds = new Set((assignments.data ?? []).map(a => a.executive_id));
   const team = directory.filter(p => teamIds.has(p.id) && p.status === "active");
   const archived = Boolean(project.data?.archived_at);
+  // Someone who sees this only through the team overview reads it and changes nothing.
+  const onlyLooking = ctx?.can_take_part === false;
+  const deliverable = handIn.data;
+  const files = attachments.data ?? [];
 
   const responsibleHead = me.is_president || me.positions.some(p => p.is_head && p.department_id === task.responsible_department_id);
   const inRequesting = inDepartment(me, task.requesting_department_id);
   const inResponsible = inDepartment(me, task.responsible_department_id);
   const open = !["done", "cancelled"].includes(task.status);
-  const canEdit = !archived && (me.is_president || task.assigned_to === me.id || task.assigned_by === me.id || responsibleHead);
+  const canEdit = !archived && !onlyLooking && (me.is_president || task.assigned_to === me.id || task.assigned_by === me.id || responsibleHead);
   const canWork = canEdit && (!task.is_cross_team || task.assigned_to === me.id || responsibleHead);
   const openProposal = (proposals.data ?? []).find(p => p.state === "open");
   const waiting = task.status === "blocked" && task.blocked_auto;
@@ -77,11 +82,16 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
   const Heading = sent ? "h2" : "h3";
   const asker = seatHolder(seats, task.assigned_by) ?? teamLead(seats, task.requesting_department_id);
   const doer = seatHolder(seats, task.assigned_to) ?? teamLead(seats, task.responsible_department_id);
+  const canHandIn = Boolean(deliverable) && canEdit && task.status !== "cancelled";
+  const handedFile = deliverable?.attachment_id ? files.find(f => f.id === deliverable.attachment_id) : undefined;
+  // A server component renders once per request, so this is that request's time.
+  // eslint-disable-next-line react-hooks/purity
+  const handInLate = Boolean(deliverable && !deliverable.submitted_at && task.due_at && new Date(task.due_at).getTime() < Date.now());
   const more = (
     <>
       {task.assigned_by ? <p className="os-muted">Given by {task.assigned_by === me.id ? "you" : nameOf(task.assigned_by)}.</p> : <p className="os-muted">Created automatically.</p>}
 
-      {task.is_cross_team && (inRequesting || inResponsible || me.is_president) && !archived && open ? (
+      {task.is_cross_team && (inRequesting || inResponsible || me.is_president) && !archived && !onlyLooking && open ? (
         openProposal ? (
           <section>
             <Heading>New date proposed</Heading>
@@ -105,8 +115,8 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
 
       <section>
         <Heading>Files</Heading>
-        {(attachments.data ?? []).length ? <ul className="os-list">{(attachments.data ?? []).map(a => <li key={a.id}><a className="os-link" href={`/os/attachments/${a.id}`}>{a.file_name}</a><span className="os-muted">{Math.ceil(a.size_bytes / 1024)} KB</span></li>)}</ul> : null}
-        {canEdit ? <Upload type="task" entity={id} /> : (attachments.data ?? []).length ? null : <p className="os-muted">No files.</p>}
+        {files.length ? <ul className="os-list">{files.map(a => <li key={a.id}><a className="os-link" href={`/os/attachments/${a.id}`}>{a.file_name}</a><span className="os-muted">{Math.ceil(a.size_bytes / 1024)} KB</span></li>)}</ul> : null}
+        {canEdit ? <Upload type="task" entity={id} /> : files.length ? null : <p className="os-muted">No files.</p>}
       </section>
 
       <section>
@@ -186,6 +196,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
           </header>
 
           {archived ? <p className="os-note">This project is archived, so this task is read-only.</p> : null}
+          {onlyLooking ? <p className="os-note">You can see this through the team overview. Only {ctx?.responsible_department} can change it.</p> : null}
           {waiting ? <p className="os-note">This can&apos;t start until {blockedBy.filter(d => d.status !== "done").map(d => d.title).join(" and ") || "an earlier task"} is done.</p> : null}
           {task.status === "done" ? <p className="os-done-note">Done.{task.is_cross_team ? ` ${ctx?.requesting_department} has been told, and can reopen this if something's missing.` : ""}</p> : null}
           {task.status === "cancelled" ? <p className="os-note">{task.request_state === "declined" ? `${ctx?.responsible_department} declined this.` : "This was cancelled."} It stays on record.</p> : null}
@@ -199,6 +210,57 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
             {task.description ? <p className="os-pre">{task.description}</p> : <p className="os-muted">No details yet.</p>}
             {task.deliverables ? <p className="os-pre os-muted">To hand in: {task.deliverables}</p> : null}
           </section>
+
+          {deliverable ? (
+            <section aria-labelledby="deliverable" className="os-deliverable">
+              <div className="os-between-line">
+                <h2 id="deliverable">Deliverable</h2>
+                <Status tone={deliverable.submitted_at ? "good" : handInLate ? "bad" : "warn"}>{deliverable.submitted_at ? "Handed in" : handInLate ? "Late" : "Not handed in yet"}</Status>
+              </div>
+              <p>{deliverable.label}</p>
+              {deliverable.submitted_at ? (
+                <div className="os-handed-in">
+                  {deliverable.body ? <p className="os-pre">{deliverable.body}</p> : null}
+                  {deliverable.link_url ? <p><a className="os-link" href={deliverable.link_url} target="_blank" rel="noopener noreferrer">{deliverable.link_url}</a></p> : null}
+                  {handedFile ? <p><a className="os-link" href={`/os/attachments/${handedFile.id}`}>{handedFile.file_name}</a></p> : null}
+                  {deliverable.kind === "document" && deliverable.attachment_id === null && !deliverable.link_url ? <p className="os-muted">The file that was handed in has been removed.</p> : null}
+                  <small className="os-muted">Handed in by {deliverable.submitted_by === me.id ? "you" : nameOf(deliverable.submitted_by)}, {formatDateTime(deliverable.submitted_at)}</small>
+                </div>
+              ) : null}
+              {canHandIn && deliverable.kind === "document" ? <Upload type="task" entity={id} label="Upload a file" /> : null}
+              {canHandIn ? (
+                <ActionForm action={handInDeliverable} className="os-stack">
+                  <Hidden name="id" value={id} />
+                  {deliverable.kind === "text" ? (
+                    <Field label="What you're handing in"><textarea name="body" rows={4} maxLength={4000} defaultValue={deliverable.body ?? ""} required /></Field>
+                  ) : deliverable.kind === "link" ? (
+                    <Field label="Link"><input name="link" type="url" inputMode="url" placeholder="https://" maxLength={2000} defaultValue={deliverable.link_url ?? ""} required /></Field>
+                  ) : (
+                    <>
+                      {files.length ? (
+                        <Field label="A file on this task">
+                          <select name="attachment" defaultValue={deliverable.attachment_id ?? ""}>
+                            <option value="">None</option>
+                            {files.map(f => <option key={f.id} value={f.id}>{f.file_name}</option>)}
+                          </select>
+                        </Field>
+                      ) : null}
+                      <Field label={files.length ? "Or a link" : "Link"} hint={files.length ? undefined : "Or upload a file above, then choose it here."}>
+                        <input name="link" type="url" inputMode="url" placeholder="https://" maxLength={2000} defaultValue={deliverable.link_url ?? ""} />
+                      </Field>
+                    </>
+                  )}
+                  <div><SubmitButton>{deliverable.submitted_at ? "Replace" : "Hand in"}</SubmitButton></div>
+                </ActionForm>
+              ) : null}
+              <p className="os-muted">
+                {[
+                  deliverable.required && !deliverable.submitted_at ? "This task can't be marked done until it's handed in." : null,
+                  ctx?.event_id ? "Every team working on this event can see what's handed in." : null,
+                ].filter(Boolean).join(" ")}
+              </p>
+            </section>
+          ) : null}
 
           <section aria-labelledby="steps">
             <div className="os-between-line"><h2 id="steps">Steps</h2>{items.length ? <small>{ticked} of {items.length} done</small> : null}</div>
@@ -241,7 +303,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
                 {(comments.data ?? []).map(c => <li key={c.id}><div><div className="os-comment-head"><Person name={nameOf(c.author_id)} title={titleOf(c.author_id)} /><small className="os-muted">{formatDateTime(c.created_at)}</small></div><p className="os-pre">{c.body}</p></div></li>)}
               </ul>
             ) : null}
-            {!archived ? (
+            {!archived && !onlyLooking ? (
               <ActionForm action={addComment} className="os-inline-form" resetOnSuccess ariaLabel="Add a comment">
                 <Hidden name="id" value={id} />
                 <Field label="Comment" hint={task.is_cross_team ? "Both teams can read this." : undefined}><input name="body" required maxLength={8000} /></Field>
@@ -278,7 +340,7 @@ export default async function TaskPage({ params }: { params: Promise<{ id: strin
                 <Field label="Who"><select name="delegate" defaultValue={task.assigned_to ?? ""} required>{task.assigned_to ? null : <option value="" disabled>Choose</option>}{directory.filter(p => p.status === "active" && (teamIds.has(p.id) || p.id === me.id || p.id === task.assigned_to)).map(p => <option key={p.id} value={p.id}>{displayName(p)}</option>)}</select></Field>
                 <div><SubmitButton variant="ghost">Change</SubmitButton></div>
               </ActionForm>
-            ) : !task.is_cross_team && open && !archived && (canEdit || (task.assigned_to === null && inResponsible)) ? (
+            ) : !task.is_cross_team && open && !archived && !onlyLooking && (canEdit || (task.assigned_to === null && inResponsible)) ? (
               <ActionForm action={assignTask} className="os-stack">
                 <Hidden name="id" value={id} />
                 <Field label="Who"><select name="assignee" defaultValue={task.assigned_to ?? ""}><option value="">Nobody yet</option>{directory.filter(p => p.status === "active" && ((can(me, "task.assign") && teamIds.has(p.id)) || p.id === me.id || p.id === task.assigned_to)).map(p => <option key={p.id} value={p.id}>{displayName(p)}</option>)}</select></Field>

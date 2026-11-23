@@ -80,7 +80,7 @@ export default async function ProjectPage({ params, searchParams }: { params: Pr
   const done = top.length - open.length;
   const board = view === "board";
   const canTick = (t: Task) => !archived && t.status !== "unassigned" && (me.is_president || t.assigned_to === me.id || (t.assigned_by === me.id && !t.is_cross_team) || me.positions.some(p => p.is_head && p.department_id === t.responsible_department_id));
-  const teamWord = otherTeams.length ? `${owner}, with ${otherTeams.map(t => t.name).join(" and ")}.` : owner ? `Only ${owner} and the President can see this.` : "";
+  const teamWord = otherTeams.length ? `${owner}, with ${otherTeams.map(t => t.name).join(" and ")}.` : owner ? `Only ${owner} and people with the team overview can see this.` : "";
 
   return (
     <div className="os-page">

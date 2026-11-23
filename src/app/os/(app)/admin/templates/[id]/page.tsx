@@ -43,6 +43,7 @@ export default async function AdminTemplate({ params }: { params: Promise<{ id: 
           <div><dt>depends_on</dt><dd>Keys of tasks in this template that must finish first</dd></div>
           <div><dt>activation, condition</dt><dd>{`{"field":"requires_sponsorship","eq":true}`}, combined with all and any. Fields: tier and each requires_ flag on the event</dd></div>
           <div><dt>subtasks</dt><dd>The same shape, under a task</dd></div>
+          <div><dt>deliverable</dt><dd>What the task hands in: <code>kind</code> (document, link or text), <code>label</code>, and <code>required</code>. Teams on the same event see it</dd></div>
           <div><dt>lead_position</dt><dd>Who leads the project and first holds its tasks</dd></div>
           <div><dt>followups</dt><dd>Tasks created when the project completes: key, title, due_days</dd></div>
           <div><dt>sop_ids</dt><dd>SOPs whose current version is pinned to each new project</dd></div>

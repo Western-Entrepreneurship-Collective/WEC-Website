@@ -129,6 +129,8 @@ export const saveChecklistItem = async (_: ActionResult, fd: FormData) =>
 export const deleteChecklistItem = async (_: ActionResult, fd: FormData) => run(() => rpc("delete_checklist_item", { p_id: uuid(fd, "item") }));
 export const addDependency = async (_: ActionResult, fd: FormData) => run(() => rpc("add_task_dependency", { p_task: uuid(fd, "id"), p_depends_on: uuid(fd, "depends_on") }));
 export const removeDependency = async (_: ActionResult, fd: FormData) => run(() => rpc("remove_task_dependency", { p_task: uuid(fd, "id"), p_depends_on: uuid(fd, "depends_on") }));
+export const handInDeliverable = async (_: ActionResult, fd: FormData) =>
+  run(() => rpc("hand_in_deliverable", { p_task: uuid(fd, "id"), p_link: optional(fd, "link", 2000), p_body: optional(fd, "body", 4000), p_attachment: optionalUuid(fd, "attachment") }), "Handed in.");
 
 // One form for every task. Who decides what it becomes: a person's task, or a request to a team.
 export async function newTask(_: ActionResult, fd: FormData): Promise<ActionResult> {

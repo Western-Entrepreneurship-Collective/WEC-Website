@@ -20,6 +20,9 @@ export type Database = {
 "add_task_dependency":
 { Args: { "p_depends_on": string,"p_task": string }; Returns: undefined
                            },
+"agree_member_policy":
+{ Args: { "p_version": number }; Returns: undefined
+                           },
 "archive_announcement":
 { Args: { "p_id": string }; Returns: undefined
                            },
@@ -116,6 +119,11 @@ export type Database = {
               "department_name": string,"due_at": string,"is_cross_team": boolean,"is_overdue": boolean,"project_name": string,"status": string,"task_id": string,"title": string
             }[]
                            },
+"event_deliverables":
+{ Args: { "p_event": string }; Returns: {
+              "attachment_id": string,"body": string,"can_open_task": boolean,"department_name": string,"due_at": string,"file_name": string,"kind": string,"label": string,"link_url": string,"required": boolean,"submitted_at": string,"submitted_by_name": string,"task_id": string,"task_status": string,"task_title": string
+            }[]
+                           },
 "event_readiness":
 { Args: { "p_event": string }; Returns: number
                            },
@@ -130,8 +138,14 @@ export type Database = {
 "generate_handover_projects":
 { Args: { "p_transition": string }; Returns: number
                            },
+"hand_in_deliverable":
+{ Args: { "p_attachment"?: string,"p_body"?: string,"p_link"?: string,"p_task": string }; Returns: undefined
+                           },
 "link_project_sop":
 { Args: { "p_linked"?: boolean,"p_project": string,"p_version": string }; Returns: undefined
+                           },
+"log_member_export":
+{ Args: { "p_batch": number,"p_batches": number,"p_count": number,"p_kind": string,"p_search": boolean,"p_year": string }; Returns: undefined
                            },
 "mark_notifications_read":
 { Args: { "p_ids"?: (string)[] }; Returns: undefined
@@ -144,6 +158,14 @@ export type Database = {
                            },
 "me":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"member_list":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "email": string,"id": string,"joined_at": string,"name": string,"year": string
+            }[]
+                           },
+"member_policy_agreed":
+{ Args: Record<PropertyKey, never>; Returns: boolean
                            },
 "my_notifications":
 { Args: { "p_limit"?: number,"p_unread_only"?: boolean }; Returns: {
@@ -180,6 +202,24 @@ export type Database = {
                            },
 "remove_weekly_summary_photo":
 { Args: { "p_id": string }; Returns: string
+                           },
+"rep_close_round":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
+"rep_get":
+{ Args: { "p_id": string }; Returns: Json
+                           },
+"rep_is_reviewer":
+{ Args: Record<PropertyKey, never>; Returns: boolean
+                           },
+"rep_list":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"rep_save_score":
+{ Args: { "p_areas": (number)[],"p_id": string,"p_note": string }; Returns: undefined
+                           },
+"rep_set_shortlist":
+{ Args: { "p_id": string,"p_on": boolean }; Returns: undefined
                            },
 "reschedule_event":
 { Args: { "p_ends_at": string,"p_event": string,"p_expected"?: string,"p_starts_at": string }; Returns: number
@@ -234,6 +274,12 @@ export type Database = {
               "archived": boolean,"item_id": string,"item_type": string,"snippet": string,"title": string
             }[]
                            },
+"service_add_rep_reviewer":
+{ Args: { "p_email": string }; Returns: undefined
+                           },
+"service_apply_rep":
+{ Args: { "p_anything": string,"p_company": string,"p_dates": string,"p_event_idea": string,"p_exec_next": string,"p_heard": string,"p_hours": string,"p_link": string,"p_name": string,"p_program": string,"p_reach": string,"p_residence": string,"p_show_up": string,"p_social": string,"p_western_email": string,"p_why": string,"p_year": string }; Returns: boolean
+                           },
 "service_claim_emails":
 { Args: { "p_limit"?: number }; Returns: {
               "email": string,"job_id": string,"preferred_name": string,"unread": number
@@ -244,6 +290,11 @@ export type Database = {
               "attachment_id": string,"storage_path": string
             }[]
                            },
+"service_claim_team_emails":
+{ Args: { "p_limit"?: number }; Returns: {
+              "email": string,"job_id": string,"preferred_name": string,"project_id": string,"project_name": string,"team_name": string
+            }[]
+                           },
 "service_finish_email":
 { Args: { "p_error"?: string,"p_job": string,"p_ok": boolean }; Returns: undefined
                            },
@@ -252,6 +303,9 @@ export type Database = {
                            },
 "service_health":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"service_join_member":
+{ Args: { "p_building": string,"p_email": string,"p_evidence"?: string,"p_favourite"?: string,"p_name": string,"p_signature": string,"p_year": string }; Returns: boolean
                            },
 "service_position_seats":
 { Args: Record<PropertyKey, never>; Returns: {
@@ -320,7 +374,7 @@ export type Database = {
                            },
 "task_context":
 { Args: { "p_task": string }; Returns: {
-              "can_open_project": boolean,"event_id": string,"project_id": string,"project_kind": string,"project_name": string,"requesting_department": string,"responsible_department": string
+              "can_open_project": boolean,"can_take_part": boolean,"event_id": string,"project_id": string,"project_kind": string,"project_name": string,"requesting_department": string,"responsible_department": string
             }[]
                            },
 "task_dependencies":
@@ -335,7 +389,7 @@ export type Database = {
                            },
 "team_overview":
 { Args: Record<PropertyKey, never>; Returns: {
-              "assignee_name": string,"department_id": string,"department_name": string,"department_slug": string,"due_at": string,"project_id": string,"project_name": string,"task_status": string,"task_title": string
+              "assignee_name": string,"deliverable_label": string,"deliverable_required": boolean,"deliverable_submitted_at": string,"department_id": string,"department_name": string,"department_slug": string,"due_at": string,"project_id": string,"project_name": string,"task_id": string,"task_status": string,"task_title": string
             }[]
                            },
 "transition_departure":
@@ -865,6 +919,26 @@ isOneToOne: false
       columns: ["department_id"]
 isOneToOne: false
       referencedRelation: "departments"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"member_policy_agreements": {
+                  Row: {
+                    "agreed_at": string,"executive_id": string,"version": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "agreed_at"?: string,"executive_id": string,"version": number
+                  }
+                  Update: {
+                    "agreed_at"?: string,"executive_id"?: string,"version"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "member_policy_agreements_executive_id_fkey"
+      columns: ["executive_id"]
+isOneToOne: false
+      referencedRelation: "executives"
       referencedColumns: ["id"]
     }
                   ]
@@ -1462,6 +1536,38 @@ isOneToOne: false
       foreignKeyName: "task_comments_task_id_fkey"
       columns: ["task_id"]
 isOneToOne: false
+      referencedRelation: "tasks"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"task_deliverables": {
+                  Row: {
+                    "attachment_id": string | null,"body": string | null,"created_at": string,"kind": string,"label": string,"link_url": string | null,"required": boolean,"submitted_at": string | null,"submitted_by": string | null,"task_id": string,"updated_at": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "attachment_id"?: string | null,"body"?: string | null,"created_at"?: string,"kind": string,"label": string,"link_url"?: string | null,"required"?: boolean,"submitted_at"?: string | null,"submitted_by"?: string | null,"task_id": string,"updated_at"?: string
+                  }
+                  Update: {
+                    "attachment_id"?: string | null,"body"?: string | null,"created_at"?: string,"kind"?: string,"label"?: string,"link_url"?: string | null,"required"?: boolean,"submitted_at"?: string | null,"submitted_by"?: string | null,"task_id"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "task_deliverables_attachment_id_fkey"
+      columns: ["attachment_id"]
+isOneToOne: false
+      referencedRelation: "attachments"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "task_deliverables_submitted_by_fkey"
+      columns: ["submitted_by"]
+isOneToOne: false
+      referencedRelation: "executives"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "task_deliverables_task_id_fkey"
+      columns: ["task_id"]
+isOneToOne: true
       referencedRelation: "tasks"
       referencedColumns: ["id"]
     }

@@ -713,3 +713,13 @@ body:has(.os-welcome) { background: var(--paper); }
 .os-loading-short { width: 40%; }
 .os-loading-panel { display: grid; gap: 12px; background: var(--white); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; margin-top: 8px; }
 @keyframes os-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+
+.os-overview-project-head h3 a, .os-overview-tasks td a { color: inherit; text-decoration: underline; text-decoration-color: #cbb9df; text-underline-offset: 3px; }
+.os-overview-project-head h3 a:hover, .os-overview-tasks td a:hover { text-decoration-color: currentColor; }
+.os-overview-hands { display: block; margin-top: 2px; color: var(--muted); font-size: 12.5px; }
+.os-deliverable { display: grid; gap: 10px; }
+.os-handed-in { display: grid; gap: 6px; padding: 12px 14px; border: 1px solid #dfeee9; border-radius: 8px; background: #f6faf8; }
+.os-handed-in p { margin: 0; overflow-wrap: anywhere; }
+.os-deliverables-table td { vertical-align: top; }
+.os-deliverables-table td p { margin: 0; overflow-wrap: anywhere; }
+.os-overview-numbers { flex-wrap: wrap; row-gap: 12px; }

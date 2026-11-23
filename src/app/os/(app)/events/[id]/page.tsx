@@ -10,6 +10,11 @@ import { createClient, rpc } from "@/lib/os/supabase";
 
 export const metadata: Metadata = { title: "Event" };
 
+type HandIn = {
+  task_id: string; department_name: string; task_title: string; label: string; kind: string; required: boolean; due_at: string | null;
+  task_status: string; submitted_at: string | null; submitted_by_name: string | null; link_url: string | null; body: string | null;
+  attachment_id: string | null; file_name: string | null; can_open_task: boolean;
+};
 type TeamRow = { project_id: string; department_name: string; lead_name: string | null; progress: number; can_open: boolean; next_title: string | null; next_due: string | null; overdue_tasks: number };
 
 function teamStatus(r: TeamRow) {
@@ -33,13 +38,14 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
   const { data: event } = await supabase.from("events").select("*").eq("id", id).maybeSingle();
   if (!event) notFound();
   const nameOf = nameLookup(await getDirectory());
-  const [leads, departments, guests, approvals, rows, readiness] = await Promise.all([
+  const [leads, departments, guests, approvals, rows, readiness, handIns] = await Promise.all([
     supabase.from("event_leads").select("executive_id").eq("event_id", id),
     supabase.from("event_departments").select("departments(name)").eq("event_id", id),
     supabase.from("event_guests").select("*").eq("event_id", id),
     supabase.from("approvals").select("*").eq("entity_type", "event").eq("entity_id", id).order("created_at"),
     rpc<TeamRow[]>("event_team_progress", { p_event: id }),
     rpc<number>("event_readiness", { p_event: id }),
+    rpc<HandIn[]>("event_deliverables", { p_event: id }),
   ]);
   const untilEvent = Math.max(Math.ceil(daysUntil(event.starts_at)), 0);
   const eventDays = untilEvent === 0 ? "Today" : `${untilEvent} day${untilEvent === 1 ? "" : "s"} away`;
@@ -49,6 +55,11 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
   const needs = NEEDS.filter(([k]) => (event as unknown as Record<string, unknown>)[k]).map(([, l]) => l);
 
   const behind = rows.filter(r => r.overdue_tasks > 0);
+  // A server component renders once per request, so this is that request's time.
+  // eslint-disable-next-line react-hooks/purity
+  const now = Date.now();
+  const handInState = (d: HandIn) => d.submitted_at ? { tone: "good", text: "Handed in" }
+    : d.due_at && new Date(d.due_at).getTime() < now ? { tone: "bad", text: "Late" } : { tone: "warn", text: "Not yet" };
   return (
     <div className="os-page">
       <nav className="os-crumbs" aria-label="You are here"><Link href="/os/events">Events</Link></nav>
@@ -110,6 +121,40 @@ export default async function EventPage({ params }: { params: Promise<{ id: stri
           </div>
         )}
       </Section>
+
+      {handIns.length ? (
+        <Section title="Deliverables">
+          <p className="os-muted">What each team hands in for this event. Everyone working on it can see these.</p>
+          <div className="os-table-wrap" tabIndex={0} role="group" aria-label="Deliverables">
+            <table className="os-overview-tasks os-deliverables-table">
+              <thead><tr><th scope="col">Team</th><th scope="col">What</th><th scope="col">Due</th><th scope="col">Status</th><th scope="col">Handed in</th></tr></thead>
+              <tbody>
+                {handIns.map(d => {
+                  const st = handInState(d);
+                  return (
+                    <tr key={d.task_id}>
+                      <td>{d.department_name}</td>
+                      <td>{d.can_open_task ? <Link className="os-link" href={`/os/tasks/${d.task_id}`}>{d.label}</Link> : d.label}</td>
+                      <td>{d.due_at ? shortDue(d.due_at) : "None"}</td>
+                      <td><Status tone={st.tone}>{st.text}</Status></td>
+                      <td>
+                        {d.submitted_at ? (
+                          <>
+                            {d.body ? <p className="os-pre">{d.body}</p> : null}
+                            {d.link_url ? <p><a className="os-link" href={d.link_url} target="_blank" rel="noopener noreferrer">{d.link_url}</a></p> : null}
+                            {d.attachment_id ? <p><a className="os-link" href={`/os/attachments/${d.attachment_id}`}>{d.file_name}</a></p> : null}
+                            <small className="os-muted">{d.submitted_by_name ?? "Former executive"}, {shortDue(d.submitted_at)}</small>
+                          </>
+                        ) : <span className="os-muted">Nothing yet</span>}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Section>
+      ) : null}
 
       <div className="os-split">
         <div className="os-stack-lg">
