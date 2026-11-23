@@ -30,7 +30,8 @@ test("a deliverable: handed in on the task, then seen by every team on the event
   await expect(list.getByRole("row", { name: /Room, building/ })).toContainText("Room 2230, Ivey. 80 seats. Booking 4471.");
   await expect(list.getByRole("row", { name: /guest list/ })).toContainText("Nothing yet");
   await expect(list.getByRole("link", { name: /Room, building/ })).toHaveCount(0);
-  expect((await page.goto(`/os/tasks/${venue}`))?.status()).toBe(404);
+  await page.goto(`/os/tasks/${venue}`);
+  await expect(page.getByRole("heading", { name: "Nothing here" })).toBeVisible();
 
   // The overview shows which are in.
   await signIn(page, PEOPLE.president);

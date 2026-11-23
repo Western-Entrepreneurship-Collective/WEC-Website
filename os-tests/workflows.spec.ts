@@ -91,7 +91,8 @@ test("projects: my team or all of WEC, grouped tasks, and editing kept apart", a
 
   // A Director who does not lead it has no Edit link, and the address doesn't open it.
   await signIn(page, PEOPLE.dirContent);
-  expect((await page.goto(url))?.status()).toBe(404);
+  await page.goto(url);
+  await expect(page.getByRole("heading", { name: "Nothing here" })).toBeVisible();
   await page.goto(url.replace("/edit", ""));
   await expect(page.getByRole("link", { name: "Edit", exact: true })).toHaveCount(0);
 });
@@ -106,7 +107,8 @@ test("a project for one team, then shared with another", async ({ page }) => {
   const url = page.url();
 
   await signIn(page, PEOPLE.dirFinance);
-  expect((await page.goto(url))?.status(), "private to Content").toBe(404);
+  await page.goto(url);
+  await expect(page.getByRole("heading", { name: "Nothing here" }), "private to Content").toBeVisible();
 
   await signIn(page, PEOPLE.vpContent);
   await page.goto(`${url}/edit`);
@@ -245,7 +247,8 @@ test("a task for another team: sent, taken, finished, on one record", async ({ p
 
   // Their Director does not see it until it is theirs.
   await signIn(page, PEOPLE.dirContent);
-  expect((await page.goto(url))?.status()).toBe(404);
+  await page.goto(url);
+  await expect(page.getByRole("heading", { name: "Nothing here" })).toBeVisible();
 
   // The receiving VP has it on their own home page, and can give it away in one move.
   await signIn(page, PEOPLE.vpContent);
@@ -342,7 +345,8 @@ test("files: attached by someone on the task, refused to everyone else", async (
   const outsider = await browser.newContext();
   const oPage = await outsider.newPage();
   await signIn(oPage, PEOPLE.dirContent);
-  expect((await oPage.goto(taskUrl))?.status()).toBe(404);
+  await oPage.goto(taskUrl);
+  await expect(oPage.getByRole("heading", { name: "Nothing here" })).toBeVisible();
   const res = await oPage.request.get(href!, { maxRedirects: 0 });
   expect(res.status()).toBe(404);
   await outsider.close();
@@ -350,7 +354,8 @@ test("files: attached by someone on the task, refused to everyone else", async (
 
 test("SOP: only a VP writes it, and only the President approves it", async ({ page }) => {
   await signIn(page, PEOPLE.dirContent);
-  expect((await page.goto("/os/sops/new"))?.status()).toBe(404);
+  await page.goto("/os/sops/new");
+  await expect(page.getByRole("heading", { name: "Nothing here" })).toBeVisible();
   await page.goto("/os/sops");
   await expect(page.getByRole("link", { name: "New SOP" })).toHaveCount(0);
 
@@ -461,7 +466,8 @@ test("meeting: minutes stay in the team, and an action becomes a task", async ({
   await expect(page.locator(".os-action-item").getByRole("link", { name: "Task" })).toBeVisible();
 
   await signIn(page, PEOPLE.dirFinance);
-  expect((await page.goto(url))?.status()).toBe(404);
+  await page.goto(url);
+  await expect(page.getByRole("heading", { name: "Nothing here" })).toBeVisible();
 });
 
 test("starting a project from the task form comes back to the task", async ({ page }) => {

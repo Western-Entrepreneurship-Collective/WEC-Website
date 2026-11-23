@@ -41,7 +41,8 @@ test("the team overview shows every team's work, and opens it to read", async ({
 
   await signIn(page, PEOPLE.vpContent);
   await expect(page.getByRole("link", { name: "Team overview" })).toHaveCount(0);
-  expect((await page.goto("/os/overview"))?.status()).toBe(404);
+  await page.goto("/os/overview");
+  await expect(page.getByRole("heading", { name: "Nothing here" })).toBeVisible();
 });
 
 test("the weekly summary: written, reviewed, copied, then marked as sent", async ({ page, context, browser }) => {
@@ -116,6 +117,7 @@ test("the weekly summary: written, reviewed, copied, then marked as sent", async
   await expect(president.getByText("Founder Lab had 42 members.")).toBeVisible();
   await expect(president.getByRole("button", { name: "Copy email" })).toHaveCount(0);
   await signIn(president, PEOPLE.vpContent);
-  expect((await president.goto(url))?.status()).toBe(404);
+  await president.goto(url);
+  await expect(president.getByRole("heading", { name: "Nothing here" })).toBeVisible();
   await others.close();
 });

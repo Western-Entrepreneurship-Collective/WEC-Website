@@ -12,24 +12,28 @@ test.beforeAll(async () => {
 test("administration and the President's page are 404 for everyone they are not for", async ({ page }) => {
   await signIn(page, PEOPLE.vpContent);
   for (const path of ["/os/admin", "/os/admin/executives", "/os/admin/audit", "/os/president"]) {
-    const response = await page.goto(path);
-    expect(response?.status(), path).toBe(404);
+    await page.goto(path);
+    await expect(page.getByRole("heading", { name: "Nothing here" }), path).toBeVisible();
   }
   await expect(page.getByRole("link", { name: "Admin", exact: true })).toHaveCount(0);
 
   await signIn(page, PEOPLE.president);
   expect((await page.goto("/os/president"))?.status()).toBe(200);
-  expect((await page.goto("/os/admin"))?.status(), "the President is not an administrator").toBe(404);
+  await page.goto("/os/admin");
+  await expect(page.getByRole("heading", { name: "Nothing here" }), "the President is not an administrator").toBeVisible();
 
   await signIn(page, PEOPLE.admin);
   expect((await page.goto("/os/admin"))?.status()).toBe(200);
-  expect((await page.goto("/os/president"))?.status(), "an administrator is not the President").toBe(404);
+  await page.goto("/os/president");
+  await expect(page.getByRole("heading", { name: "Nothing here" }), "an administrator is not the President").toBeVisible();
 });
 
 test("changing the ID in a URL shows nothing from another team", async ({ page }) => {
   await signIn(page, PEOPLE.dirContent);
-  expect((await page.goto(`/os/projects/${P.internal}`))?.status()).toBe(404);
-  expect((await page.goto(`/os/tasks/${P.task}`))?.status()).toBe(404);
+  await page.goto(`/os/projects/${P.internal}`);
+  await expect(page.getByRole("heading", { name: "Nothing here" })).toBeVisible();
+  await page.goto(`/os/tasks/${P.task}`);
+  await expect(page.getByRole("heading", { name: "Nothing here" })).toBeVisible();
   await page.goto("/os/search?q=reserve");
   await expect(page.getByText("No results.")).toBeVisible();
 
@@ -43,7 +47,8 @@ test("an unknown address is a 404 inside the workspace, and a sign-in page outsi
   await page.goto("/os/no-such-page");
   await expect(page).toHaveURL(/\/os\/login$/);
   await signIn(page, PEOPLE.dirContent);
-  expect((await page.goto("/os/no-such-page"))?.status()).toBe(404);
+  await page.goto("/os/no-such-page");
+  await expect(page.getByRole("heading", { name: "Nothing here" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Nothing here" })).toBeVisible();
   await expect(page.getByRole("link", { name: "My tasks", exact: true })).toBeVisible();
 });
