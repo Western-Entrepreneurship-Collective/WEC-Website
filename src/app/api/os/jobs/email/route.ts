@@ -2,9 +2,10 @@
  * POST /api/os/jobs/email: sends queued emails through Resend, then clears out
  * abandoned uploads. Called by the database sweep, with the jobs secret.
  *
- * ⛔ Two kinds only. A digest says how many notifications are waiting. A team email
+ * ⛔ Three kinds only. A digest says how many notifications are waiting. A team email
  * names the team and the project it was added to, and nothing from inside the project.
- * Neither carries task titles, details or comments.
+ * A deliverable email names the team, what it handed in and the event, and links to the
+ * event page; what was handed in stays in WEC OS. None carries task details or comments.
  */
 import { createServiceClient, serviceRpc } from "@/lib/os/admin";
 import { osSiteUrl } from "@/lib/os/config";
@@ -12,6 +13,7 @@ import { jobAuthorized, jobResponse } from "@/lib/os/jobAuth";
 
 type Claimed = { job_id: string; email: string; preferred_name: string; unread: number };
 type TeamClaimed = { job_id: string; email: string; preferred_name: string; team_name: string; project_id: string; project_name: string };
+type DeliverableClaimed = { job_id: string; email: string; preferred_name: string; team_name: string; deliverable_name: string; event_id: string; event_name: string; updated: boolean };
 
 export async function POST(request: Request) {
   if (!jobAuthorized(request)) return jobResponse({ error: "forbidden" }, 403);
@@ -40,6 +42,14 @@ export async function POST(request: Request) {
         to: job.email,
         subject: `${job.team_name} was added to ${job.project_name}`,
         text: `Hi ${job.preferred_name},\n\n${job.team_name} was added to the project ${job.project_name} in WEC OS.\n\n${osSiteUrl()}/os/projects/${job.project_id}\n`,
+      });
+    }
+    for (const job of await serviceRpc<DeliverableClaimed[]>("service_claim_deliverable_emails", { p_limit: 40 })) {
+      const verb = job.updated ? "updated" : "handed in";
+      await send(job.job_id, {
+        to: job.email,
+        subject: `${job.team_name} ${verb} ${job.deliverable_name} for ${job.event_name}`,
+        text: `Hi ${job.preferred_name},\n\n${job.team_name} ${verb} ${job.deliverable_name} for ${job.event_name}.\n\nSee it on the event page in WEC OS:\n${osSiteUrl()}/os/events/${job.event_id}\n`,
       });
     }
     for (const job of await serviceRpc<Claimed[]>("service_claim_emails", { p_limit: 40 })) {

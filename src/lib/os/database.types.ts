@@ -280,6 +280,11 @@ export type Database = {
 "service_apply_rep":
 { Args: { "p_anything": string,"p_company": string,"p_dates": string,"p_event_idea": string,"p_exec_next": string,"p_heard": string,"p_hours": string,"p_link": string,"p_name": string,"p_program": string,"p_reach": string,"p_residence": string,"p_show_up": string,"p_social": string,"p_western_email": string,"p_why": string,"p_year": string }; Returns: boolean
                            },
+"service_claim_deliverable_emails":
+{ Args: { "p_limit"?: number }; Returns: {
+              "deliverable_name": string,"email": string,"event_id": string,"event_name": string,"job_id": string,"preferred_name": string,"team_name": string,"updated": boolean
+            }[]
+                           },
 "service_claim_emails":
 { Args: { "p_limit"?: number }; Returns: {
               "email": string,"job_id": string,"preferred_name": string,"unread": number
@@ -389,7 +394,7 @@ export type Database = {
                            },
 "team_overview":
 { Args: Record<PropertyKey, never>; Returns: {
-              "assignee_name": string,"deliverable_label": string,"deliverable_required": boolean,"deliverable_submitted_at": string,"department_id": string,"department_name": string,"department_slug": string,"due_at": string,"project_id": string,"project_name": string,"task_id": string,"task_status": string,"task_title": string
+              "assignee_name": string,"deliverable_label": string,"deliverable_required": boolean,"deliverable_submitted_at": string,"department_id": string,"department_name": string,"department_slug": string,"due_at": string,"project_id": string,"project_name": string,"task_id": string,"task_status": string,"task_title": string,"task_waiting": boolean
             }[]
                            },
 "transition_departure":
@@ -1542,14 +1547,14 @@ isOneToOne: false
                   ]
                 },"task_deliverables": {
                   Row: {
-                    "attachment_id": string | null,"body": string | null,"created_at": string,"kind": string,"label": string,"link_url": string | null,"required": boolean,"submitted_at": string | null,"submitted_by": string | null,"task_id": string,"updated_at": string
+                    "attachment_id": string | null,"body": string | null,"created_at": string,"kind": string,"label": string,"link_url": string | null,"name": string | null,"notify": (string)[],"required": boolean,"submitted_at": string | null,"submitted_by": string | null,"task_id": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "attachment_id"?: string | null,"body"?: string | null,"created_at"?: string,"kind": string,"label": string,"link_url"?: string | null,"required"?: boolean,"submitted_at"?: string | null,"submitted_by"?: string | null,"task_id": string,"updated_at"?: string
+                    "attachment_id"?: string | null,"body"?: string | null,"created_at"?: string,"kind": string,"label": string,"link_url"?: string | null,"name"?: string | null,"notify"?: (string)[],"required"?: boolean,"submitted_at"?: string | null,"submitted_by"?: string | null,"task_id": string,"updated_at"?: string
                   }
                   Update: {
-                    "attachment_id"?: string | null,"body"?: string | null,"created_at"?: string,"kind"?: string,"label"?: string,"link_url"?: string | null,"required"?: boolean,"submitted_at"?: string | null,"submitted_by"?: string | null,"task_id"?: string,"updated_at"?: string
+                    "attachment_id"?: string | null,"body"?: string | null,"created_at"?: string,"kind"?: string,"label"?: string,"link_url"?: string | null,"name"?: string | null,"notify"?: (string)[],"required"?: boolean,"submitted_at"?: string | null,"submitted_by"?: string | null,"task_id"?: string,"updated_at"?: string
                   }
                   Relationships: [
                     {

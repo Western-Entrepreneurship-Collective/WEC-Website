@@ -133,6 +133,8 @@ Team overview lists each team's active projects, tasks, assignees, dates, status
 
 Some event tasks hand something to the other teams: the venue, the run-of-show, the budget, sponsor commitments, guest bios and so on. A template task names it with `deliverable` (`kind` is `document`, `link` or `text`), and the task gets a row in `os.task_deliverables` when it is made. Whoever can edit the task hands it in from the task page, with `api.hand_in_deliverable`. A required deliverable has to be handed in before the task can be done; a trigger on `os.tasks` enforces that whichever function marks it done. Everyone on a team working on the same event, and the event's leads, can see what was handed in, on the event page (`api.event_deliverables`), including a handed-in file, without being able to open the task itself.
 
+When a deliverable is handed in or replaced, the teams it is for hear about it. The template's `deliverable.notify` lists their slugs, `president` adds the President, and an empty list means every team on the event. Everyone on those teams gets a notification that opens the event page, and an email whose subject reads like "Outreach handed in the guest bios and headshots for Pitch Competition" (or "updated" for a replacement). The email names the team, the deliverable (`deliverable.name`) and the event, and links to the event page. What was handed in is never in the email. The sweep wakes the email route, so emails go out within about 15 minutes. People can turn these off under Profile → Notifications.
+
 ## The year-end transition
 
 Administration → Academic years, a few weeks before the new team takes over.

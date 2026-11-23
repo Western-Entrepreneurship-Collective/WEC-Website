@@ -11,11 +11,11 @@ export const metadata: Metadata = { title: "Team overview" };
 
 type Row = {
   department_id: string; department_name: string; department_slug: string; project_id: string; project_name: string;
-  task_id: string | null; task_title: string | null; assignee_name: string | null; due_at: string | null; task_status: string | null;
+  task_id: string | null; task_title: string | null; assignee_name: string | null; due_at: string | null; task_status: string | null; task_waiting: boolean | null;
   deliverable_label: string | null; deliverable_required: boolean | null; deliverable_submitted_at: string | null;
 };
 type Deliverable = { label: string; handedIn: boolean };
-type Task = { id: string; title: string; who: string; dueAt: string | null; status: string; deliverable: Deliverable | null };
+type Task = { id: string; title: string; who: string; dueAt: string | null; status: string; waiting: boolean; deliverable: Deliverable | null };
 
 const percent = (done: number, total: number) => (total ? Math.round((done / total) * 100) : 0);
 const isDone = (t: Task) => t.status === "done";
@@ -45,7 +45,7 @@ export default async function TeamOverviewPage({ searchParams }: { searchParams:
     team.projects.set(row.project_id, project);
     if (row.task_id && row.task_title) {
       project.tasks.push({
-        id: row.task_id, title: row.task_title, who: row.assignee_name ?? "Nobody yet", dueAt: row.due_at, status: row.task_status ?? "todo",
+        id: row.task_id, title: row.task_title, who: row.assignee_name ?? "Nobody yet", dueAt: row.due_at, status: row.task_status ?? "todo", waiting: Boolean(row.task_waiting),
         deliverable: row.deliverable_label ? { label: row.deliverable_label, handedIn: Boolean(row.deliverable_submitted_at) } : null,
       });
     }
@@ -112,7 +112,7 @@ export default async function TeamOverviewPage({ searchParams }: { searchParams:
                                 <td><Link href={`/os/tasks/${task.id}`}>{task.title}</Link>{task.deliverable ? <small className="os-overview-hands">Hands in: {task.deliverable.label}</small> : null}</td>
                                 <td>{task.who}</td>
                                 <td className={isLate(task, now) ? "os-overdue" : undefined}>{task.dueAt ? shortDue(task.dueAt) : "None"}</td>
-                                <td>{label(task.status)}</td>
+                                <td>{task.waiting ? "Waiting" : label(task.status)}</td>
                                 <td>{state ? <Status tone={state.tone}>{state.text}</Status> : <span className="os-muted">None</span>}</td>
                               </tr>
                             );

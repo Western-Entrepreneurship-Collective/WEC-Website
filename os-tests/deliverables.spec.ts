@@ -37,6 +37,8 @@ test("a deliverable: handed in on the task, then seen by every team on the event
   await signIn(page, PEOPLE.president);
   await page.goto("/os/overview?team=events");
   await expect(page.getByRole("row", { name: /Book the venue/ }).last()).toContainText("Handed in");
+  // Waiting on an earlier task is the plan working, not stuck.
+  await expect(page.getByRole("row", { name: /Set up the room and AV/ }).last()).toContainText("Waiting");
 
   // Out of the way of the workflow tests, which expect one event's work per team.
   await dbQuery(`update os.tasks set status = 'cancelled' where status <> 'done' and project_id in (select id from os.projects where event_id = '${id}');
